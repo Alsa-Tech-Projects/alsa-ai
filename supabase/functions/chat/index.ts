@@ -30,8 +30,12 @@ async function searchWikipedia(query: string): Promise<string> {
 }
 
 async function generateProjectFiles(input: { project_type: string; description: string }): Promise<Record<string, string>> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-  if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
+  
+  if (!LOVABLE_API_KEY && !GEMINI_API_KEY) {
+    throw new Error("No AI API key configured");
+  }
 
   const system = `Return ONLY valid JSON. Create a small but working project file map for the requested type.
 
@@ -49,26 +53,53 @@ Supported types:
 
   const user = `Project type: ${input.project_type}\nDescription: ${input.description}`;
 
-  // Use Google Gemini API directly
-  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [
-        { role: "user", parts: [{ text: `${system}\n\n${user}` }] }
-      ],
-      generationConfig: { temperature: 0.2 }
-    }),
-  });
+  let content = "";
+  
+  if (LOVABLE_API_KEY) {
+    // Use Lovable AI gateway
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user }
+        ],
+      }),
+    });
 
-  if (!resp.ok) {
-    const t = await resp.text();
-    throw new Error(`Project generation failed: ${resp.status} ${t}`);
+    if (!resp.ok) {
+      const t = await resp.text();
+      throw new Error(`Project generation failed: ${resp.status} ${t}`);
+    }
+
+    const j = await resp.json();
+    content = j.choices?.[0]?.message?.content ?? "";
+  } else {
+    // Fallback to Gemini API
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          { role: "user", parts: [{ text: `${system}\n\n${user}` }] }
+        ],
+        generationConfig: { temperature: 0.2 }
+      }),
+    });
+
+    if (!resp.ok) {
+      const t = await resp.text();
+      throw new Error(`Project generation failed: ${resp.status} ${t}`);
+    }
+
+    const j = await resp.json();
+    content = j.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
   }
-
-  const j = await resp.json();
-  // Gemini returns: { candidates: [{ content: { parts: [{ text: "..." }] } }] }
-  const content = j.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
   const start = content.indexOf("{");
   const end = content.lastIndexOf("}");
@@ -100,10 +131,15 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const { messages, memory, ai_response_style, files } = body; // files = array of { name, type, data (base64) }
+    
+    // Use Lovable AI (auto-provisioned) - fallback to Gemini if available
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-
-    if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY is not configured. Add it in Settings → Backup API Keys or Supabase secrets.");
+    
+    const useLovableAI = !!LOVABLE_API_KEY;
+    
+    if (!LOVABLE_API_KEY && !GEMINI_API_KEY) {
+      throw new Error("No AI API key configured. LOVABLE_API_KEY or GEMINI_API_KEY required.");
     }
 
     const systemPrompt = `You are ALSA - AI Lifestyle & Smart Assistant, a powerful AI assistant created by Mohd Eisa.
@@ -594,37 +630,78 @@ PERSONALITY MODE (from Settings): ${ai_response_style || 'balanced'}
       }
     }
 
-     // Call Gemini API with Standard Structure
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key=${GEMINI_API_KEY}&alt=sse`,
-      {
+    // Call AI API - prefer Lovable AI, fallback to Gemini
+    let response: Response;
+    let isLovableAI = false;
+    
+    if (useLovableAI) {
+      isLovableAI = true;
+      // Use Lovable AI gateway with OpenAI-compatible format
+      response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          // System prompt ko alag se yahan rakhein
-          system_instruction: { 
-            parts: [{ text: systemPrompt }] 
-          },
-          // Sirf user aur model ki chat yahan jayegi
-          contents: messages.map((m: { role: string; content?: string }) => ({
-            role: m.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: m.content || "Hello" }]
-          })),
-          tools: [{ functionDeclarations: tools.map((t: any) => t.function) }],
-          generationConfig: { 
-            temperature: 0.7,
-            topP: 0.95,
-            topK: 40
-          }
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...messages.map((m: { role: string; content?: string }) => ({
+              role: m.role,
+              content: m.content || "Hello"
+            }))
+          ],
+          tools: tools,
+          stream: true,
         }),
-      }
-    );
+      });
+    } else {
+      // Fallback to Gemini API directly
+      response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key=${GEMINI_API_KEY}&alt=sse`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            system_instruction: { 
+              parts: [{ text: systemPrompt }] 
+            },
+            contents: messages.map((m: { role: string; content?: string }) => ({
+              role: m.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: m.content || "Hello" }]
+            })),
+            tools: [{ functionDeclarations: tools.map((t: any) => t.function) }],
+            generationConfig: { 
+              temperature: 0.7,
+              topP: 0.95,
+              topK: 40
+            }
+          }),
+        }
+      );
+    }
 
     if (!response.ok || !response.body) {
       const errorText = await response.text();
-      console.error("Gemini API error:", response.status, errorText);
+      console.error("AI API error:", response.status, errorText);
+      
+      // Handle rate limits
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "API quota exceeded. Please check your plan." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
       return new Response(
-        JSON.stringify({ error: `Gemini API error: ${response.status}` }),
+        JSON.stringify({ error: `AI API error: ${response.status}` }),
         { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -658,24 +735,53 @@ PERSONALITY MODE (from Settings): ${ai_response_style || 'balanced'}
 
               try {
                 const parsed = JSON.parse(data);
-                // Gemini streaming format: { candidates: [{ content: { parts: [{ text, functionCall }] } }] }
-                const candidate = parsed.candidates?.[0];
-                const parts = candidate?.content?.parts || [];
-
-                for (const part of parts) {
-                  // Handle text content
-                  if (part.text) {
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: part.text })}\n\n`));
+                
+                if (isLovableAI) {
+                  // OpenAI-compatible format from Lovable AI
+                  const choice = parsed.choices?.[0];
+                  const delta = choice?.delta;
+                  
+                  if (delta?.content) {
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: delta.content })}\n\n`));
                   }
-
-                  // Handle function calls
-                  if (part.functionCall) {
-                    toolCalls.push({
-                      function: {
-                        name: part.functionCall.name,
-                        arguments: JSON.stringify(part.functionCall.args || {})
+                  
+                  // Handle tool calls
+                  if (delta?.tool_calls) {
+                    for (const tc of delta.tool_calls) {
+                      if (tc.function?.name) {
+                        currentToolCall = { function: { name: tc.function.name, arguments: '' } };
                       }
-                    });
+                      if (tc.function?.arguments && currentToolCall) {
+                        currentToolCall.function.arguments += tc.function.arguments;
+                      }
+                    }
+                  }
+                  
+                  // Check if this is the final chunk with complete tool call
+                  if (choice?.finish_reason === 'tool_calls' && currentToolCall) {
+                    toolCalls.push(currentToolCall);
+                    currentToolCall = null;
+                  }
+                } else {
+                  // Gemini streaming format: { candidates: [{ content: { parts: [{ text, functionCall }] } }] }
+                  const candidate = parsed.candidates?.[0];
+                  const parts = candidate?.content?.parts || [];
+
+                  for (const part of parts) {
+                    // Handle text content
+                    if (part.text) {
+                      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: part.text })}\n\n`));
+                    }
+
+                    // Handle function calls
+                    if (part.functionCall) {
+                      toolCalls.push({
+                        function: {
+                          name: part.functionCall.name,
+                          arguments: JSON.stringify(part.functionCall.args || {})
+                        }
+                      });
+                    }
                   }
                 }
               } catch (e) {
