@@ -405,15 +405,20 @@ PERSONALITY MODE (from Settings): ${ai_response_style || 'balanced'}
                           name: { type: "string" },
                           type: { type: "string", enum: ["TEXT", "INTEGER", "REAL", "DATE", "BOOLEAN"] },
                           primary_key: { type: "boolean" }
-                        }
+                        },
+                        required: ["name", "type"]
                       }
                     },
                     sample_data: {
                       type: "array",
-                      items: { type: "array" },
-                      description: "Sample data rows to insert"
+                      items: { 
+                        type: "array",
+                        items: { type: "string" }
+                      },
+                      description: "Sample data rows to insert (2D array of strings)"
                     }
-                  }
+                  },
+                  required: ["name", "columns"]
                 },
                 description: "Array of table definitions"
               }
@@ -601,9 +606,9 @@ PERSONALITY MODE (from Settings): ${ai_response_style || 'balanced'}
             parts: [{ text: systemPrompt }] 
           },
           // Sirf user aur model ki chat yahan jayegi
-          contents: messages.map(m => ({
+          contents: messages.map((m: { role: string; content?: string }) => ({
             role: m.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: m.content || "Hello" }] // Khali content handle karein
+            parts: [{ text: m.content || "Hello" }]
           })),
           tools: [{ functionDeclarations: tools.map((t: any) => t.function) }],
           generationConfig: { 
