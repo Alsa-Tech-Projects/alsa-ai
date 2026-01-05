@@ -307,17 +307,17 @@ PERSONALITY MODE (from Settings): ${ai_response_style || 'balanced'}
         type: "function",
         function: {
           name: "create_coding_project",
-          description: "Create a full coding project at specified path with multiple files. IMPORTANT: Always ask user for project path and project type/description before calling this tool. Use when user asks to create projects, websites, apps, etc.",
+          description: "Create a complete coding project with multiple files at specified path. USE THIS TOOL when user asks to create projects, websites, apps, applications, portfolios, e-commerce sites, etc. DO NOT use capture_screenshot for project creation - that tool is ONLY for taking pictures of the screen. IMPORTANT: Ask user for 1) project path (e.g., E:\\Projects\\MyApp), 2) project type (react/html/node/python), 3) what the project should do.",
           parameters: {
             type: "object",
             properties: {
               project_path: {
                 type: "string",
-                description: "Full Windows path where project should be created (e.g., E:\\Eisa\\MyProject or C:\\Users\\Mohd Eisa\\Documents\\Projects\\MyApp). ALWAYS ask user for this path."
+                description: "Full Windows path where project should be created (e.g., E:\\Eisa\\MyProject or C:\\Users\\Mohd Eisa\\Documents\\Projects\\MyApp). ALWAYS ask user for this path first."
               },
               description: {
                 type: "string",
-                description: "Detailed description of what the project should do, including technology stack (react, html, node, python, etc.)"
+                description: "Detailed description of what the project should do, including all features and requirements"
               },
               project_type: {
                 type: "string",
@@ -535,7 +535,7 @@ PERSONALITY MODE (from Settings): ${ai_response_style || 'balanced'}
         type: "function",
         function: {
           name: "capture_screenshot",
-          description: "Capture a screenshot of the entire screen. Supports delay (e.g., 'take screenshot after 10 seconds'). Screenshots are saved to C:\\Users\\Mohd Eisa\\Pictures\\Screenshots by default.",
+          description: "Capture a screenshot of the user's computer screen and save it as an image file. ONLY use this tool when user explicitly asks to take a screenshot, screen capture, or save what's on their screen. DO NOT use for project creation, document creation, or any other task - those have their own dedicated tools.",
           parameters: {
             type: "object",
             properties: {
@@ -545,7 +545,7 @@ PERSONALITY MODE (from Settings): ${ai_response_style || 'balanced'}
               },
               save_path: {
                 type: "string",
-                description: "Optional custom path to save screenshot. Default: C:\\Users\\Mohd Eisa\\Pictures\\Screenshots"
+                description: "Optional custom path to save screenshot. Default: user's Screenshots folder"
               }
             }
           }

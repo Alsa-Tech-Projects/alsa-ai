@@ -297,6 +297,46 @@ const Settings = () => {
                   </div>
 
                   <div>
+                    <Label htmlFor="voice-gender">Voice Gender</Label>
+                    <Select
+                      value={localStorage.getItem('alsa_voice_preferences') ? JSON.parse(localStorage.getItem('alsa_voice_preferences') || '{}').gender || 'male' : 'male'}
+                      onValueChange={(value) => {
+                        const current = JSON.parse(localStorage.getItem('alsa_voice_preferences') || '{"gender":"male","language":"hinglish"}');
+                        localStorage.setItem('alsa_voice_preferences', JSON.stringify({ ...current, gender: value }));
+                      }}
+                    >
+                      <SelectTrigger id="voice-gender" className="mt-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male (Hinglish)</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="auto">Auto</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="voice-language">Voice Language</Label>
+                    <Select
+                      value={localStorage.getItem('alsa_voice_preferences') ? JSON.parse(localStorage.getItem('alsa_voice_preferences') || '{}').language || 'hinglish' : 'hinglish'}
+                      onValueChange={(value) => {
+                        const current = JSON.parse(localStorage.getItem('alsa_voice_preferences') || '{"gender":"male","language":"hinglish"}');
+                        localStorage.setItem('alsa_voice_preferences', JSON.stringify({ ...current, language: value }));
+                      }}
+                    >
+                      <SelectTrigger id="voice-language" className="mt-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="hinglish">Hinglish (Hindi + English)</SelectItem>
+                        <SelectItem value="english">English Only</SelectItem>
+                        <SelectItem value="hindi">Hindi Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
                     <Label htmlFor="voice-name">Voice Character</Label>
                     <Select
                       value={preferences.voice_name}
