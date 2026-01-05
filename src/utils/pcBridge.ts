@@ -741,6 +741,70 @@ export const captureScreenshot = async (
 // Screen recording functions
 let recordingMediaRecorder: MediaRecorder | null = null;
 let recordingChunks: Blob[] = [];
+let recordingStream: MediaStream | null = null;
+
+// Save recording to disk via PC Bridge
+export const saveRecordingToDisk = async (
+  blob: Blob, 
+  savePath: string
+): Promise<{ success: boolean; message: string; filePath?: string }> => {
+  try {
+    // Convert blob to base64
+    const arrayBuffer = await blob.arrayBuffer();
+    const base64 = btoa(
+      new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+    );
+    
+    const filename = `recording-${Date.now()}.webm`;
+    
+    const response = await fetch(`${BRIDGE_URL}/save_recording`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ 
+        save_path: savePath,
+        filename,
+        data: base64
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.message || 'Failed to save recording');
+    }
+    
+    return { 
+      success: true, 
+      message: data.message || 'Recording saved',
+      filePath: data.file_path || `${savePath}\\${filename}`
+    };
+  } catch (error: any) {
+    console.error('Failed to save recording via PC Bridge:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to save recording to disk'
+    };
+  }
+};
+
+// Open folder in file explorer
+export const openFolder = async (folderPath: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    const response = await fetch(`${BRIDGE_URL}/open_folder`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ folder_path: folderPath })
+    });
+    const data = await response.json();
+    return { 
+      success: data.success ?? true, 
+      message: data.message || 'Folder opened'
+    };
+  } catch (error: any) {
+    // Fallback: try using run command
+    return await runCommand(`explorer "${folderPath}"`);
+  }
+};
 
 export const startScreenRecording = async (durationSeconds?: number): Promise<{ success: boolean; message: string }> => {
   try {
@@ -749,6 +813,7 @@ export const startScreenRecording = async (durationSeconds?: number): Promise<{ 
       audio: true
     });
 
+    recordingStream = stream;
     recordingChunks = [];
     recordingMediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
     
@@ -760,16 +825,49 @@ export const startScreenRecording = async (durationSeconds?: number): Promise<{ 
 
     recordingMediaRecorder.onstop = async () => {
       const blob = new Blob(recordingChunks, { type: 'video/webm' });
-      const url = URL.createObjectURL(blob);
       
-      // Download the recording
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `screen-recording-${Date.now()}.webm`;
-      a.click();
+      // Try to save to settings path via PC Bridge
+      const outputPaths = localStorage.getItem('alsa_output_paths');
+      let savePath = 'C:\\Users\\Mohd Eisa\\Videos\\Recordings';
+      
+      if (outputPaths) {
+        try {
+          const parsed = JSON.parse(outputPaths);
+          if (parsed.recording) {
+            savePath = parsed.recording;
+          }
+        } catch (e) {
+          console.error('Failed to parse output paths:', e);
+        }
+      }
+      
+      // Try to save via PC Bridge
+      const saveResult = await saveRecordingToDisk(blob, savePath);
+      
+      if (!saveResult.success) {
+        // Fallback: Download via browser
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `screen-recording-${Date.now()}.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
       
       // Stop all tracks
-      stream.getTracks().forEach(track => track.stop());
+      if (recordingStream) {
+        recordingStream.getTracks().forEach(track => track.stop());
+        recordingStream = null;
+      }
+      
+      // Dispatch event for UI to show "Open Folder" button
+      window.dispatchEvent(new CustomEvent('recording-saved', { 
+        detail: { 
+          success: saveResult.success, 
+          filePath: saveResult.filePath,
+          folderPath: savePath
+        } 
+      }));
     };
 
     recordingMediaRecorder.start();

@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { supabase } from '@/integrations/supabase/client';
-import { checkBridgeConnection, executeSystemCommand, scanSystem, SystemScanResult, captureScreenshot, startScreenRecording, stopScreenRecording, parseNaturalLanguage, WEBSITES, createProject, createPowerPoint, createExcel, createDatabase, executePythonFile, executeCmdCommand, runCommand, checkInstallation, sendCommand, adbConnect, adbCommand, closeWindow } from '@/utils/pcBridge';
+import { checkBridgeConnection, executeSystemCommand, scanSystem, SystemScanResult, captureScreenshot, startScreenRecording, stopScreenRecording, parseNaturalLanguage, WEBSITES, createProject, createPowerPoint, createExcel, createDatabase, executePythonFile, executeCmdCommand, runCommand, checkInstallation, sendCommand, adbConnect, adbCommand, closeWindow, openFolder } from '@/utils/pcBridge';
 import ChatMessage from '@/components/ChatMessage';
 import MemoryManager from '@/components/MemoryManager';
 import TranscriptionFeedback from '@/components/TranscriptionFeedback';
@@ -58,6 +58,7 @@ const Index = () => {
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [backupKeyActive, setBackupKeyActive] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingSavedPath, setRecordingSavedPath] = useState<string | null>(null);
   
   const { toast } = useToast();
   const {
@@ -123,6 +124,7 @@ const Index = () => {
       });
       speak('Recording stopped and saved');
     } else {
+      setRecordingSavedPath(null); // Clear previous path
       const result = await startScreenRecording(60); // 60 seconds max
       if (result.success) {
         setIsRecording(true);
@@ -140,6 +142,34 @@ const Index = () => {
       }
     }
   }, [isRecording, toast, speak]);
+
+  // Listen for recording saved event
+  useEffect(() => {
+    const handleRecordingSaved = (event: CustomEvent) => {
+      const { success, folderPath } = event.detail;
+      if (success && folderPath) {
+        setRecordingSavedPath(folderPath);
+        toast({
+          title: 'Recording Saved',
+          description: (
+            <div className="flex flex-col gap-2">
+              <span>Saved to: {folderPath}</span>
+              <button 
+                className="bg-primary text-primary-foreground px-3 py-1 rounded text-sm hover:bg-primary/90"
+                onClick={() => openFolder(folderPath)}
+              >
+                Open Folder
+              </button>
+            </div>
+          ) as any,
+          duration: 10000
+        });
+      }
+    };
+
+    window.addEventListener('recording-saved', handleRecordingSaved as EventListener);
+    return () => window.removeEventListener('recording-saved', handleRecordingSaved as EventListener);
+  }, [toast]);
 
   // Keyboard shortcuts: Alt+V for voice, Ctrl+Shift+O for new chat
   useEffect(() => {
@@ -378,9 +408,37 @@ const Index = () => {
       }
     }
 
-    // Check for website opening (no PC Bridge needed for web-based)
+    // Check for website opening - IMPROVED: Use word boundaries to avoid matching app names like "excel"
+    // Only match websites when explicitly requested or using full website names
+    const isExplicitWebsiteRequest = /\b(open|visit|go to|browse|show me)\s+(website|site|webpage)\b/i.test(lowerText) ||
+                                      /\b(open|visit|go to)\s+\w+\.(com|org|net|io|co|in)\b/i.test(lowerText);
+    
     for (const [key, site] of Object.entries(WEBSITES)) {
-      if (lowerText.includes(key) || lowerText.includes(site.name.toLowerCase())) {
+      // Use word boundary matching to avoid false positives
+      // e.g., "excel" should NOT match "x" website
+      const keyPattern = new RegExp(`\\b${key}\\b`, 'i');
+      const namePattern = new RegExp(`\\b${site.name.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+      
+      // Skip single-character keys like 'x' unless explicitly requesting website
+      const isSingleCharKey = key.length === 1;
+      
+      const matchesKey = keyPattern.test(lowerText);
+      const matchesName = namePattern.test(lowerText);
+      
+      // For single-char keys, require explicit website request or full name match
+      if (isSingleCharKey && !isExplicitWebsiteRequest && !matchesName) {
+        continue;
+      }
+      
+      if (matchesKey || matchesName) {
+        // Double-check: If the command looks like an app command, skip
+        const appKeywords = ['file explorer', 'explorer', 'notepad', 'word', 'excel', 'powerpoint', 'paint', 'calculator', 'cmd', 'terminal'];
+        const looksLikeAppCommand = appKeywords.some(app => lowerText.includes(app));
+        
+        if (looksLikeAppCommand && !isExplicitWebsiteRequest) {
+          continue; // Let PC Bridge handle it
+        }
+        
         const response = `Opening ${site.name}`;
         setMessages(prev => [...prev, { role: 'assistant', content: response }]);
         speak(response);
@@ -397,9 +455,8 @@ const Index = () => {
       setIsTyping(true);
       const memory = getMemory();
 
-      // Check if server key works, fallback to backup
-      let apiEndpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
-      let useBackup = false;
+      // API endpoint
+      const apiEndpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
       const response = await fetch(apiEndpoint, {
         method: 'POST',
@@ -419,21 +476,60 @@ const Index = () => {
       });
 
       if (!response.ok) {
-        // Try backup API key if available
-        const savedKeys = localStorage.getItem('alsa_backup_api_keys');
-        if (savedKeys) {
-          const keys = JSON.parse(savedKeys);
-          const geminiKey = keys.find((k: any) => k.name.toLowerCase().includes('gemini') || k.name.toLowerCase().includes('google'));
-          if (geminiKey) {
-            useBackup = true;
-            setBackupKeyActive(true);
-            // Would need to implement direct Gemini API call here
+        const errorStatus = response.status;
+        
+        // Try backup API key if available (for 429, 402, 500 errors)
+        if ([429, 402, 500, 503].includes(errorStatus)) {
+          const savedKeys = localStorage.getItem('alsa_backup_api_keys');
+          if (savedKeys) {
+            const keys = JSON.parse(savedKeys);
+            const geminiKey = keys.find((k: any) => 
+              k.name.toLowerCase().includes('gemini') || 
+              k.name.toLowerCase().includes('google')
+            );
+            
+            if (geminiKey) {
+              setBackupKeyActive(true);
+              toast({
+                title: 'Using Backup API Key',
+                description: `Primary API unavailable (${errorStatus}). Using your backup Gemini key.`
+              });
+              
+              // Call Gemini API directly with backup key
+              const backupResponse = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey.key}`,
+                {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    contents: [...messages, userMessage].map(m => ({
+                      role: m.role === 'assistant' ? 'model' : 'user',
+                      parts: [{ text: m.content }]
+                    })),
+                    generationConfig: { temperature: 0.7 }
+                  })
+                }
+              );
+              
+              if (backupResponse.ok) {
+                const backupData = await backupResponse.json();
+                const backupText = backupData.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from backup API';
+                
+                setMessages(prev => [...prev, { role: 'assistant', content: backupText }]);
+                speak(backupText);
+                setIsTyping(false);
+                setBackupKeyActive(false);
+                
+                if (user) {
+                  await saveConversation(userMessage, { role: 'assistant', content: backupText });
+                }
+                return;
+              }
+            }
           }
         }
         
-        if (!useBackup) {
-          throw new Error('Failed to get response');
-        }
+        throw new Error(`API error: ${errorStatus}`);
       }
 
       if (!response.body) {
