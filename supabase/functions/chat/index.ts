@@ -130,7 +130,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { messages, memory, ai_response_style, files } = body; // files = array of { name, type, data (base64) }
+    const { messages, memory, conversationContext, ai_response_style, files } = body; // files = array of { name, type, data (base64) }
     
     // Use Lovable AI (auto-provisioned) - fallback to Gemini if available
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -197,6 +197,9 @@ PERSONAL QUESTIONS:
 
 MEMORY ACCESS:
 ${memory ? `You have access to user's saved memories: ${JSON.stringify(memory)}. Use this information naturally in conversation.` : 'No memories saved yet.'}
+
+CONVERSATION CONTEXT (learned from past interactions):
+${conversationContext || 'No previous context available.'}
 
 MULTILINGUAL SUPPORT:
 - You can understand and respond in multiple languages including English, Hindi, Urdu, Arabic, Spanish, French, German, Chinese, Japanese, and more

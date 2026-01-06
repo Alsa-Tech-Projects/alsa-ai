@@ -11,6 +11,7 @@ import ChatMessage from '@/components/ChatMessage';
 import MemoryManager from '@/components/MemoryManager';
 import TranscriptionFeedback from '@/components/TranscriptionFeedback';
 import { getMemory, addMemory, parseMemoryCommand, getTimeBasedGreeting } from '@/utils/memoryManager';
+import { parseAndLearn, getAIContext, trackInteraction, addConversationSummary } from '@/utils/conversationMemory';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -20,8 +21,8 @@ import Sidebar from '@/components/Sidebar';
 import RightPanel from '@/components/RightPanel';
 import CircularSiriWave from '@/components/CircularSiriWave';
 import FileUpload from '@/components/FileUpload';
+import VoiceAssistantLanding from '@/components/VoiceAssistantLanding';
 import { useIsMobile } from '@/hooks/use-mobile';
-
 interface FileAttachment {
   name: string;
   type: string;
@@ -59,6 +60,8 @@ const Index = () => {
   const [backupKeyActive, setBackupKeyActive] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSavedPath, setRecordingSavedPath] = useState<string | null>(null);
+  const [showLandingPage, setShowLandingPage] = useState(true);
+  const [landingTranscript, setLandingTranscript] = useState('');
   
   const { toast } = useToast();
   const {
@@ -377,6 +380,10 @@ const Index = () => {
 
     const lowerText = text.toLowerCase();
 
+    // Learn from user message for conversation memory
+    parseAndLearn(text);
+    trackInteraction(text);
+
     // Handle memory commands
     const memoryData = parseMemoryCommand(text);
     if (memoryData) {
@@ -471,6 +478,7 @@ const Index = () => {
             files: m.files // Include file attachments for multimodal analysis
           })),
           memory,
+          conversationContext: getAIContext(), // Add conversation memory context
           ai_response_style: localStorage.getItem('alsa_ai_response_style') || 'balanced'
         })
       });
@@ -776,6 +784,25 @@ const Index = () => {
   };
 
   const hasMessages = messages.length > 0;
+
+  // Handle landing page start chat
+  const handleStartChat = useCallback(() => {
+    setShowLandingPage(false);
+    if (landingTranscript) {
+      setInputText(landingTranscript);
+      setTimeout(() => handleSubmit(landingTranscript), 100);
+    }
+  }, [landingTranscript]);
+
+  // Show landing page if no messages and enabled
+  if (showLandingPage && !hasMessages && !urlConversationId) {
+    return (
+      <VoiceAssistantLanding 
+        onStartChat={handleStartChat}
+        onTranscriptChange={setLandingTranscript}
+      />
+    );
+  }
 
   // Mobile UI
   if (isMobile) {
