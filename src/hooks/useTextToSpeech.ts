@@ -1,37 +1,23 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 
-// Clean text for speech - remove markdown, emojis, special characters
-const cleanTextForSpeech = (text: string): string => {
-  return text
-    // Remove markdown formatting
-    .replace(/\*+/g, '') // asterisks
-    .replace(/_+/g, '') // underscores
-    .replace(/`+/g, '') // backticks
-    .replace(/#+\s*/g, '') // headers
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links [text](url) -> text
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '') // images ![alt](url)
-    .replace(/^>\s*/gm, '') // blockquotes
-    .replace(/^[-*+]\s+/gm, '') // list items
-    .replace(/^\d+\.\s+/gm, '') // numbered lists
-    .replace(/---+/g, '') // horizontal rules
-    .replace(/\|\s*[-:]+\s*\|/g, '') // table separators
-    // Remove ALL emojis using comprehensive regex
-    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
-    // Remove remaining emoji-like symbols
-    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
-    .replace(/[\u{2600}-\u{27BF}]/gu, '')
-    // Remove special symbols and bullets
-    .replace(/[•●○◆◇■□▪▫▲△▼▽◀▶►◄→←↑↓↔↕↖↗↘↙]/g, '')
-    .replace(/[✓✔✕✖✗✘✚✛✜✝✞✟✠✡✢✣✤✥✦✧✨✩✪✫✬✭✮✯✰✱✲✳✴✵✶✷✸✹✺✻✼✽✾✿❀❁❂❃❄❅❆❇❈❉❊❋]/g, '')
-    .replace(/[❌❎❓❔❕❖❗❘❙❚❛❜❝❞❟❠❡❢❣❤❥❦❧]/g, '')
-    .replace(/[☀☁☂☃☄★☆☇☈☉☊☋☌☍☎☏☐☑☒☓☔☕☖☗☘☙☚☛☜☝☞☟☠☡☢☣☤☥☦☧☨☩☪☫☬☭☮☯]/g, '')
-    // Clean up code blocks but keep the content
-    .replace(/```[\w]*\n?/g, '') // code fence markers
-    // Clean up extra whitespace
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/\s+/g, ' ')
-    .trim();
-};
+export type VoiceGender = 'male' | 'female' | 'auto';
+
+export interface VoiceOptions {
+  gender?: VoiceGender;
+  language?: string;
+}
+
+// Male Hinglish/Indian voice names
+const MALE_VOICE_NAMES = [
+  'ravi', 'prem', 'hemant', 'kalpana', 'google हिन्दी', 'microsoft ravi',
+  'male', 'indian male', 'en-in male', 'hi-in male'
+];
+
+// Female Hinglish/Indian voice names
+const FEMALE_VOICE_NAMES = [
+  'heera', 'priya', 'swara', 'neha', 'google हिन्दी', 'microsoft heera',
+  'female', 'indian female', 'en-in female', 'hi-in female'
+];
 
 // Detect if text contains Hindi/Devanagari characters
 const containsHindi = (text: string): boolean => {
@@ -53,7 +39,8 @@ const isHinglishContent = (text: string): boolean => {
     'yaar', 'dost', 'pyaar', 'mohabbat', 'dil', 'jaan', 'zindagi', 'khushi',
     'matlab', 'samajh', 'pata', 'maloom', 'zaroor', 'bilkul', 'sahi', 'galat',
     'kholo', 'kholna', 'band', 'kardo', 'karden', 'dijiye', 'kijiye', 'lijiye',
-    'chaliye', 'jaiye', 'aaiye', 'baitho', 'suno', 'dekho', 'padho', 'likho'
+    'chaliye', 'jaiye', 'aaiye', 'baitho', 'suno', 'dekho', 'padho', 'likho',
+    'mast', 'zabardast', 'kamaal', 'jhakkas', 'bindaas', 'pataka', 'dhamaka'
   ];
   
   const lowerText = text.toLowerCase();
@@ -83,98 +70,67 @@ const detectLanguage = (text: string): string => {
   return 'en-US';
 };
 
-// Enhanced emotion detection with more feelings
-interface EmotionSettings {
-  pitch: number;
-  rate: number;
-  volume: number;
-  emotion: string;
-}
-
-const detectEmotion = (text: string): EmotionSettings => {
+// Enhanced emotion detection with Hinglish keywords
+const detectEmotion = (text: string): { pitch: number; rate: number } => {
   const lowerText = text.toLowerCase();
   
-  // Excited/Happy - upbeat, energetic tone
-  if (/(!{2,}|wow|amazing|great|awesome|fantastic|excellent|yay|hurray|wonderful|incredible|brilliant|congratulations|congrats|party|celebrate|happy|joy|खुशी|खुश|मज़ा|badhai|mubarak|mazaa)/i.test(lowerText)) {
-    return { pitch: 1.3, rate: 1.15, volume: 1.0, emotion: 'happy' };
+  // Excited/Happy - includes more Hinglish
+  if (/(!{2,}|wow|amazing|great|awesome|fantastic|excellent|yay|hurray|खुशी|खुश|मज़ा|mast|zabardast|kamaal|jhakkas|bindaas|dhamaka|pataka)/i.test(lowerText)) {
+    return { pitch: 1.2, rate: 1.1 };
   }
   
-  // Loving/Caring - warm, gentle tone
-  if (/love|dear|care|support|together|miss|hug|kiss|sweetheart|honey|darling|pyaar|mohabbat|dil|jaan|jaanu|baby/i.test(lowerText)) {
-    return { pitch: 1.15, rate: 0.88, volume: 0.92, emotion: 'loving' };
+  // Sad/Sympathetic - includes Hinglish
+  if (/sorry|unfortunately|sadly|regret|condolence|दुख|अफ़सोस|माफ़|udaas|takleef|pareshaan|dukhi|rona|aansu/i.test(lowerText)) {
+    return { pitch: 0.9, rate: 0.9 };
   }
   
-  // Sad/Sympathetic - softer, slower, lower tone
-  if (/sorry|unfortunately|sadly|regret|condolence|miss you|loss|passed away|heartbroken|crying|tears|pain|hurt|दुख|अफ़सोस|माफ़|rona|dard|takleef|udaas/i.test(lowerText)) {
-    return { pitch: 0.8, rate: 0.75, volume: 0.8, emotion: 'sad' };
+  // Urgent/Warning - includes Hinglish
+  if (/warning|urgent|important|critical|danger|alert|emergency|चेतावनी|ख़तरा|jaldi|fauran|abhi|turant|fatafat/i.test(lowerText)) {
+    return { pitch: 1.1, rate: 1.15 };
   }
   
-  // Angry/Frustrated - stronger, slightly faster, intense
-  if (/angry|frustrated|annoyed|irritated|upset|furious|hate|stupid|idiot|damn|what the|gussa|naraz|pagal/i.test(lowerText)) {
-    return { pitch: 1.15, rate: 1.15, volume: 1.0, emotion: 'angry' };
+  // Question
+  if (/\?/.test(text)) {
+    return { pitch: 1.05, rate: 1.0 };
   }
   
-  // Urgent/Warning - intense, faster tone
-  if (/warning|urgent|important|critical|danger|alert|emergency|immediately|now|hurry|quick|fast|jaldi|abhi|turant|चेतावनी|ख़तरा/i.test(lowerText)) {
-    return { pitch: 1.2, rate: 1.25, volume: 1.0, emotion: 'urgent' };
-  }
-  
-  // Calm/Reassuring - steady, soothing tone
-  if (/calm|relax|don't worry|it's okay|no problem|peace|safe|breathe|easy|slow down|fikar mat|tension mat|theek hai|sab theek/i.test(lowerText)) {
-    return { pitch: 0.92, rate: 0.8, volume: 0.88, emotion: 'calm' };
-  }
-  
-  // Curious/Question - slightly higher pitch
-  if (/\?|what|how|why|when|where|who|which|kya|kaise|kyun|kab|kahan|kaun/i.test(lowerText)) {
-    return { pitch: 1.12, rate: 0.95, volume: 0.95, emotion: 'curious' };
-  }
-  
-  // Confident/Assertive - clear, steady, strong
-  if (/definitely|absolutely|certainly|of course|sure|guaranteed|promise|bilkul|zaroor|pakka|definitely|100%/i.test(lowerText)) {
-    return { pitch: 1.08, rate: 1.0, volume: 1.0, emotion: 'confident' };
-  }
-  
-  // Surprised/Shocked - higher pitch, slower
-  if (/oh my|really|seriously|no way|what!|shocked|surprised|unbelievable|kya!|sach|arey|arrey|oho/i.test(lowerText)) {
-    return { pitch: 1.25, rate: 0.9, volume: 1.0, emotion: 'surprised' };
-  }
-  
-  // Thoughtful/Explaining - moderate, clear
-  if (/let me explain|basically|actually|in other words|the thing is|samjho|matlab|dekho|suniye/i.test(lowerText)) {
-    return { pitch: 1.0, rate: 0.9, volume: 0.95, emotion: 'thoughtful' };
-  }
-  
-  // Default - neutral, friendly
-  return { pitch: 1.0, rate: 0.92, volume: 0.95, emotion: 'neutral' };
+  // Calm/Informative (default)
+  return { pitch: 1.0, rate: 0.95 };
 };
 
-// Get voice preferences from localStorage
-interface VoicePreferences {
-  gender: 'male' | 'female' | 'auto';
-  language: 'hinglish' | 'english' | 'hindi';
-  emotionEnabled: boolean;
-}
+// Find voice by gender preference
+const findVoiceByGender = (
+  voices: SpeechSynthesisVoice[],
+  gender: VoiceGender,
+  isHinglish: boolean
+): SpeechSynthesisVoice | null => {
+  const targetNames = gender === 'male' ? MALE_VOICE_NAMES : FEMALE_VOICE_NAMES;
+  
+  // For Hinglish, prioritize Indian English voices
+  const langPriority = isHinglish 
+    ? ['en-IN', 'hi-IN', 'en-US', 'en-GB'] 
+    : ['en-US', 'en-GB', 'en-IN'];
 
-const getVoicePreferences = (): VoicePreferences => {
-  try {
-    const prefs = localStorage.getItem('alsa_voice_preferences');
-    if (prefs) {
-      const parsed = JSON.parse(prefs);
-      return {
-        gender: parsed.gender || 'male',
-        language: parsed.language || 'hinglish',
-        emotionEnabled: parsed.emotionEnabled !== false
-      };
+  for (const lang of langPriority) {
+    // Try to find voice matching gender keywords
+    for (const namePart of targetNames) {
+      const match = voices.find(v => 
+        v.lang.startsWith(lang.split('-')[0]) &&
+        v.name.toLowerCase().includes(namePart.toLowerCase())
+      );
+      if (match) return match;
     }
-  } catch (e) {
-    console.error('Error loading voice preferences:', e);
+    
+    // Fallback: any voice for this language
+    const langMatch = voices.find(v => v.lang === lang || v.lang.startsWith(lang.split('-')[0]));
+    if (langMatch) return langMatch;
   }
-  return { gender: 'male', language: 'hinglish', emotionEnabled: true };
+
+  return null;
 };
 
 export const useTextToSpeech = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [currentEmotion, setCurrentEmotion] = useState<string>('neutral');
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
 
@@ -196,144 +152,79 @@ export const useTextToSpeech = () => {
     };
   }, []);
 
-  const speak = useCallback((text: string, forceLang?: string) => {
+  const speak = useCallback((text: string, options?: VoiceOptions) => {
     try {
-      // Stop any ongoing speech
       window.speechSynthesis.cancel();
-      
-      // Clean the text before speaking
-      const cleanedText = cleanTextForSpeech(text);
-      
-      if (!cleanedText.trim()) {
-        console.log('No speakable text after cleaning');
-        return;
-      }
-      
       setIsSpeaking(true);
 
-      const utterance = new SpeechSynthesisUtterance(cleanedText);
+      const utterance = new SpeechSynthesisUtterance(text);
       synthRef.current = utterance;
 
-      // Detect language and emotion
-      const detectedLang = forceLang || detectLanguage(text);
-      const voicePrefs = getVoicePreferences();
-      const emotionSettings = voicePrefs.emotionEnabled ? detectEmotion(text) : { pitch: 1.0, rate: 0.92, volume: 0.95, emotion: 'neutral' };
-      
-      setCurrentEmotion(emotionSettings.emotion);
+      const detectedLang = options?.language || detectLanguage(text);
+      const emotion = detectEmotion(text);
+      const gender = options?.gender || 'auto';
+      const isHinglish = isHinglishContent(text) || detectedLang === 'hi-IN';
       
       // Set voice properties with emotion
-      utterance.rate = emotionSettings.rate;
-      utterance.pitch = emotionSettings.pitch;
-      utterance.volume = emotionSettings.volume;
+      utterance.rate = emotion.rate;
+      utterance.pitch = emotion.pitch;
+      utterance.volume = 1.0;
 
-      // Get available voices
       const voices = window.speechSynthesis.getVoices();
-      
-      // Find best voice for language with gender preference
       let selectedVoice: SpeechSynthesisVoice | null = null;
       
-      const preferMale = voicePrefs.gender === 'male' || voicePrefs.gender === 'auto';
+      // Try to find gender-specific voice
+      if (gender !== 'auto') {
+        selectedVoice = findVoiceByGender(voices, gender, isHinglish);
+      }
       
-      if (detectedLang === 'hi-IN' || isHinglishContent(text) || voicePrefs.language === 'hinglish' || voicePrefs.language === 'hindi') {
-        // For Hinglish/Hindi - prioritize male Indian English/Hindi voices
-        const hindiVoices = voices.filter(v => 
-          v.lang.startsWith('hi') || 
-          v.lang === 'en-IN' ||
-          v.name.toLowerCase().includes('india') ||
-          v.name.toLowerCase().includes('hindi')
+      // Fallback: Hinglish-optimized voice selection
+      if (!selectedVoice && isHinglish) {
+        selectedVoice = voices.find(v => 
+          v.lang === 'en-IN' || v.name.toLowerCase().includes('india')
+        ) || voices.find(v => 
+          v.lang.startsWith('hi') || v.name.toLowerCase().includes('hindi')
         );
-        
-        if (preferMale) {
-          selectedVoice = hindiVoices.find(v => 
-            v.name.toLowerCase().includes('male') ||
-            v.name.toLowerCase().includes('ravi') ||
-            v.name.toLowerCase().includes('hemant') ||
-            v.name.toLowerCase().includes('microsoft ravi') ||
-            (!v.name.toLowerCase().includes('female') && !v.name.toLowerCase().includes('lekha'))
-          ) || hindiVoices[0];
-        } else {
-          selectedVoice = hindiVoices.find(v => 
-            v.name.toLowerCase().includes('female') ||
-            v.name.toLowerCase().includes('lekha') ||
-            v.name.toLowerCase().includes('heera')
-          ) || hindiVoices[0];
-        }
-        
-        // Fallback to any Indian voice
-        if (!selectedVoice) {
-          selectedVoice = voices.find(v => v.lang === 'en-IN') || 
-                          voices.find(v => v.lang.startsWith('hi'));
-        }
         
         // Adjust rate for Hinglish - slightly slower for clarity
-        utterance.rate = Math.max(0.8, emotionSettings.rate - 0.05);
+        utterance.rate = Math.max(0.85, emotion.rate - 0.1);
         utterance.lang = selectedVoice?.lang.startsWith('hi') ? 'hi-IN' : 'en-IN';
-      } else {
-        // Find voice matching detected language with gender preference
-        const langVoices = voices.filter(v => 
-          v.lang === detectedLang || v.lang.startsWith(detectedLang.split('-')[0])
-        );
-        
-        if (preferMale) {
-          selectedVoice = langVoices.find(v => 
-            v.name.toLowerCase().includes('male') ||
-            v.name.toLowerCase().includes('david') ||
-            v.name.toLowerCase().includes('mark') ||
-            v.name.toLowerCase().includes('james') ||
-            v.name.toLowerCase().includes('guy') ||
-            (!v.name.toLowerCase().includes('female') && !v.name.toLowerCase().includes('zira') && !v.name.toLowerCase().includes('samantha'))
-          ) || langVoices[0];
-        } else {
-          selectedVoice = langVoices.find(v => 
-            v.name.toLowerCase().includes('female') ||
-            v.name.toLowerCase().includes('zira') ||
-            v.name.toLowerCase().includes('samantha') ||
-            v.name.toLowerCase().includes('susan')
-          ) || langVoices[0];
-        }
-        
+      }
+      
+      // Standard language matching
+      if (!selectedVoice) {
+        selectedVoice = voices.find(v => v.lang === detectedLang) ||
+                        voices.find(v => v.lang.startsWith(detectedLang.split('-')[0]));
         utterance.lang = detectedLang;
       }
       
-      // Prefer Google or Microsoft voices for quality
+      // Prefer quality voices (Google/Microsoft)
       if (!selectedVoice) {
-        const qualityVoices = voices.filter(v => 
+        const qualityVoice = voices.find(v => 
           v.lang.startsWith(detectedLang.split('-')[0]) &&
           (v.name.includes('Google') || v.name.includes('Microsoft'))
         );
-        
-        if (preferMale) {
-          selectedVoice = qualityVoices.find(v => !v.name.toLowerCase().includes('female')) || qualityVoices[0];
-        } else {
-          selectedVoice = qualityVoices.find(v => v.name.toLowerCase().includes('female')) || qualityVoices[0];
-        }
+        if (qualityVoice) selectedVoice = qualityVoice;
       }
       
-      // Fallback to any English voice
+      // Final fallback
       if (!selectedVoice) {
-        const englishVoices = voices.filter(v => v.lang.startsWith('en'));
-        if (preferMale) {
-          selectedVoice = englishVoices.find(v => !v.name.toLowerCase().includes('female')) || englishVoices[0] || voices[0];
-        } else {
-          selectedVoice = englishVoices.find(v => v.name.toLowerCase().includes('female')) || englishVoices[0] || voices[0];
-        }
+        selectedVoice = voices.find(v => v.lang.startsWith('en')) || voices[0];
       }
       
       if (selectedVoice) {
         utterance.voice = selectedVoice;
-        console.log(`🎤 Voice: ${selectedVoice.name} | Emotion: ${emotionSettings.emotion} | Pitch: ${emotionSettings.pitch.toFixed(2)} | Rate: ${emotionSettings.rate.toFixed(2)}`);
+        console.log(`Using voice: ${selectedVoice.name} (${selectedVoice.lang}) | Gender: ${gender} | Pitch: ${emotion.pitch}, Rate: ${utterance.rate}`);
       }
 
       utterance.onend = () => {
         setIsSpeaking(false);
-        setCurrentEmotion('neutral');
         synthRef.current = null;
       };
 
       utterance.onerror = (event) => {
         console.error('Text-to-speech error:', event);
         setIsSpeaking(false);
-        setCurrentEmotion('neutral');
         synthRef.current = null;
       };
 
@@ -348,8 +239,7 @@ export const useTextToSpeech = () => {
     window.speechSynthesis.cancel();
     synthRef.current = null;
     setIsSpeaking(false);
-    setCurrentEmotion('neutral');
   }, []);
 
-  return { speak, stop, isSpeaking, currentEmotion, availableVoices };
+  return { speak, stop, isSpeaking, availableVoices };
 };
