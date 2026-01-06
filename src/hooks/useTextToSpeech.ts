@@ -15,61 +15,12 @@ const cleanTextForSpeech = (text: string): string => {
     .replace(/^\d+\.\s+/gm, '') // numbered lists
     .replace(/---+/g, '') // horizontal rules
     .replace(/\|\s*[-:]+\s*\|/g, '') // table separators
-    // Remove emojis (all Unicode emoji ranges)
-    .replace(/[\u{1F600}-\u{1F64F}]/gu, '') // emoticons
-    .replace(/[\u{1F300}-\u{1F5FF}]/gu, '') // misc symbols & pictographs
-    .replace(/[\u{1F680}-\u{1F6FF}]/gu, '') // transport & map symbols
-    .replace(/[\u{1F1E0}-\u{1F1FF}]/gu, '') // flags
-    .replace(/[\u{2600}-\u{26FF}]/gu, '') // misc symbols
-    .replace(/[\u{2700}-\u{27BF}]/gu, '') // dingbats
-    .replace(/[\u{1F900}-\u{1F9FF}]/gu, '') // supplemental symbols
-    .replace(/[\u{1FA00}-\u{1FA6F}]/gu, '') // chess symbols
-    .replace(/[\u{1FA70}-\u{1FAFF}]/gu, '') // symbols extended-A
-    .replace(/[\u{231A}-\u{231B}]/gu, '') // watch, hourglass
-    .replace(/[\u{23E9}-\u{23F3}]/gu, '') // media controls
-    .replace(/[\u{23F8}-\u{23FA}]/gu, '') // media controls
-    .replace(/[\u{25AA}-\u{25AB}]/gu, '') // squares
-    .replace(/[\u{25B6}]/gu, '') // play button
-    .replace(/[\u{25C0}]/gu, '') // reverse button
-    .replace(/[\u{25FB}-\u{25FE}]/gu, '') // squares
-    .replace(/[\u{2614}-\u{2615}]/gu, '') // umbrella, coffee
-    .replace(/[\u{2648}-\u{2653}]/gu, '') // zodiac
-    .replace(/[\u{267F}]/gu, '') // wheelchair
-    .replace(/[\u{2693}]/gu, '') // anchor
-    .replace(/[\u{26A1}]/gu, '') // high voltage
-    .replace(/[\u{26AA}-\u{26AB}]/gu, '') // circles
-    .replace(/[\u{26BD}-\u{26BE}]/gu, '') // sports
-    .replace(/[\u{26C4}-\u{26C5}]/gu, '') // weather
-    .replace(/[\u{26CE}]/gu, '') // ophiuchus
-    .replace(/[\u{26D4}]/gu, '') // no entry
-    .replace(/[\u{26EA}]/gu, '') // church
-    .replace(/[\u{26F2}-\u{26F3}]/gu, '') // fountain, golf
-    .replace(/[\u{26F5}]/gu, '') // sailboat
-    .replace(/[\u{26FA}]/gu, '') // tent
-    .replace(/[\u{26FD}]/gu, '') // fuel pump
-    .replace(/[\u{2702}]/gu, '') // scissors
-    .replace(/[\u{2705}]/gu, '') // check mark
-    .replace(/[\u{2708}-\u{270D}]/gu, '') // airplane to writing hand
-    .replace(/[\u{270F}]/gu, '') // pencil
-    .replace(/[\u{2712}]/gu, '') // black nib
-    .replace(/[\u{2714}]/gu, '') // check mark
-    .replace(/[\u{2716}]/gu, '') // x mark
-    .replace(/[\u{271D}]/gu, '') // cross
-    .replace(/[\u{2721}]/gu, '') // star of david
-    .replace(/[\u{2728}]/gu, '') // sparkles
-    .replace(/[\u{2733}-\u{2734}]/gu, '') // asterisks
-    .replace(/[\u{2744}]/gu, '') // snowflake
-    .replace(/[\u{2747}]/gu, '') // sparkle
-    .replace(/[\u{274C}]/gu, '') // cross mark
-    .replace(/[\u{274E}]/gu, '') // cross mark
-    .replace(/[\u{2753}-\u{2755}]/gu, '') // question marks
-    .replace(/[\u{2757}]/gu, '') // exclamation
-    .replace(/[\u{2763}-\u{2764}]/gu, '') // hearts
-    .replace(/[\u{2795}-\u{2797}]/gu, '') // math symbols
-    .replace(/[\u{27A1}]/gu, '') // arrow
-    .replace(/[\u{27B0}]/gu, '') // curly loop
-    .replace(/[\u{27BF}]/gu, '') // double curly loop
-    // Remove other special symbols
+    // Remove ALL emojis using comprehensive regex
+    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
+    // Remove remaining emoji-like symbols
+    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
+    .replace(/[\u{2600}-\u{27BF}]/gu, '')
+    // Remove special symbols and bullets
     .replace(/[•●○◆◇■□▪▫▲△▼▽◀▶►◄→←↑↓↔↕↖↗↘↙]/g, '')
     .replace(/[✓✔✕✖✗✘✚✛✜✝✞✟✠✡✢✣✤✥✦✧✨✩✪✫✬✭✮✯✰✱✲✳✴✵✶✷✸✹✺✻✼✽✾✿❀❁❂❃❄❅❆❇❈❉❊❋]/g, '')
     .replace(/[❌❎❓❔❕❖❗❘❙❚❛❜❝❞❟❠❡❢❣❤❥❦❧]/g, '')
@@ -90,10 +41,8 @@ const containsHindi = (text: string): boolean => {
 
 // Detect if text is primarily Hindi (romanized or Devanagari) - Hinglish detection
 const isHinglishContent = (text: string): boolean => {
-  // Check for Devanagari script
   if (containsHindi(text)) return true;
   
-  // Check for common Hindi/Hinglish romanized words
   const hinglishKeywords = [
     'kya', 'hai', 'hain', 'mein', 'aap', 'tum', 'main', 'hum', 'kaise', 'kaisa',
     'kahan', 'kyun', 'kab', 'abhi', 'acha', 'theek', 'nahi', 'haan', 'ji',
@@ -113,103 +62,119 @@ const isHinglishContent = (text: string): boolean => {
     hinglishKeywords.some(kw => word.includes(kw))
   ).length;
   
-  // If more than 15% of words are Hinglish keywords
   return hinglishWordCount / words.length > 0.15;
 };
 
 // Detect language from text
 const detectLanguage = (text: string): string => {
-  // Arabic
   if (/[\u0600-\u06FF]/.test(text)) return 'ar-SA';
-  // Chinese
   if (/[\u4E00-\u9FFF]/.test(text)) return 'zh-CN';
-  // Japanese
   if (/[\u3040-\u30FF\u31F0-\u31FF]/.test(text)) return 'ja-JP';
-  // Korean
   if (/[\uAC00-\uD7AF]/.test(text)) return 'ko-KR';
-  // Russian/Cyrillic
   if (/[\u0400-\u04FF]/.test(text)) return 'ru-RU';
-  // German
   if (/[äöüßÄÖÜ]/.test(text)) return 'de-DE';
-  // French
   if (/[àâçéèêëîïôùûüÿœæ]/i.test(text)) return 'fr-FR';
-  // Spanish
   if (/[áéíóúñ¿¡]/i.test(text)) return 'es-ES';
-  // Portuguese
   if (/[ãõç]/i.test(text)) return 'pt-BR';
-  // Hindi/Devanagari
   if (containsHindi(text)) return 'hi-IN';
-  // Hinglish (romanized Hindi)
   if (isHinglishContent(text)) return 'hi-IN';
-  // Urdu
   if (/[\u0600-\u06FF\u0750-\u077F]/.test(text)) return 'ur-PK';
   
   return 'en-US';
 };
 
-// Enhanced voice emotion detection with feelings
-const detectEmotion = (text: string): { pitch: number; rate: number; volume: number } => {
+// Enhanced emotion detection with more feelings
+interface EmotionSettings {
+  pitch: number;
+  rate: number;
+  volume: number;
+  emotion: string;
+}
+
+const detectEmotion = (text: string): EmotionSettings => {
   const lowerText = text.toLowerCase();
   
   // Excited/Happy - upbeat, energetic tone
-  if (/(!{2,}|wow|amazing|great|awesome|fantastic|excellent|yay|hurray|खुशी|खुश|मज़ा|badhai|mubarak|wonderful|incredible|brilliant)/i.test(lowerText)) {
-    return { pitch: 1.25, rate: 1.15, volume: 1.0 };
+  if (/(!{2,}|wow|amazing|great|awesome|fantastic|excellent|yay|hurray|wonderful|incredible|brilliant|congratulations|congrats|party|celebrate|happy|joy|खुशी|खुश|मज़ा|badhai|mubarak|mazaa)/i.test(lowerText)) {
+    return { pitch: 1.3, rate: 1.15, volume: 1.0, emotion: 'happy' };
   }
   
   // Loving/Caring - warm, gentle tone
-  if (/love|dear|care|support|together|pyaar|mohabbat|dil|jaan|sweetheart|honey/i.test(lowerText)) {
-    return { pitch: 1.1, rate: 0.9, volume: 0.95 };
+  if (/love|dear|care|support|together|miss|hug|kiss|sweetheart|honey|darling|pyaar|mohabbat|dil|jaan|jaanu|baby/i.test(lowerText)) {
+    return { pitch: 1.15, rate: 0.88, volume: 0.92, emotion: 'loving' };
   }
   
-  // Sad/Sympathetic - softer, slower tone
-  if (/sorry|unfortunately|sadly|regret|condolence|दुख|अफ़सोस|माफ़|miss you|loss|passed away|heartbroken/i.test(lowerText)) {
-    return { pitch: 0.85, rate: 0.8, volume: 0.85 };
+  // Sad/Sympathetic - softer, slower, lower tone
+  if (/sorry|unfortunately|sadly|regret|condolence|miss you|loss|passed away|heartbroken|crying|tears|pain|hurt|दुख|अफ़सोस|माफ़|rona|dard|takleef|udaas/i.test(lowerText)) {
+    return { pitch: 0.8, rate: 0.75, volume: 0.8, emotion: 'sad' };
+  }
+  
+  // Angry/Frustrated - stronger, slightly faster, intense
+  if (/angry|frustrated|annoyed|irritated|upset|furious|hate|stupid|idiot|damn|what the|gussa|naraz|pagal/i.test(lowerText)) {
+    return { pitch: 1.15, rate: 1.15, volume: 1.0, emotion: 'angry' };
   }
   
   // Urgent/Warning - intense, faster tone
-  if (/warning|urgent|important|critical|danger|alert|emergency|चेतावनी|ख़तरा|immediately|now|hurry/i.test(lowerText)) {
-    return { pitch: 1.15, rate: 1.2, volume: 1.0 };
-  }
-  
-  // Angry/Frustrated - stronger, slightly faster
-  if (/angry|frustrated|annoyed|irritated|gussa|upset|furious/i.test(lowerText)) {
-    return { pitch: 1.1, rate: 1.1, volume: 1.0 };
+  if (/warning|urgent|important|critical|danger|alert|emergency|immediately|now|hurry|quick|fast|jaldi|abhi|turant|चेतावनी|ख़तरा/i.test(lowerText)) {
+    return { pitch: 1.2, rate: 1.25, volume: 1.0, emotion: 'urgent' };
   }
   
   // Calm/Reassuring - steady, soothing tone
-  if (/calm|relax|don't worry|it's okay|no problem|fikar mat|theek hai|peace|safe/i.test(lowerText)) {
-    return { pitch: 0.95, rate: 0.85, volume: 0.9 };
+  if (/calm|relax|don't worry|it's okay|no problem|peace|safe|breathe|easy|slow down|fikar mat|tension mat|theek hai|sab theek/i.test(lowerText)) {
+    return { pitch: 0.92, rate: 0.8, volume: 0.88, emotion: 'calm' };
   }
   
-  // Question - slightly higher pitch at end
-  if (/\?/.test(text)) {
-    return { pitch: 1.08, rate: 0.95, volume: 0.95 };
+  // Curious/Question - slightly higher pitch
+  if (/\?|what|how|why|when|where|who|which|kya|kaise|kyun|kab|kahan|kaun/i.test(lowerText)) {
+    return { pitch: 1.12, rate: 0.95, volume: 0.95, emotion: 'curious' };
   }
   
-  // Confident/Assertive - clear, steady
-  if (/definitely|absolutely|certainly|of course|bilkul|zaroor|sure/i.test(lowerText)) {
-    return { pitch: 1.05, rate: 1.0, volume: 1.0 };
+  // Confident/Assertive - clear, steady, strong
+  if (/definitely|absolutely|certainly|of course|sure|guaranteed|promise|bilkul|zaroor|pakka|definitely|100%/i.test(lowerText)) {
+    return { pitch: 1.08, rate: 1.0, volume: 1.0, emotion: 'confident' };
   }
   
-  // Calm/Informative (default)
-  return { pitch: 1.0, rate: 0.95, volume: 1.0 };
+  // Surprised/Shocked - higher pitch, slower
+  if (/oh my|really|seriously|no way|what!|shocked|surprised|unbelievable|kya!|sach|arey|arrey|oho/i.test(lowerText)) {
+    return { pitch: 1.25, rate: 0.9, volume: 1.0, emotion: 'surprised' };
+  }
+  
+  // Thoughtful/Explaining - moderate, clear
+  if (/let me explain|basically|actually|in other words|the thing is|samjho|matlab|dekho|suniye/i.test(lowerText)) {
+    return { pitch: 1.0, rate: 0.9, volume: 0.95, emotion: 'thoughtful' };
+  }
+  
+  // Default - neutral, friendly
+  return { pitch: 1.0, rate: 0.92, volume: 0.95, emotion: 'neutral' };
 };
 
 // Get voice preferences from localStorage
-const getVoicePreferences = (): { gender: 'male' | 'female' | 'auto'; language: string } => {
+interface VoicePreferences {
+  gender: 'male' | 'female' | 'auto';
+  language: 'hinglish' | 'english' | 'hindi';
+  emotionEnabled: boolean;
+}
+
+const getVoicePreferences = (): VoicePreferences => {
   try {
     const prefs = localStorage.getItem('alsa_voice_preferences');
     if (prefs) {
-      return JSON.parse(prefs);
+      const parsed = JSON.parse(prefs);
+      return {
+        gender: parsed.gender || 'male',
+        language: parsed.language || 'hinglish',
+        emotionEnabled: parsed.emotionEnabled !== false
+      };
     }
   } catch (e) {
     console.error('Error loading voice preferences:', e);
   }
-  return { gender: 'male', language: 'hinglish' };
+  return { gender: 'male', language: 'hinglish', emotionEnabled: true };
 };
 
 export const useTextToSpeech = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [currentEmotion, setCurrentEmotion] = useState<string>('neutral');
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
 
@@ -251,13 +216,15 @@ export const useTextToSpeech = () => {
 
       // Detect language and emotion
       const detectedLang = forceLang || detectLanguage(text);
-      const emotion = detectEmotion(text);
       const voicePrefs = getVoicePreferences();
+      const emotionSettings = voicePrefs.emotionEnabled ? detectEmotion(text) : { pitch: 1.0, rate: 0.92, volume: 0.95, emotion: 'neutral' };
+      
+      setCurrentEmotion(emotionSettings.emotion);
       
       // Set voice properties with emotion
-      utterance.rate = emotion.rate;
-      utterance.pitch = emotion.pitch;
-      utterance.volume = emotion.volume;
+      utterance.rate = emotionSettings.rate;
+      utterance.pitch = emotionSettings.pitch;
+      utterance.volume = emotionSettings.volume;
 
       // Get available voices
       const voices = window.speechSynthesis.getVoices();
@@ -267,7 +234,7 @@ export const useTextToSpeech = () => {
       
       const preferMale = voicePrefs.gender === 'male' || voicePrefs.gender === 'auto';
       
-      if (detectedLang === 'hi-IN' || isHinglishContent(text) || voicePrefs.language === 'hinglish') {
+      if (detectedLang === 'hi-IN' || isHinglishContent(text) || voicePrefs.language === 'hinglish' || voicePrefs.language === 'hindi') {
         // For Hinglish/Hindi - prioritize male Indian English/Hindi voices
         const hindiVoices = voices.filter(v => 
           v.lang.startsWith('hi') || 
@@ -277,18 +244,18 @@ export const useTextToSpeech = () => {
         );
         
         if (preferMale) {
-          // Try to find male voice
           selectedVoice = hindiVoices.find(v => 
             v.name.toLowerCase().includes('male') ||
             v.name.toLowerCase().includes('ravi') ||
             v.name.toLowerCase().includes('hemant') ||
+            v.name.toLowerCase().includes('microsoft ravi') ||
             (!v.name.toLowerCase().includes('female') && !v.name.toLowerCase().includes('lekha'))
           ) || hindiVoices[0];
         } else {
-          // Try to find female voice
           selectedVoice = hindiVoices.find(v => 
             v.name.toLowerCase().includes('female') ||
-            v.name.toLowerCase().includes('lekha')
+            v.name.toLowerCase().includes('lekha') ||
+            v.name.toLowerCase().includes('heera')
           ) || hindiVoices[0];
         }
         
@@ -299,7 +266,7 @@ export const useTextToSpeech = () => {
         }
         
         // Adjust rate for Hinglish - slightly slower for clarity
-        utterance.rate = Math.max(0.85, emotion.rate - 0.05);
+        utterance.rate = Math.max(0.8, emotionSettings.rate - 0.05);
         utterance.lang = selectedVoice?.lang.startsWith('hi') ? 'hi-IN' : 'en-IN';
       } else {
         // Find voice matching detected language with gender preference
@@ -313,13 +280,15 @@ export const useTextToSpeech = () => {
             v.name.toLowerCase().includes('david') ||
             v.name.toLowerCase().includes('mark') ||
             v.name.toLowerCase().includes('james') ||
+            v.name.toLowerCase().includes('guy') ||
             (!v.name.toLowerCase().includes('female') && !v.name.toLowerCase().includes('zira') && !v.name.toLowerCase().includes('samantha'))
           ) || langVoices[0];
         } else {
           selectedVoice = langVoices.find(v => 
             v.name.toLowerCase().includes('female') ||
             v.name.toLowerCase().includes('zira') ||
-            v.name.toLowerCase().includes('samantha')
+            v.name.toLowerCase().includes('samantha') ||
+            v.name.toLowerCase().includes('susan')
           ) || langVoices[0];
         }
         
@@ -352,17 +321,19 @@ export const useTextToSpeech = () => {
       
       if (selectedVoice) {
         utterance.voice = selectedVoice;
-        console.log(`Using voice: ${selectedVoice.name} (${selectedVoice.lang}) | Emotion: pitch=${emotion.pitch}, rate=${emotion.rate}, vol=${emotion.volume}`);
+        console.log(`🎤 Voice: ${selectedVoice.name} | Emotion: ${emotionSettings.emotion} | Pitch: ${emotionSettings.pitch.toFixed(2)} | Rate: ${emotionSettings.rate.toFixed(2)}`);
       }
 
       utterance.onend = () => {
         setIsSpeaking(false);
+        setCurrentEmotion('neutral');
         synthRef.current = null;
       };
 
       utterance.onerror = (event) => {
         console.error('Text-to-speech error:', event);
         setIsSpeaking(false);
+        setCurrentEmotion('neutral');
         synthRef.current = null;
       };
 
@@ -377,7 +348,8 @@ export const useTextToSpeech = () => {
     window.speechSynthesis.cancel();
     synthRef.current = null;
     setIsSpeaking(false);
+    setCurrentEmotion('neutral');
   }, []);
 
-  return { speak, stop, isSpeaking, availableVoices };
+  return { speak, stop, isSpeaking, currentEmotion, availableVoices };
 };
