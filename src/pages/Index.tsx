@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { supabase } from '@/integrations/supabase/client';
-import { checkBridgeConnection, executeSystemCommand, scanSystem, SystemScanResult, captureScreenshot, startScreenRecording, stopScreenRecording, parseNaturalLanguage, WEBSITES, createProject, createPowerPoint, createExcel, createDatabase, executePythonFile, executeCmdCommand, runCommand, checkInstallation, sendCommand, adbConnect, adbCommand, closeWindow, openFolder } from '@/utils/pcBridge';
+import { checkBridgeConnection, executeSystemCommand, scanSystem, SystemScanResult, captureScreenshot, startScreenRecording, stopScreenRecording, parseNaturalLanguage, WEBSITES, createProject, createPowerPoint, createExcel, createDatabase, executePythonFile, executeCmdCommand, runCommand, checkInstallation, sendCommand, adbConnect, adbCommand, closeWindow, openFolder, runProject } from '@/utils/pcBridge';
 import ChatMessage from '@/components/ChatMessage';
 import MemoryManager from '@/components/MemoryManager';
 import TranscriptionFeedback from '@/components/TranscriptionFeedback';
@@ -21,7 +21,6 @@ import Sidebar from '@/components/Sidebar';
 import RightPanel from '@/components/RightPanel';
 import CircularSiriWave from '@/components/CircularSiriWave';
 import FileUpload from '@/components/FileUpload';
-import VoiceAssistantLanding from '@/components/VoiceAssistantLanding';
 import { useIsMobile } from '@/hooks/use-mobile';
 interface FileAttachment {
   name: string;
@@ -60,8 +59,6 @@ const Index = () => {
   const [backupKeyActive, setBackupKeyActive] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSavedPath, setRecordingSavedPath] = useState<string | null>(null);
-  const [showLandingPage, setShowLandingPage] = useState(true);
-  const [landingTranscript, setLandingTranscript] = useState('');
   
   const { toast } = useToast();
   const {
@@ -415,35 +412,48 @@ const Index = () => {
       }
     }
 
-    // Check for website opening - IMPROVED: Use word boundaries to avoid matching app names like "excel"
-    // Only match websites when explicitly requested or using full website names
-    const isExplicitWebsiteRequest = /\b(open|visit|go to|browse|show me)\s+(website|site|webpage)\b/i.test(lowerText) ||
-                                      /\b(open|visit|go to)\s+\w+\.(com|org|net|io|co|in)\b/i.test(lowerText);
+    // Check for website opening - STRICT: Only open when user says EXACT "open [website name]" or "kholo" 
+    // Patterns: "open youtube", "youtube kholo", "youtube open karo", "twitter ko open karo"
+    const openWebsitePatterns = [
+      /\b(open|launch|start)\s+(\w+)\b/i,  // "open youtube"
+      /\b(\w+)\s+(kholo|kholna|open\s+karo|ko\s+open\s+karo)\b/i,  // "youtube kholo"
+    ];
     
-    for (const [key, site] of Object.entries(WEBSITES)) {
-      // Use word boundary matching to avoid false positives
-      // e.g., "excel" should NOT match "x" website
-      const keyPattern = new RegExp(`\\b${key}\\b`, 'i');
-      const namePattern = new RegExp(`\\b${site.name.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-      
-      // Skip single-character keys like 'x' unless explicitly requesting website
-      const isSingleCharKey = key.length === 1;
-      
-      const matchesKey = keyPattern.test(lowerText);
-      const matchesName = namePattern.test(lowerText);
-      
-      // For single-char keys, require explicit website request or full name match
-      if (isSingleCharKey && !isExplicitWebsiteRequest && !matchesName) {
-        continue;
+    // Check for custom user sites first
+    const userSites = JSON.parse(localStorage.getItem('alsa_user_sites') || '[]');
+    for (const site of userSites) {
+      const sitePattern = new RegExp(`\\b(open|kholo|launch)\\s+${site.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b|\\b${site.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+(kholo|open\\s+karo)\\b`, 'i');
+      if (sitePattern.test(lowerText)) {
+        const response = `Opening ${site.name}`;
+        setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+        speak(response);
+        setTimeout(() => window.open(site.url, '_blank'), 500);
+        if (user) {
+          await saveConversation(userMessage, { role: 'assistant', content: response });
+        }
+        return;
       }
+    }
+    
+    // Check built-in websites - ONLY with explicit open command
+    for (const [key, site] of Object.entries(WEBSITES)) {
+      // Strict patterns that require explicit open intent
+      const strictPatterns = [
+        new RegExp(`\\b(open|launch|start|visit)\\s+${key}\\b`, 'i'),
+        new RegExp(`\\b(open|launch|start|visit)\\s+${site.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i'),
+        new RegExp(`\\b${key}\\s+(kholo|kholna|open\\s+karo|ko\\s+open\\s+karo)\\b`, 'i'),
+        new RegExp(`\\b${site.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+(kholo|kholna|open\\s+karo)\\b`, 'i'),
+      ];
       
-      if (matchesKey || matchesName) {
-        // Double-check: If the command looks like an app command, skip
-        const appKeywords = ['file explorer', 'explorer', 'notepad', 'word', 'excel', 'powerpoint', 'paint', 'calculator', 'cmd', 'terminal'];
+      const shouldOpen = strictPatterns.some(pattern => pattern.test(lowerText));
+      
+      if (shouldOpen) {
+        // Skip if it's an app keyword (don't open website when user wants local app)
+        const appKeywords = ['file explorer', 'explorer', 'notepad', 'word', 'excel', 'powerpoint', 'paint', 'calculator', 'cmd', 'terminal', 'antigravity'];
         const looksLikeAppCommand = appKeywords.some(app => lowerText.includes(app));
         
-        if (looksLikeAppCommand && !isExplicitWebsiteRequest) {
-          continue; // Let PC Bridge handle it
+        if (looksLikeAppCommand) {
+          continue; // Let PC Bridge handle local apps
         }
         
         const response = `Opening ${site.name}`;
@@ -755,6 +765,30 @@ const Index = () => {
                 if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
                 return newMessages;
               });
+            } else if (parsed.type === 'run_project') {
+              // Ask user for confirmation before running
+              const confirmMsg = `Do you want me to run this ${parsed.project_type} project at ${parsed.project_path} on your local machine? I'll install dependencies and start the server.`;
+              accumulatedText += `\n\n${confirmMsg}`;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
+              
+              // Execute project run
+              const result = await runProject(parsed.project_path, parsed.project_type);
+              const statusMsg = result.success 
+                ? `✅ ${result.message}${result.output ? `\n\`\`\`\n${result.output}\n\`\`\`` : ''}` 
+                : `❌ ${result.message}`;
+              accumulatedText += `\n\n${statusMsg}`;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
+              speak(result.success ? 'Project is running' : 'Failed to run project');
             }
           } catch (e) {
             console.error('Parse error:', e);
@@ -784,25 +818,6 @@ const Index = () => {
   };
 
   const hasMessages = messages.length > 0;
-
-  // Handle landing page start chat
-  const handleStartChat = useCallback(() => {
-    setShowLandingPage(false);
-    if (landingTranscript) {
-      setInputText(landingTranscript);
-      setTimeout(() => handleSubmit(landingTranscript), 100);
-    }
-  }, [landingTranscript]);
-
-  // Show landing page if no messages and enabled
-  if (showLandingPage && !hasMessages && !urlConversationId) {
-    return (
-      <VoiceAssistantLanding 
-        onStartChat={handleStartChat}
-        onTranscriptChange={setLandingTranscript}
-      />
-    );
-  }
 
   // Mobile UI
   if (isMobile) {
