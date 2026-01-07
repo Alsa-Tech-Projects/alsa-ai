@@ -1193,3 +1193,68 @@ export const uploadFileToBridge = async (file: File): Promise<{ success: boolean
     };
   }
 };
+
+// Run a project on localhost
+export const runProject = async (
+  projectPath: string, 
+  projectType: 'react' | 'node' | 'python' | 'html'
+): Promise<{ success: boolean; message: string; output?: string }> => {
+  try {
+    // Commands for different project types
+    const commands: Record<string, string[]> = {
+      react: [
+        `cd /d "${projectPath}"`,
+        'npm install',
+        'npm run dev'
+      ],
+      node: [
+        `cd /d "${projectPath}"`,
+        'npm install',
+        'node index.js'
+      ],
+      python: [
+        `cd /d "${projectPath}"`,
+        'pip install -r requirements.txt',
+        'python main.py'
+      ],
+      html: [
+        `cd /d "${projectPath}"`,
+        'start index.html'
+      ]
+    };
+    
+    const projectCommands = commands[projectType] || commands.html;
+    
+    // Execute via PC Bridge - open cmd and run commands
+    const response = await fetch(`${BRIDGE_URL}/run_project`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        project_path: projectPath,
+        project_type: projectType,
+        commands: projectCommands
+      })
+    });
+    
+    const data = await response.json();
+    return {
+      success: data.success ?? true,
+      message: data.message || `Running ${projectType} project at ${projectPath}`,
+      output: data.output
+    };
+  } catch (error: any) {
+    // Fallback: try to open the folder or run basic command
+    try {
+      await sendCommand(`start cmd /k "cd /d ${projectPath}"`);
+      return {
+        success: true,
+        message: `Opened command prompt at ${projectPath}. Please run the project manually.`
+      };
+    } catch {
+      return {
+        success: false,
+        message: error.message || 'Cannot connect to PC Bridge for running project'
+      };
+    }
+  }
+};

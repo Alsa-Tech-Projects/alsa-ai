@@ -29,6 +29,35 @@ async function searchWikipedia(query: string): Promise<string> {
   }
 }
 
+// Weather API function
+async function getWeather(city: string): Promise<string> {
+  try {
+    const WEATHER_API_KEY = Deno.env.get("WEATHER_API_KEY") || "73e125eedd43989bff126a13bfc191e7";
+    const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${WEATHER_API_KEY}&units=metric`;
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      return `Could not find weather data for ${city}. Please check the city name.`;
+    }
+    
+    const data = await response.json();
+    const weather = data.weather?.[0]?.description || "Unknown";
+    const temp = data.main?.temp || "N/A";
+    const feels_like = data.main?.feels_like || "N/A";
+    const humidity = data.main?.humidity || "N/A";
+    const wind = data.wind?.speed || "N/A";
+    
+    return `Weather in ${data.name}, ${data.sys?.country || ''}:
+🌡️ Temperature: ${temp}°C (Feels like: ${feels_like}°C)
+☁️ Condition: ${weather}
+💧 Humidity: ${humidity}%
+💨 Wind Speed: ${wind} m/s`;
+  } catch (error) {
+    console.error("Weather API error:", error);
+    return "Failed to fetch weather data. Please try again.";
+  }
+}
+
 async function generateProjectFiles(input: { project_type: string; description: string }): Promise<Record<string, string>> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
@@ -538,7 +567,7 @@ PERSONALITY MODE (from Settings): ${ai_response_style || 'balanced'}
         type: "function",
         function: {
           name: "capture_screenshot",
-          description: "Capture a screenshot of the user's computer screen and save it as an image file. ONLY use this tool when user explicitly asks to take a screenshot, screen capture, or save what's on their screen. DO NOT use for project creation, document creation, or any other task - those have their own dedicated tools.",
+          description: "ONLY USE THIS TOOL when user EXPLICITLY says phrases like: 'take screenshot', 'capture screen', 'screenshot lo', 'screen capture karo', 'save my screen'. NEVER use this tool for: project creation, document creation, coding, file operations, or ANY other task. This tool ONLY captures what's visible on the user's monitor. If user asks to create something (project, website, app, document), use the appropriate creation tool instead - NOT this one.",
           parameters: {
             type: "object",
             properties: {
@@ -551,6 +580,45 @@ PERSONALITY MODE (from Settings): ${ai_response_style || 'balanced'}
                 description: "Optional custom path to save screenshot. Default: user's Screenshots folder"
               }
             }
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "get_weather",
+          description: "Get current weather information for a city. Use when user asks about weather, temperature, forecast, climate of any location.",
+          parameters: {
+            type: "object",
+            properties: {
+              city: {
+                type: "string",
+                description: "Name of the city to get weather for (e.g., 'Delhi', 'Mumbai', 'New York')"
+              }
+            },
+            required: ["city"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "run_project",
+          description: "Run a project on localhost after creation. Use when user wants to run/start/execute a project they just created or an existing project. Asks user if they want to run the project on their local machine.",
+          parameters: {
+            type: "object",
+            properties: {
+              project_path: {
+                type: "string",
+                description: "Full path to the project folder (e.g., E:\\Eisa\\MyProject)"
+              },
+              project_type: {
+                type: "string",
+                enum: ["react", "node", "python", "html"],
+                description: "Type of project to determine how to run it"
+              }
+            },
+            required: ["project_path", "project_type"]
           }
         }
       },
@@ -851,6 +919,15 @@ PERSONALITY MODE (from Settings): ${ai_response_style || 'balanced'}
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'close_window', window_name: args.window_name })}\n\n`));
               } else if (toolCall.function.name === 'run_application') {
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'run_application', command: args.command })}\n\n`));
+              } else if (toolCall.function.name === 'get_weather') {
+                const weatherResult = await getWeather(args.city);
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: weatherResult })}\n\n`));
+              } else if (toolCall.function.name === 'run_project') {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+                  type: 'run_project', 
+                  project_path: args.project_path, 
+                  project_type: args.project_type 
+                })}\n\n`));
               }
             }
 
