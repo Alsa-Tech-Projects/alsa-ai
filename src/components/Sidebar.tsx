@@ -28,10 +28,11 @@ interface SidebarProps {
     bridgeConnected: boolean;
     onNewChat: () => void;
     onOpenMemory: () => void;
+    onToggleBridge?: () => void;
     currentConversationId?: string | null;
 }
 
-const Sidebar = ({ bridgeConnected, onNewChat, onOpenMemory, currentConversationId }: SidebarProps) => {
+const Sidebar = ({ bridgeConnected, onNewChat, onOpenMemory, onToggleBridge, currentConversationId }: SidebarProps) => {
     const navigate = useNavigate();
     const { toast } = useToast();
     const [user, setUser] = useState<any>(null);
@@ -124,15 +125,19 @@ const Sidebar = ({ bridgeConnected, onNewChat, onOpenMemory, currentConversation
     return (
         <div className="w-64 h-screen bg-[#1a1a1a]/95 border-r border-white/5 flex flex-col sticky top-0 z-40 backdrop-blur-xl">
 
-            {/* Bridge Status */}
+            {/* Bridge Status - Clickable to toggle */}
             <div className="p-6 border-b border-white/5">
-                <div className="flex items-center justify-between bg-black/40 p-2.5 rounded-xl border border-white/5">
+                <button 
+                    onClick={onToggleBridge}
+                    className="w-full flex items-center justify-between bg-black/40 p-2.5 rounded-xl border border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
+                    title={bridgeConnected ? 'Click to disconnect PC Bridge' : 'Click to connect PC Bridge'}
+                >
                     <div className="flex items-center gap-2">
                         {bridgeConnected ? <Wifi className="w-3.5 h-3.5 text-green-400 animate-pulse" /> : <WifiOff className="w-3.5 h-3.5 text-red-400" />}
                         <span className="text-[11px] font-bold uppercase tracking-widest text-white/70">PC Bridge</span>
                     </div>
                     <div className={`h-1.5 w-1.5 rounded-full ${bridgeConnected ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500'}`} />
-                </div>
+                </button>
             </div>
 
             {/* Actions */}

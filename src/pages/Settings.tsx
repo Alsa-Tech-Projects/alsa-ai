@@ -21,10 +21,10 @@ interface OutputPaths {
   database: string;
 }
 
-interface BackupApiKey {
+interface CustomSite {
   id: string;
   name: string;
-  key: string;
+  url: string;
 }
 
 const Settings = () => {
@@ -37,7 +37,7 @@ const [preferences, setPreferences] = useState({
     ai_response_style: 'balanced',
     voice_enabled: true,
     voice_name: 'default',
-    voice_gender: 'auto' as 'male' | 'female' | 'auto',
+    voice_gender: 'female' as 'male' | 'female' | 'auto', // Default to female hinglish
     theme: 'dark'
   });
 
@@ -52,10 +52,10 @@ const [preferences, setPreferences] = useState({
     database: 'C:\\Users\\Mohd Eisa\\Documents\\Databases'
   });
 
-  // Backup API keys state
-  const [backupApiKeys, setBackupApiKeys] = useState<BackupApiKey[]>([]);
-  const [newApiKeyName, setNewApiKeyName] = useState('');
-  const [newApiKeyValue, setNewApiKeyValue] = useState('');
+  // Custom sites state
+  const [customSites, setCustomSites] = useState<CustomSite[]>([]);
+  const [newSiteName, setNewSiteName] = useState('');
+  const [newSiteUrl, setNewSiteUrl] = useState('');
 
   useEffect(() => {
     loadPreferences();
@@ -73,14 +73,20 @@ const [preferences, setPreferences] = useState({
       }
     }
 
-    // Load backup API keys from localStorage
-    const savedKeys = localStorage.getItem('alsa_backup_api_keys');
-    if (savedKeys) {
+    // Load custom sites from localStorage
+    const savedSites = localStorage.getItem('alsa_user_sites');
+    if (savedSites) {
       try {
-        setBackupApiKeys(JSON.parse(savedKeys));
+        setCustomSites(JSON.parse(savedSites));
       } catch (e) {
-        console.error('Error loading backup API keys:', e);
+        console.error('Error loading custom sites:', e);
       }
+    }
+
+    // Load voice gender with default to female
+    const savedGender = localStorage.getItem('alsa_voice_gender') as 'male' | 'female' | 'auto';
+    if (savedGender) {
+      setPreferences(prev => ({ ...prev, voice_gender: savedGender }));
     }
   };
 
@@ -105,7 +111,7 @@ const [preferences, setPreferences] = useState({
       }
 
       if (data) {
-        const savedGender = localStorage.getItem('alsa_voice_gender') as 'male' | 'female' | 'auto' || 'auto';
+        const savedGender = localStorage.getItem('alsa_voice_gender') as 'male' | 'female' | 'auto' || 'female';
         setPreferences({
           ai_response_style: data.ai_response_style || 'balanced',
           voice_enabled: data.voice_enabled ?? true,
@@ -127,12 +133,16 @@ const [preferences, setPreferences] = useState({
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
+        // Only save DB-compatible fields (voice_gender is localStorage only)
         const { error } = await supabase
           .from('user_preferences')
           .upsert(
             {
               user_id: user.id,
-              ...preferences,
+              ai_response_style: preferences.ai_response_style,
+              voice_enabled: preferences.voice_enabled,
+              voice_name: preferences.voice_name,
+              theme: preferences.theme,
             },
             { onConflict: 'user_id' }
           );
@@ -140,11 +150,12 @@ const [preferences, setPreferences] = useState({
         if (error) throw error;
       }
 
-      // Save local settings
+      // Save local settings (including voice_gender which isn't in DB)
       localStorage.setItem('alsa_output_paths', JSON.stringify(outputPaths));
-      localStorage.setItem('alsa_backup_api_keys', JSON.stringify(backupApiKeys));
+      localStorage.setItem('alsa_user_sites', JSON.stringify(customSites));
       localStorage.setItem('alsa_ai_response_style', preferences.ai_response_style);
       localStorage.setItem('alsa_voice_gender', preferences.voice_gender);
+      localStorage.setItem('alsa_voice_enabled', String(preferences.voice_enabled));
 
       // Apply theme immediately
       applyTheme(preferences.theme);
@@ -187,37 +198,43 @@ const [preferences, setPreferences] = useState({
     applyTheme(preferences.theme);
   }, [preferences.theme]);
 
-  const addBackupApiKey = () => {
-    if (!newApiKeyName.trim() || !newApiKeyValue.trim()) {
+  const addCustomSite = () => {
+    if (!newSiteName.trim() || !newSiteUrl.trim()) {
       toast({
         title: "Error",
-        description: "Please enter both name and API key",
+        description: "Please enter both site name and URL",
         variant: "destructive"
       });
       return;
     }
 
-    const newKey: BackupApiKey = {
+    // Ensure URL has protocol
+    let url = newSiteUrl.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+
+    const newSite: CustomSite = {
       id: crypto.randomUUID(),
-      name: newApiKeyName.trim(),
-      key: newApiKeyValue.trim()
+      name: newSiteName.trim().toLowerCase(),
+      url: url
     };
 
-    setBackupApiKeys(prev => [...prev, newKey]);
-    setNewApiKeyName('');
-    setNewApiKeyValue('');
+    setCustomSites(prev => [...prev, newSite]);
+    setNewSiteName('');
+    setNewSiteUrl('');
 
     toast({
-      title: "API Key Added",
-      description: `${newKey.name} has been added as a backup`
+      title: "Site Added",
+      description: `${newSite.name} has been added to your shortcuts`
     });
   };
 
-  const removeBackupApiKey = (id: string) => {
-    setBackupApiKeys(prev => prev.filter(k => k.id !== id));
+  const removeCustomSite = (id: string) => {
+    setCustomSites(prev => prev.filter(s => s.id !== id));
     toast({
-      title: "API Key Removed",
-      description: "Backup API key has been removed"
+      title: "Site Removed",
+      description: "Custom site has been removed"
     });
   };
 
@@ -456,34 +473,34 @@ const [preferences, setPreferences] = useState({
               </CardContent>
             </Card>
 
-            {/* Backup API Keys */}
+            {/* Custom Sites */}
             <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Key className="w-5 h-5" />
-                  Backup API Keys
+                  Custom Sites & Apps
                 </CardTitle>
                 <CardDescription>
-                  Add backup API keys for when the server key is unavailable. (Optional: add a Weather API key if you want OpenWeatherMap.)
+                  Add your own website shortcuts. Say "open [site name]" to open them quickly.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {/* Existing Keys */}
-                  {backupApiKeys.length > 0 && (
+                  {/* Existing Sites */}
+                  {customSites.length > 0 && (
                     <div className="space-y-2">
-                      {backupApiKeys.map((apiKey) => (
-                        <div key={apiKey.id} className="flex items-center gap-2 p-3 bg-secondary/30 rounded-lg">
+                      {customSites.map((site) => (
+                        <div key={site.id} className="flex items-center gap-2 p-3 bg-secondary/30 rounded-lg">
                           <div className="flex-1">
-                            <p className="font-medium text-sm">{apiKey.name}</p>
-                            <p className="text-xs text-muted-foreground font-mono">
-                              {apiKey.key.slice(0, 8)}...{apiKey.key.slice(-4)}
+                            <p className="font-medium text-sm capitalize">{site.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {site.url}
                             </p>
                           </div>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => removeBackupApiKey(apiKey.id)}
+                            onClick={() => removeCustomSite(site.id)}
                             className="text-destructive hover:text-destructive"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -493,34 +510,33 @@ const [preferences, setPreferences] = useState({
                     </div>
                   )}
 
-                  {/* Suggested Keys */}
+                  {/* Tips */}
                   <div className="text-xs text-muted-foreground bg-secondary/20 rounded-lg p-3 space-y-1">
-                    <p className="font-medium">Suggested API Keys:</p>
+                    <p className="font-medium">How to use:</p>
                     <ul className="list-disc list-inside space-y-0.5">
-                      <li><strong>Weather API</strong> - OpenWeatherMap key for weather widget</li>
-                      <li><strong>Gemini API</strong> - Google AI backup for chat</li>
-                      <li><strong>OpenAI API</strong> - GPT backup for chat</li>
+                      <li>Say "open [site name]" or "[site name] kholo" to open</li>
+                      <li>Names are case-insensitive (e.g., "mysite" works)</li>
+                      <li>Works with any URL including internal tools</li>
                     </ul>
                   </div>
 
-                  {/* Add New Key */}
+                  {/* Add New Site */}
                   <div className="space-y-2 pt-2 border-t border-border">
-                    <Label>Add New Backup Key</Label>
+                    <Label>Add New Site</Label>
                     <div className="flex gap-2">
                       <Input
-                        value={newApiKeyName}
-                        onChange={(e) => setNewApiKeyName(e.target.value)}
-                        placeholder="Key name (e.g., Weather API)"
+                        value={newSiteName}
+                        onChange={(e) => setNewSiteName(e.target.value)}
+                        placeholder="Site name (e.g., mywork)"
                         className="flex-1"
                       />
                       <Input
-                        value={newApiKeyValue}
-                        onChange={(e) => setNewApiKeyValue(e.target.value)}
-                        placeholder="API Key"
-                        type="password"
+                        value={newSiteUrl}
+                        onChange={(e) => setNewSiteUrl(e.target.value)}
+                        placeholder="URL (e.g., mywork.com)"
                         className="flex-[2]"
                       />
-                      <Button onClick={addBackupApiKey} size="icon">
+                      <Button onClick={addCustomSite} size="icon">
                         <Plus className="w-4 h-4" />
                       </Button>
                     </div>
