@@ -19,6 +19,14 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app, origins=['*'])  # Allow all origins for local bridge
 
+# =============================================================================
+# AI API KEY CONFIGURATION
+# Replace YOUR_GEMINI_API_KEY_HERE with your actual Gemini API key
+# Or set the GEMINI_API_KEY environment variable
+# =============================================================================
+AI_API_KEY = os.environ.get('GEMINI_API_KEY', 'YOUR_GEMINI_API_KEY_HERE')
+AI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+
 # Allowed base directories for file operations
 ALLOWED_BASE_DIRS = [
     os.path.expanduser('~\\Documents'),
@@ -82,10 +90,13 @@ def validate_adb_command(command):
 
 @app.route('/status', methods=['GET'])
 def status():
-    """Check if bridge is running"""
+    """Check if bridge is running and return API key status"""
+    has_api_key = AI_API_KEY and AI_API_KEY != 'YOUR_GEMINI_API_KEY_HERE'
     return jsonify({
         'status': 'running',
-        'message': 'ALSA AI PC Bridge is active'
+        'message': 'ALSA AI PC Bridge is active',
+        'has_api_key': has_api_key,
+        'api_key_hint': AI_API_KEY[:8] + '...' if has_api_key else None
     })
 
 
@@ -1026,12 +1037,99 @@ def stop_song():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/ai_chat', methods=['POST'])
+def ai_chat():
+    """Handle AI chat requests using configured API key"""
+    try:
+        if not AI_API_KEY or AI_API_KEY == 'YOUR_GEMINI_API_KEY_HERE':
+            return jsonify({
+                'error': 'No AI API key configured',
+                'message': 'Please set GEMINI_API_KEY in the script or environment'
+            }), 400
+        
+        data = request.get_json()
+        messages = data.get('messages', [])
+        
+        if not messages:
+            return jsonify({'error': 'No messages provided'}), 400
+        
+        # Build Gemini-compatible request
+        contents = []
+        for msg in messages:
+            role = 'model' if msg.get('role') == 'assistant' else 'user'
+            contents.append({
+                'role': role,
+                'parts': [{'text': msg.get('content', '')}]
+            })
+        
+        # Call Gemini API
+        import urllib.request
+        import urllib.error
+        
+        req_body = json.dumps({
+            'contents': contents,
+            'generationConfig': {'temperature': 0.7}
+        }).encode('utf-8')
+        
+        req = urllib.request.Request(
+            f"{AI_API_URL}?key={AI_API_KEY}",
+            data=req_body,
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read().decode('utf-8'))
+        
+        response_text = result.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
+        
+        return jsonify({
+            'success': True,
+            'response': response_text,
+            'source': 'local_gemini'
+        })
+        
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode('utf-8') if e.fp else str(e)
+        print(f"AI API Error: {e.code} - {error_body}")
+        return jsonify({'error': f'AI API error: {e.code}', 'details': error_body}), 500
+    except Exception as e:
+        print(f"Error in AI chat: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/set_api_key', methods=['POST'])
+def set_api_key():
+    """Update the AI API key at runtime"""
+    global AI_API_KEY
+    try:
+        data = request.get_json()
+        new_key = data.get('api_key', '').strip()
+        
+        if not new_key:
+            return jsonify({'error': 'No API key provided'}), 400
+        
+        AI_API_KEY = new_key
+        
+        return jsonify({
+            'success': True,
+            'message': 'API key updated successfully',
+            'key_hint': new_key[:8] + '...'
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     print("=" * 50)
     print("ALSA AI PC Control Bridge Started")
     print("Bridge is running on http://localhost:5001")
     print("You can now control your PC through ALSA AI!")
     print("Features: Project creation, PPT, Excel, Database, Screenshots, ADB, Music")
+    if AI_API_KEY and AI_API_KEY != 'YOUR_GEMINI_API_KEY_HERE':
+        print(f"AI API Key: {AI_API_KEY[:8]}... (configured)")
+    else:
+        print("AI API Key: NOT CONFIGURED - Set GEMINI_API_KEY environment variable")
     print("=" * 50)
     
     app.run(host='127.0.0.1', port=5001, debug=False)

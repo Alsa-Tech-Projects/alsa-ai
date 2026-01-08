@@ -68,12 +68,41 @@ const Index = () => {
     stopListening,
     resetTranscript
   } = useSpeechRecognition();
-  const { speak, stop, isSpeaking } = useTextToSpeech();
+  const { speak: ttsSpeak, stop, isSpeaking } = useTextToSpeech();
   
+  // Wrapper for speak that checks if voice is enabled
+  const speak = useCallback((text: string) => {
+    const voiceEnabled = localStorage.getItem('alsa_voice_enabled') !== 'false';
+    if (voiceEnabled) {
+      ttsSpeak(text);
+    }
+  }, [ttsSpeak]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const listeningTimeoutRef = useRef<NodeJS.Timeout>();
   const lastProcessedRef = useRef<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Toggle PC Bridge connection
+  const toggleBridgeConnection = useCallback(async () => {
+    if (bridgeConnected) {
+      // Disconnect - just set state, bridge keeps running
+      setBridgeConnected(false);
+      toast({ title: 'PC Bridge Disconnected', description: 'Click again to reconnect' });
+    } else {
+      // Try to connect
+      const status = await checkBridgeConnection();
+      setBridgeConnected(status.connected);
+      if (status.connected) {
+        toast({ title: 'PC Bridge Connected', description: 'You can now control your PC' });
+      } else {
+        toast({ 
+          title: 'PC Bridge Not Running', 
+          description: 'Start pc-control-bridge.py first',
+          variant: 'destructive'
+        });
+      }
+    }
+  }, [bridgeConnected, toast]);
 
   // Toggle voice with callback - stays open until manually closed
   const toggleVoice = useCallback(() => {
@@ -987,6 +1016,7 @@ return (
       bridgeConnected={bridgeConnected}
       onNewChat={handleNewConversation}
       onOpenMemory={() => setShowMemoryManager(true)}
+      onToggleBridge={toggleBridgeConnection}
       currentConversationId={currentConversationId}
     />
 
