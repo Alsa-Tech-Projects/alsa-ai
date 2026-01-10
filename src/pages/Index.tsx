@@ -22,12 +22,11 @@ import RightPanel from '@/components/RightPanel';
 import CircularSiriWave from '@/components/CircularSiriWave';
 import FileUpload from '@/components/FileUpload';
 import { useIsMobile } from '@/hooks/use-mobile';
-
 interface FileAttachment {
   name: string;
   type: string;
   size: number;
-  data: string;
+  data: string; // base64
   preview?: string;
 }
 
@@ -78,7 +77,6 @@ const Index = () => {
       ttsSpeak(text);
     }
   }, [ttsSpeak]);
-  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const listeningTimeoutRef = useRef<NodeJS.Timeout>();
   const lastProcessedRef = useRef<string>('');
@@ -87,9 +85,11 @@ const Index = () => {
   // Toggle PC Bridge connection
   const toggleBridgeConnection = useCallback(async () => {
     if (bridgeConnected) {
+      // Disconnect - just set state, bridge keeps running
       setBridgeConnected(false);
       toast({ title: 'PC Bridge Disconnected', description: 'Click again to reconnect' });
     } else {
+      // Try to connect
       const status = await checkBridgeConnection();
       setBridgeConnected(status.connected);
       if (status.connected) {
@@ -104,7 +104,7 @@ const Index = () => {
     }
   }, [bridgeConnected, toast]);
 
-  // Toggle voice with callback
+  // Toggle voice with callback - stays open until manually closed
   const toggleVoice = useCallback(() => {
     if (isListening) {
       stopListening();
@@ -147,17 +147,27 @@ const Index = () => {
     if (isRecording) {
       const result = await stopScreenRecording();
       setIsRecording(false);
-      toast({ title: 'Recording Stopped', description: result.message });
+      toast({ 
+        title: 'Recording Stopped',
+        description: result.message
+      });
       speak('Recording stopped and saved');
     } else {
-      setRecordingSavedPath(null);
-      const result = await startScreenRecording(60);
+      setRecordingSavedPath(null); // Clear previous path
+      const result = await startScreenRecording(60); // 60 seconds max
       if (result.success) {
         setIsRecording(true);
-        toast({ title: 'Recording Started', description: 'Recording for up to 60 seconds' });
+        toast({ 
+          title: 'Recording Started',
+          description: 'Recording for up to 60 seconds'
+        });
         speak('Screen recording started');
       } else {
-        toast({ title: 'Recording Failed', description: result.message, variant: 'destructive' });
+        toast({ 
+          title: 'Recording Failed',
+          description: result.message,
+          variant: 'destructive'
+        });
       }
     }
   }, [isRecording, toast, speak]);
@@ -170,34 +180,51 @@ const Index = () => {
         setRecordingSavedPath(folderPath);
         toast({
           title: 'Recording Saved',
-          description: `Saved to: ${folderPath}`,
+          description: (
+            <div className="flex flex-col gap-2">
+              <span>Saved to: {folderPath}</span>
+              <button 
+                className="bg-primary text-primary-foreground px-3 py-1 rounded text-sm hover:bg-primary/90"
+                onClick={() => openFolder(folderPath)}
+              >
+                Open Folder
+              </button>
+            </div>
+          ) as any,
           duration: 10000
         });
       }
     };
+
     window.addEventListener('recording-saved', handleRecordingSaved as EventListener);
     return () => window.removeEventListener('recording-saved', handleRecordingSaved as EventListener);
   }, [toast]);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts: Alt+V for voice, Ctrl+Shift+O for new chat
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Alt+V for voice toggle
       if (e.altKey && e.key.toLowerCase() === 'v') {
         e.preventDefault();
         toggleVoice();
         return;
       }
+
+      // Ctrl+Shift+O for new conversation
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'o') {
         e.preventDefault();
         handleNewConversation();
         return;
       }
+
+      // Ctrl+Shift+S for screenshot
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') {
         e.preventDefault();
         handleScreenshot();
         return;
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleVoice, handleNewConversation, handleScreenshot]);
@@ -207,9 +234,11 @@ const Index = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
     });
+
     return () => subscription.unsubscribe();
   }, []);
 
@@ -218,12 +247,14 @@ const Index = () => {
     const loadConversation = async () => {
       const convId = urlConversationId || location.state?.conversationId;
       if (!convId || !user) return;
+
       try {
         const { data, error } = await supabase
           .from('chat_messages')
           .select('*')
           .eq('conversation_id', convId)
           .order('created_at', { ascending: true });
+
         if (error) throw error;
         if (data && data.length > 0) {
           setMessages(data.map(msg => ({
@@ -236,6 +267,7 @@ const Index = () => {
         console.error('Error loading conversation:', error);
       }
     };
+
     loadConversation();
   }, [urlConversationId, location.state, user]);
 
@@ -243,6 +275,7 @@ const Index = () => {
   useEffect(() => {
     if (!hasGreeted && messages.length === 0) {
       const greeting = getTimeBasedGreeting();
+      const fullGreeting = `${greeting}! I'm ALSA, your AI assistant. How can I help you today?`;
       setHasGreeted(true);
     }
   }, [hasGreeted, messages.length]);
@@ -252,6 +285,7 @@ const Index = () => {
     const checkBridge = async () => {
       const status = await checkBridgeConnection();
       setBridgeConnected(status.connected);
+
       if (status.connected && !systemData) {
         const scanResult = await scanSystem();
         if (scanResult.success && scanResult.data) {
@@ -259,6 +293,7 @@ const Index = () => {
         }
       }
     };
+
     checkBridge();
     const interval = setInterval(checkBridge, 30000);
     return () => clearInterval(interval);
@@ -269,11 +304,16 @@ const Index = () => {
     if (!isListening) return;
     const currentText = transcript.trim();
     if (!currentText) return;
+
     setInputText(currentText);
+
     if (listeningTimeoutRef.current) {
       clearTimeout(listeningTimeoutRef.current);
     }
+
     const lowerText = currentText.toLowerCase();
+
+    // Voice control commands
     if (lowerText === 'stop listening' || lowerText === 'voice off') {
       listeningTimeoutRef.current = setTimeout(() => {
         speak('Voice input disabled');
@@ -282,13 +322,17 @@ const Index = () => {
       }, 500);
       return;
     }
+
+    // Process full commands after 3 seconds of silence
     if (currentText.length > 5) {
       listeningTimeoutRef.current = setTimeout(() => {
         if (currentText === lastProcessedRef.current) return;
         lastProcessedRef.current = currentText;
+        
         handleSubmit(currentText);
         setInputText('');
         resetTranscript();
+
         setTimeout(() => {
           lastProcessedRef.current = '';
         }, 2000);
@@ -306,8 +350,10 @@ const Index = () => {
 
   const saveConversation = async (userMsg: Message, assistantMsg: Message) => {
     if (!user) return;
+
     try {
       let conversationId = currentConversationId;
+
       if (!conversationId) {
         const title = userMsg.content.slice(0, 50) + (userMsg.content.length > 50 ? '...' : '');
         const { data: conv, error: convError } = await supabase
@@ -315,9 +361,11 @@ const Index = () => {
           .insert({ user_id: user.id, title })
           .select()
           .single();
+
         if (convError) throw convError;
         conversationId = conv.id;
         setCurrentConversationId(conversationId);
+        
         navigate(`/c/${conversationId}`, { replace: true });
       } else {
         await supabase
@@ -325,6 +373,7 @@ const Index = () => {
           .update({ updated_at: new Date().toISOString() })
           .eq('id', conversationId);
       }
+
       await supabase.from('chat_messages').insert([
         { conversation_id: conversationId, role: 'user', content: userMsg.content },
         { conversation_id: conversationId, role: 'assistant', content: assistantMsg.content }
@@ -335,6 +384,7 @@ const Index = () => {
   };
 
   const handleFilesSelected = (files: any[]) => {
+    // files from FileUpload component have { name, type, size, data, preview }
     const attachments: FileAttachment[] = files.map(f => ({
       name: f.name,
       type: f.type,
@@ -342,7 +392,7 @@ const Index = () => {
       data: f.data || '',
       preview: f.preview
     }));
-    setUploadedFiles(prev => [...prev, ...attachments].slice(0, 10));
+    setUploadedFiles(prev => [...prev, ...attachments].slice(0, 10)); // Max 10 files
     setShowFileUpload(false);
   };
 
@@ -356,7 +406,7 @@ const Index = () => {
 
     const lowerText = text.toLowerCase();
 
-    // Learn from user message
+    // Learn from user message for conversation memory
     parseAndLearn(text);
     trackInteraction(text);
 
@@ -370,7 +420,7 @@ const Index = () => {
       return;
     }
 
-    // Check for PC Bridge commands
+    // Check for PC Bridge commands using natural language parser
     const parsedCommand = parseNaturalLanguage(text);
     if (parsedCommand && bridgeConnected) {
       try {
@@ -391,8 +441,14 @@ const Index = () => {
       }
     }
 
-    // Check for website opening - STRICT: Only open when user says EXACT "open [website name]"
-    // Check custom user sites first
+    // Check for website opening - STRICT: Only open when user says EXACT "open [website name]" or "kholo" 
+    // Patterns: "open youtube", "youtube kholo", "youtube open karo", "twitter ko open karo"
+    const openWebsitePatterns = [
+      /\b(open|launch|start)\s+(\w+)\b/i,  // "open youtube"
+      /\b(\w+)\s+(kholo|kholna|open\s+karo|ko\s+open\s+karo)\b/i,  // "youtube kholo"
+    ];
+    
+    // Check for custom user sites first
     const userSites = JSON.parse(localStorage.getItem('alsa_user_sites') || '[]');
     for (const site of userSites) {
       const sitePattern = new RegExp(`\\b(open|kholo|launch)\\s+${site.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b|\\b${site.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+(kholo|open\\s+karo)\\b`, 'i');
@@ -410,6 +466,7 @@ const Index = () => {
     
     // Check built-in websites - ONLY with explicit open command
     for (const [key, site] of Object.entries(WEBSITES)) {
+      // Strict patterns that require explicit open intent
       const strictPatterns = [
         new RegExp(`\\b(open|launch|start|visit)\\s+${key}\\b`, 'i'),
         new RegExp(`\\b(open|launch|start|visit)\\s+${site.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i'),
@@ -420,11 +477,12 @@ const Index = () => {
       const shouldOpen = strictPatterns.some(pattern => pattern.test(lowerText));
       
       if (shouldOpen) {
+        // Skip if it's an app keyword (don't open website when user wants local app)
         const appKeywords = ['file explorer', 'explorer', 'notepad', 'word', 'excel', 'powerpoint', 'paint', 'calculator', 'cmd', 'terminal', 'antigravity'];
         const looksLikeAppCommand = appKeywords.some(app => lowerText.includes(app));
         
         if (looksLikeAppCommand) {
-          continue;
+          continue; // Let PC Bridge handle local apps
         }
         
         const response = `Opening ${site.name}`;
@@ -442,6 +500,8 @@ const Index = () => {
     try {
       setIsTyping(true);
       const memory = getMemory();
+
+      // API endpoint
       const apiEndpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
       const response = await fetch(apiEndpoint, {
@@ -454,10 +514,10 @@ const Index = () => {
           messages: [...messages, userMessage].map(m => ({
             role: m.role,
             content: m.content,
-            files: m.files
+            files: m.files // Include file attachments for multimodal analysis
           })),
           memory,
-          conversationContext: getAIContext(),
+          conversationContext: getAIContext(), // Add conversation memory context
           ai_response_style: localStorage.getItem('alsa_ai_response_style') || 'balanced'
         })
       });
@@ -465,6 +525,7 @@ const Index = () => {
       if (!response.ok) {
         const errorStatus = response.status;
         
+        // Try backup API key if available (for 429, 402, 500 errors)
         if ([429, 402, 500, 503].includes(errorStatus)) {
           const savedKeys = localStorage.getItem('alsa_backup_api_keys');
           if (savedKeys) {
@@ -481,6 +542,7 @@ const Index = () => {
                 description: `Primary API unavailable (${errorStatus}). Using your backup Gemini key.`
               });
               
+              // Call Gemini API directly with backup key
               const backupResponse = await fetch(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey.key}`,
                 {
@@ -566,6 +628,7 @@ const Index = () => {
               setCurrentGame(parsed.game);
               speak(`Launching ${parsed.game}`);
             } else if (parsed.type === 'create_project' && parsed.project_path && parsed.files) {
+              // Execute project creation via PC Bridge
               const result = await createProject(parsed.project_path, parsed.files);
               const statusMsg = result.success 
                 ? `✅ Project created at ${parsed.project_path}` 
@@ -644,7 +707,7 @@ const Index = () => {
                 return newMessages;
               });
             } else if (parsed.type === 'system_power') {
-              const result = await sendCommand(parsed.action);
+              const result = await sendCommand(parsed.action); // shutdown, restart, sleep
               const statusMsg = result.success 
                 ? `✅ ${result.message}` 
                 : `❌ ${result.message}`;
@@ -732,6 +795,7 @@ const Index = () => {
                 return newMessages;
               });
             } else if (parsed.type === 'run_project') {
+              // Ask user for confirmation before running
               const confirmMsg = `Do you want me to run this ${parsed.project_type} project at ${parsed.project_path} on your local machine? I'll install dependencies and start the server.`;
               accumulatedText += `\n\n${confirmMsg}`;
               setMessages(prev => {
@@ -741,6 +805,7 @@ const Index = () => {
                 return newMessages;
               });
               
+              // Execute project run
               const result = await runProject(parsed.project_path, parsed.project_type);
               const statusMsg = result.success 
                 ? `✅ ${result.message}${result.output ? `\n\`\`\`\n${result.output}\n\`\`\`` : ''}` 
@@ -787,16 +852,28 @@ const Index = () => {
   if (isMobile) {
     return (
       <div className="flex flex-col h-screen w-screen bg-[#0d0d0d] text-white overflow-hidden">
+        {/* Mobile Top Bar */}
         <div className="flex items-center justify-between p-3 border-b border-white/5 bg-black/40 backdrop-blur-xl">
-          <Button variant="ghost" size="icon" onClick={() => setShowSidebar(true)} className="text-white/60">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowSidebar(true)}
+            className="text-white/60"
+          >
             <Menu className="w-5 h-5" />
           </Button>
           <span className="text-sm font-bold tracking-wider text-blue-400">ALSA</span>
-          <Button variant="ghost" size="icon" onClick={() => setShowRightPanel(true)} className="text-white/60">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowRightPanel(true)}
+            className="text-white/60"
+          >
             <Settings className="w-5 h-5" />
           </Button>
         </div>
 
+        {/* Chat Area */}
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-4">
             {!hasMessages && (
@@ -823,6 +900,7 @@ const Index = () => {
           </div>
         </ScrollArea>
 
+        {/* Mobile Input */}
         <div className="p-3 border-t border-white/5 bg-black/60 backdrop-blur-xl">
           {uploadedFiles.length > 0 && (
             <div className="flex gap-2 mb-2 flex-wrap">
@@ -835,7 +913,12 @@ const Index = () => {
             </div>
           )}
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => setShowFileUpload(true)} className="text-white/40">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowFileUpload(true)}
+              className="text-white/40"
+            >
               <Paperclip className="w-4 h-4" />
             </Button>
             <Input
@@ -845,41 +928,66 @@ const Index = () => {
               placeholder="Message ALSA..."
               className="flex-1 bg-white/5 border-white/10 text-white text-sm"
             />
-            <Button variant="ghost" size="icon" onClick={toggleVoice} className={isListening ? 'text-red-400' : 'text-white/40'}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleVoice}
+              className={isListening ? 'text-red-400' : 'text-white/40'}
+            >
               <Mic className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleSubmit()} className="text-white/40">
+            <Button
+              size="icon"
+              onClick={() => handleSubmit()}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
               <Send className="w-4 h-4" />
             </Button>
           </div>
         </div>
 
-        <Dialog open={showSidebar} onOpenChange={setShowSidebar}>
-          <DialogContent className="bg-[#0a0a0a] border-white/10 text-white p-0 max-w-[280px] h-full left-0 translate-x-0 rounded-none">
-            <Sidebar
-              bridgeConnected={bridgeConnected}
-              onNewChat={handleNewConversation}
-              onOpenMemory={() => setShowMemoryManager(true)}
-              onToggleBridge={toggleBridgeConnection}
-              currentConversationId={currentConversationId}
-            />
+        {/* Mobile Sidebar Overlay */}
+        {showSidebar && (
+          <div className="fixed inset-0 z-50 bg-black/80" onClick={() => setShowSidebar(false)}>
+            <div className="w-72 h-full" onClick={e => e.stopPropagation()}>
+              <Sidebar
+                bridgeConnected={bridgeConnected}
+                onNewChat={handleNewConversation}
+                onOpenMemory={() => setShowMemoryManager(true)}
+                currentConversationId={currentConversationId}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Right Panel Overlay */}
+        {showRightPanel && (
+          <div className="fixed inset-0 z-50 bg-black/80" onClick={() => setShowRightPanel(false)}>
+            <div className="w-72 h-full ml-auto" onClick={e => e.stopPropagation()}>
+              <RightPanel
+                user={user}
+                bridgeConnected={bridgeConnected}
+                isListening={isListening}
+                isSpeaking={isSpeaking}
+                toggleVoice={toggleVoice}
+                onOpenMemory={() => setShowMemoryManager(true)}
+                backupKeyActive={backupKeyActive}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* File Upload Dialog */}
+        <Dialog open={showFileUpload} onOpenChange={setShowFileUpload}>
+          <DialogContent className="bg-[#0a0a0a] border-white/10 text-white">
+            <DialogHeader>
+              <DialogTitle>Upload Files</DialogTitle>
+            </DialogHeader>
+            <FileUpload onFilesSelected={handleFilesSelected} maxFiles={10} />
           </DialogContent>
         </Dialog>
 
-        <Dialog open={showRightPanel} onOpenChange={setShowRightPanel}>
-          <DialogContent className="bg-[#0a0a0a] border-white/10 text-white p-0 max-w-[280px] h-full right-0 translate-x-0 rounded-none">
-            <RightPanel
-              user={user}
-              bridgeConnected={bridgeConnected}
-              isListening={isListening}
-              isSpeaking={isSpeaking}
-              toggleVoice={toggleVoice}
-              onOpenMemory={() => setShowMemoryManager(true)}
-              backupKeyActive={backupKeyActive}
-            />
-          </DialogContent>
-        </Dialog>
-
+        {/* Memory Manager */}
         <Dialog open={showMemoryManager} onOpenChange={setShowMemoryManager}>
           <DialogContent className="bg-[#0a0a0a] border-white/10 text-white max-w-2xl">
             <DialogHeader>
@@ -897,145 +1005,146 @@ const Index = () => {
 
         <MusicPlayer song={currentSong} onClose={() => setCurrentSong(null)} />
         <GameLauncher game={currentGame as any} onClose={() => setCurrentGame(null)} />
-
-        <Dialog open={showFileUpload} onOpenChange={setShowFileUpload}>
-          <DialogContent className="bg-[#0a0a0a] border-white/10 text-white max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Upload Files</DialogTitle>
-            </DialogHeader>
-            <FileUpload onFilesSelected={handleFilesSelected} />
-          </DialogContent>
-        </Dialog>
       </div>
     );
   }
+  // ================= DESKTOP UI =================
+return (
+  <div className="flex h-screen w-screen bg-[#0d0d0d] text-white overflow-hidden">
+    {/* ========== SIDEBAR / LEFT PANEL ========= */}
+    <Sidebar
+      bridgeConnected={bridgeConnected}
+      onNewChat={handleNewConversation}
+      onOpenMemory={() => setShowMemoryManager(true)}
+      onToggleBridge={toggleBridgeConnection}
+      currentConversationId={currentConversationId}
+    />
 
-  // Desktop UI
-  return (
-    <div className="flex h-screen w-screen bg-[#0d0d0d] text-white overflow-hidden">
-      <Sidebar
-        bridgeConnected={bridgeConnected}
-        onNewChat={handleNewConversation}
-        onOpenMemory={() => setShowMemoryManager(true)}
-        onToggleBridge={toggleBridgeConnection}
-        currentConversationId={currentConversationId}
-      />
+    {/* ========== CENTER CHAT AREA ========= */}
+    <div className="flex-[1_1_0%] min-w-0 relative flex flex-col overflow-hidden">
+      {/* Background Gradient */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(17,24,39,1)_0%,rgba(0,0,0,1)_100%)]" />
 
-      <div className="flex-[1_1_0%] min-w-0 relative flex flex-col overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(17,24,39,1)_0%,rgba(0,0,0,1)_100%)]" />
+      <div className="relative z-10 flex-1 flex flex-col overflow-hidden">
+        {/* EMPTY STATE */}
+        {!messages.length ? (
+          <div className="flex-1 flex flex-col items-center justify-center px-6">
+            <h1 className="text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20">
+              ALSA CORE
+            </h1>
+            <p className="mt-3 text-blue-500/50 font-mono text-[10px] tracking-[0.5em] uppercase">
+              System.Scan(v2.0.4) // Neural Link Active
+            </p>
 
-        <div className="relative z-10 flex-1 flex flex-col overflow-hidden">
-          {!messages.length ? (
-            <div className="flex-1 flex flex-col items-center justify-center px-6">
-              <h1 className="text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20">
-                ALSA CORE
-              </h1>
-              <p className="mt-3 text-blue-500/50 font-mono text-[10px] tracking-[0.5em] uppercase">
-                System.Scan(v2.0.4) // Neural Link Active
-              </p>
-
-              <div className="mt-14 w-full max-w-2xl">
-                <div className="flex items-center bg-black/50 border border-white/10 rounded-2xl px-6 py-4 backdrop-blur-xl">
-                  <Input
-                    ref={inputRef}
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
-                    placeholder="Enter Command..."
-                    className="bg-transparent border-none text-white text-xl flex-1 focus-visible:ring-0"
-                  />
-                  <Send
-                    className="w-6 h-6 cursor-pointer hover:text-blue-400 transition-colors"
-                    onClick={() => handleSubmit()}
-                  />
-                </div>
+            <div className="mt-14 w-full max-w-2xl">
+              <div className="flex items-center bg-black/50 border border-white/10 rounded-2xl px-6 py-4 backdrop-blur-xl">
+                <Input
+                  ref={inputRef}
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+                  placeholder="Enter Command..."
+                  className="bg-transparent border-none text-white text-xl flex-1 focus-visible:ring-0"
+                />
+                <Send
+                  className="w-6 h-6 cursor-pointer hover:text-blue-400 transition-colors"
+                  onClick={() => handleSubmit()}
+                />
               </div>
             </div>
-          ) : (
-            <>
-              <ScrollArea className="flex-1 px-6">
-                <div className="max-w-5xl mx-auto py-12 space-y-10">
-                  {messages.map((m, i) => (
-                    <ChatMessage key={i} role={m.role} content={m.content} />
-                  ))}
+          </div>
+        ) : (
+          <>
+            {/* CHAT MESSAGES */}
+            <ScrollArea className="flex-1 px-6">
+              <div className="max-w-5xl mx-auto py-12 space-y-10">
+                {messages.map((m, i) => (
+                  <ChatMessage key={i} role={m.role} content={m.content} />
+                ))}
 
-                  {isTyping && (
-                    <div className="flex gap-2 ml-12">
-                      <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" />
-                      <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                      <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                    </div>
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-              </ScrollArea>
-
-              <div className="p-6 bg-gradient-to-t from-black via-black/80 to-transparent">
-                <div className="max-w-5xl mx-auto flex items-center bg-[#1a1a1a]/80 border border-white/10 rounded-2xl px-5 py-3 backdrop-blur-xl">
-                  <Plus
-                    className="w-5 h-5 text-white/30 hover:text-white cursor-pointer"
-                    onClick={() => setShowFileUpload(true)}
-                  />
-                  <Input
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
-                    placeholder="Message ALSA..."
-                    className="bg-transparent border-none flex-1 px-4 text-sm focus-visible:ring-0"
-                  />
-                  <Send
-                    className="w-5 h-5 text-black bg-white rounded-full p-1 cursor-pointer hover:scale-110 transition"
-                    onClick={() => handleSubmit()}
-                  />
-                </div>
+                {isTyping && (
+                  <div className="flex gap-2 ml-12">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" />
+                    <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                    <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
               </div>
-            </>
-          )}
-        </div>
+            </ScrollArea>
+
+            {/* INPUT BAR (DURING CHAT) */}
+            <div className="p-6 bg-gradient-to-t from-black via-black/80 to-transparent">
+              <div className="max-w-5xl mx-auto flex items-center bg-[#1a1a1a]/80 border border-white/10 rounded-2xl px-5 py-3 backdrop-blur-xl">
+                <Plus
+                  className="w-5 h-5 text-white/30 hover:text-white cursor-pointer"
+                  onClick={() => setShowFileUpload(true)}
+                />
+                <Input
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+                  placeholder="Message ALSA..."
+                  className="bg-transparent border-none flex-1 px-4 text-sm focus-visible:ring-0"
+                />
+                <Send
+                  className="w-5 h-5 text-black bg-white rounded-full p-1 cursor-pointer hover:scale-110 transition"
+                  onClick={() => handleSubmit()}
+                />
+              </div>
+            </div>
+          </>
+        )}
       </div>
-
-      <div className="w-[260px] shrink-0 border-l border-white/5 bg-black/40 backdrop-blur-md">
-        <RightPanel
-          user={user}
-          bridgeConnected={bridgeConnected}
-          isListening={isListening}
-          isSpeaking={isSpeaking}
-          toggleVoice={toggleVoice}
-          onOpenMemory={() => setShowMemoryManager(true)}
-          backupKeyActive={backupKeyActive}
-        />
-      </div>
-
-      <Dialog open={showMemoryManager} onOpenChange={setShowMemoryManager}>
-        <DialogContent className="bg-[#0a0a0a] border-white/10 text-white max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-xs tracking-[0.3em] uppercase text-blue-500">
-              Neural Data Bank
-            </DialogTitle>
-          </DialogHeader>
-          <MemoryManager />
-        </DialogContent>
-      </Dialog>
-
-      {isListening && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50">
-          <TranscriptionFeedback transcript={transcript} isListening={isListening} />
-        </div>
-      )}
-
-      <MusicPlayer song={currentSong} onClose={() => setCurrentSong(null)} />
-      <GameLauncher game={currentGame as any} onClose={() => setCurrentGame(null)} />
-
-      <Dialog open={showFileUpload} onOpenChange={setShowFileUpload}>
-        <DialogContent className="bg-[#0a0a0a] border-white/10 text-white max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Upload Files</DialogTitle>
-          </DialogHeader>
-          <FileUpload onFilesSelected={handleFilesSelected} />
-        </DialogContent>
-      </Dialog>
     </div>
-  );
+
+    {/* ========== RIGHT PANEL ========= */}
+    <div className="w-[260px] shrink-0 border-l border-white/5 bg-black/40 backdrop-blur-md">
+      <RightPanel
+        user={user}
+        bridgeConnected={bridgeConnected}
+        isListening={isListening}
+        isSpeaking={isSpeaking}
+        toggleVoice={toggleVoice}
+        onOpenMemory={() => setShowMemoryManager(true)}
+        backupKeyActive={backupKeyActive}
+      />
+    </div>
+
+    {/* ========== ALL MODALS & OVERLAYS ========= */}
+    
+    {/* Memory Manager Modal */}
+    <Dialog open={showMemoryManager} onOpenChange={setShowMemoryManager}>
+      <DialogContent className="bg-[#0a0a0a] border-white/10 text-white max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="text-xs tracking-[0.3em] uppercase text-blue-500">
+            Neural Data Bank
+          </DialogTitle>
+        </DialogHeader>
+        <MemoryManager />
+      </DialogContent>
+    </Dialog>
+
+    {/* File Upload Modal */}
+    <Dialog open={showFileUpload} onOpenChange={setShowFileUpload}>
+      <DialogContent className="bg-[#0a0a0a] border-white/10 text-white">
+        <FileUpload onFilesSelected={handleFilesSelected} maxFiles={10} />
+      </DialogContent>
+    </Dialog>
+
+    {/* Players & Tools */}
+    <MusicPlayer song={currentSong} onClose={() => setCurrentSong(null)} />
+    <GameLauncher game={currentGame as any} onClose={() => setCurrentGame(null)} />
+
+    {/* Voice Overlay */}
+    {isListening && (
+      <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-50">
+        <TranscriptionFeedback transcript={transcript} isListening={isListening} />
+      </div>
+    )}
+  </div>
+);
+
 };
 
 export default Index;
