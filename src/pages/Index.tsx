@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { supabase } from '@/integrations/supabase/client';
-import { checkBridgeConnection, executeSystemCommand, scanSystem, SystemScanResult, captureScreenshot, startScreenRecording, stopScreenRecording, parseNaturalLanguage, WEBSITES, createProject, createPowerPoint, createExcel, createDatabase, executePythonFile, executeCmdCommand, runCommand, checkInstallation, sendCommand, adbConnect, adbCommand, closeWindow, openFolder, runProject } from '@/utils/pcBridge';
+import { checkBridgeConnection, executeSystemCommand, scanSystem, SystemScanResult, captureScreenshot, startScreenRecording, stopScreenRecording, parseNaturalLanguage, WEBSITES, createProject, createPowerPoint, createExcel, createDatabase, executePythonFile, executeCmdCommand, runCommand, checkInstallation, sendCommand, adbConnect, adbCommand, closeWindow, openFolder, runProject, createFolder, createTextFile, openWebsiteWithSearch, openCustomApp } from '@/utils/pcBridge';
 import ChatMessage from '@/components/ChatMessage';
 import MemoryManager from '@/components/MemoryManager';
 import TranscriptionFeedback from '@/components/TranscriptionFeedback';
@@ -818,6 +818,56 @@ const Index = () => {
                 return newMessages;
               });
               speak(result.success ? 'Project is running' : 'Failed to run project');
+            } else if (parsed.type === 'create_folder') {
+              const result = await createFolder(parsed.folder_path);
+              const statusMsg = result.success 
+                ? `✅ Folder created: ${parsed.folder_path}` 
+                : `❌ ${result.message}`;
+              accumulatedText += `\n\n${statusMsg}`;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
+              speak(result.success ? 'Folder created' : 'Failed to create folder');
+            } else if (parsed.type === 'create_text_file') {
+              const result = await createTextFile(parsed.file_path, parsed.content);
+              const statusMsg = result.success 
+                ? `✅ File created: ${parsed.file_path}` 
+                : `❌ ${result.message}`;
+              accumulatedText += `\n\n${statusMsg}`;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
+              speak(result.success ? 'File created' : 'Failed to create file');
+            } else if (parsed.type === 'open_website_with_search') {
+              openWebsiteWithSearch(parsed.platform, parsed.search_query);
+              const statusMsg = `✅ Opening ${parsed.platform} with search: "${parsed.search_query}"`;
+              accumulatedText += `\n\n${statusMsg}`;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
+              speak(`Opening ${parsed.platform} with search ${parsed.search_query}`);
+            } else if (parsed.type === 'open_custom_app') {
+              const result = await openCustomApp(parsed.app_name);
+              const statusMsg = result.success 
+                ? `✅ Opened ${parsed.app_name}` 
+                : `❌ ${result.message}`;
+              accumulatedText += `\n\n${statusMsg}`;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
+              speak(result.success ? `Opened ${parsed.app_name}` : 'Failed to open app');
             }
           } catch (e) {
             console.error('Parse error:', e);
