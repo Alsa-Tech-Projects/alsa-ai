@@ -599,6 +599,99 @@ export const createProject = async (projectPath: string, files: Record<string, s
   }
 };
 
+// Create a folder at any path
+export const createFolder = async (folderPath: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    const response = await fetch(`${BRIDGE_URL}/create_folder`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ folder_path: folderPath }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: response.statusText }));
+      throw new Error(errorData.message || errorData.error || `Failed to create folder`);
+    }
+
+    const data = await response.json();
+    return { success: true, message: data.message || `Folder created: ${folderPath}` };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || 'Cannot connect to PC Bridge'
+    };
+  }
+};
+
+// Create a text file with content at any path
+export const createTextFile = async (filePath: string, content: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    const response = await fetch(`${BRIDGE_URL}/create_text_file`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ file_path: filePath, content }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: response.statusText }));
+      throw new Error(errorData.message || errorData.error || `Failed to create file`);
+    }
+
+    const data = await response.json();
+    return { success: true, message: data.message || `File created: ${filePath}` };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || 'Cannot connect to PC Bridge'
+    };
+  }
+};
+
+// Open website with search query
+export const openWebsiteWithSearch = (platform: 'youtube' | 'spotify' | 'google', searchQuery: string): void => {
+  const searchUrls: Record<string, string> = {
+    youtube: `https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`,
+    spotify: `https://open.spotify.com/search/${encodeURIComponent(searchQuery)}`,
+    google: `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`
+  };
+  
+  const url = searchUrls[platform];
+  if (url) {
+    window.open(url, '_blank');
+  }
+};
+
+// Open custom app from user's configured apps
+export const openCustomApp = async (appName: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    // Get custom apps from localStorage
+    const customApps = JSON.parse(localStorage.getItem('alsa_custom_apps') || '[]');
+    const app = customApps.find((a: any) => a.name.toLowerCase() === appName.toLowerCase());
+    
+    if (!app) {
+      return { success: false, message: `Custom app "${appName}" not found in settings` };
+    }
+    
+    const response = await fetch(`${BRIDGE_URL}/execute`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ command: `start "" "${app.path}"` }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to open app');
+    }
+
+    const data = await response.json();
+    return { success: true, message: data.message || `Opened ${app.name}` };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || 'Cannot connect to PC Bridge'
+    };
+  }
+};
+
 export const checkInstallation = async (software: string): Promise<{ success: boolean; installed: boolean; message: string; version?: string }> => {
   try {
     const response = await fetch(`${BRIDGE_URL}/check_installation`, {

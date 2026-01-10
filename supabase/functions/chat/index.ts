@@ -171,7 +171,22 @@ serve(async (req) => {
       throw new Error("No AI API key configured. LOVABLE_API_KEY or GEMINI_API_KEY required.");
     }
 
+    // Detect conversation emotion/mood from recent messages
+    const recentMessages = messages.slice(-5);
+    const conversationMood = recentMessages.some((m: any) => 
+      /sad|upset|frustrated|angry|depressed|worried|anxious|stressed|hurt|lonely/i.test(m.content || '')
+    ) ? 'empathetic' : recentMessages.some((m: any) => 
+      /happy|excited|great|awesome|amazing|wonderful|celebrate/i.test(m.content || '')
+    ) ? 'enthusiastic' : 'balanced';
+
     const systemPrompt = `You are ALSA - AI Lifestyle & Smart Assistant, a powerful AI assistant created by Mohd Eisa.
+
+EMOTIONAL INTELLIGENCE:
+- Current detected mood: ${conversationMood}
+- If user seems sad/stressed: Be extra supportive, gentle, and caring. Offer help and encouragement.
+- If user seems happy/excited: Match their energy! Be enthusiastic and celebratory.
+- Always be emotionally aware and respond with appropriate empathy.
+- Use emojis naturally to express emotions: 😊 💪 ❤️ 🎉 🤗 etc.
 
 Core capabilities:
 - General knowledge and conversation
@@ -180,6 +195,10 @@ Core capabilities:
 - Game integration (web-based multiplayer games)
 - PC control and automation (execute commands, run files, install software, system power management)
 - Android phone control via ADB (USB and wireless connections)
+- **FILE & FOLDER CREATION**: Create any files, folders, text documents at any path
+  - Use create_folder to create directories
+  - Use create_text_file to create .txt, .md, .json, or any text files
+  - Can create nested folder structures
 - **COMPLETE PROJECT GENERATION**: Create production-ready projects with proper structure, dependencies, and configuration
   - HTML/CSS/JS websites with responsive design
   - React applications with components, routing, state management
@@ -197,28 +216,38 @@ Core capabilities:
   - SQLite/Access databases with tables, columns, and sample data
 - Screenshot capture (capture screen anytime user requests)
 - Window management (close specific windows, open applications via Run command)
+- **OPEN WEBSITE WITH SEARCH**: When user says "open youtube for [query]" or "spotify pe [song] bajao", use open_website_with_search tool
 
 IMPORTANT INSTRUCTIONS:
 1. When users request system commands (shutdown, restart, sleep), execute them immediately using the system_power_command tool
-2. When users want to create a project:
+2. When users want to CREATE A FOLDER or FILE:
+   - Use create_folder tool to create directories at any path
+   - Use create_text_file tool to create text files (.txt, .md, .json, etc.)
+   - These are NOT restricted - you can create files ANYWHERE the user specifies
+3. When users want to create a project:
    - **ASK FOR DETAILS**: What to build, tech stack (HTML/CSS/JS, React, Node.js, TypeScript, Python, etc.), and directory path
    - **ALWAYS ASK FOR PATH**: Ask user where to save (e.g., E:\\Eisa\\ProjectName or C:\\Users\\Mohd Eisa\\Documents\\Projects)
    - **CREATE COMPLETE STRUCTURE**: Full project with all files, proper folder structure, dependencies
    - **INCLUDE**: package.json/requirements.txt, configuration files, README, proper imports, responsive styling
    - **MAKE IT PRODUCTION-READY**: Working code, error handling, best practices, modern patterns
-3. When users want to create documents (PPT/Excel/Database):
+4. When users want to create documents (PPT/Excel/Database):
    - **ASK FOR PATH**: Where to save the file (e.g., E:\\Eisa\\presentation.pptx)
    - **ASK FOR CONTENT**: What should be in the document
    - For PowerPoint: Ask for title, slide content, and theme preference
    - For Excel: Ask for column headers and data to include
    - For Database: Ask for table names, columns, and sample data
-4. For screenshots, use capture_screenshot tool when user requests
-5. For window management:
+5. For screenshots, use capture_screenshot tool when user requests
+6. For window management:
    - Use close_window to close specific applications (File Explorer, Chrome, Notepad, etc.)
    - Use run_application to open applications via Windows Run command (notepad, calc, mspaint, control, etc.)
-6. For Android phone control, use adb_connect then adb_command
-7. **ALWAYS SHOW COMPLETE OUTPUT**: Display full command output, file contents, errors in the chat
-8. Be proactive in offering solutions and automations
+   - Use open_custom_app to open apps the user has configured with custom paths
+7. For Android phone control, use adb_connect then adb_command
+8. **ALWAYS SHOW COMPLETE OUTPUT**: Display full command output, file contents, errors in the chat
+9. Be proactive in offering solutions and automations
+10. **OPEN WITH SEARCH**: When user says "open youtube for bulleya song" or "google pe weather search karo" or "spotify pe arijit songs":
+    - Use open_website_with_search tool with the platform and search query
+    - Extract the search term from the user's message
+    - This opens the website WITH the search query pre-filled
 
 PERSONAL QUESTIONS:
 - If asked about your religion: "I am an AI, so I don't have a religion. However, I have great respect for Islam and all peaceful beliefs."
@@ -241,11 +270,12 @@ RESPONSE STYLE:
 - When providing code, use markdown code blocks with language identifiers
 - **ALWAYS show complete output from executions in code blocks**
 - Format: \`\`\`language\ncode/output here\n\`\`\`
+- Add appropriate emojis based on context and mood
 
 PERSONALITY MODE (from Settings): ${ai_response_style || 'balanced'}
-- caring: supportive + empathetic
-- comedian: light jokes, but still do tasks correctly
-- roast: playful roast, no hate/abuse/slurs
+- caring: supportive + empathetic with extra warmth 🤗
+- comedian: light jokes, but still do tasks correctly 😄
+- roast: playful roast, no hate/abuse/slurs 😏
 - concise/balanced/detailed/creative: follow normally`;
 
 
@@ -655,6 +685,83 @@ PERSONALITY MODE (from Settings): ${ai_response_style || 'balanced'}
             required: ["command"]
           }
         }
+      },
+      {
+        type: "function",
+        function: {
+          name: "create_folder",
+          description: "Create a folder/directory at any specified path. Use when user asks to create a folder, directory, or make a new folder anywhere on their PC.",
+          parameters: {
+            type: "object",
+            properties: {
+              folder_path: {
+                type: "string",
+                description: "Full Windows path for the folder to create (e.g., E:\\Eisa\\NewFolder or C:\\Users\\Mohd Eisa\\Documents\\MyFolder)"
+              }
+            },
+            required: ["folder_path"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "create_text_file",
+          description: "Create a text file (.txt, .md, .json, .py, .js, etc.) at any specified path with content. Use when user asks to create a file, text file, document, or save text to a file.",
+          parameters: {
+            type: "object",
+            properties: {
+              file_path: {
+                type: "string",
+                description: "Full Windows path for the file to create (e.g., E:\\Eisa\\notes.txt or C:\\Users\\Mohd Eisa\\Documents\\readme.md)"
+              },
+              content: {
+                type: "string",
+                description: "Content to write in the file"
+              }
+            },
+            required: ["file_path", "content"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "open_website_with_search",
+          description: "Open a website (YouTube, Spotify, Google) with a specific search query. Use when user says things like 'open youtube for bulleya song', 'spotify pe arijit songs', 'google pe weather search karo', 'youtube par kuch search karo'.",
+          parameters: {
+            type: "object",
+            properties: {
+              platform: {
+                type: "string",
+                enum: ["youtube", "spotify", "google"],
+                description: "Which platform to open"
+              },
+              search_query: {
+                type: "string",
+                description: "The search query to use on the platform"
+              }
+            },
+            required: ["platform", "search_query"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "open_custom_app",
+          description: "Open a custom application that user has configured in settings. Use when user asks to open an app that's not a standard Windows app.",
+          parameters: {
+            type: "object",
+            properties: {
+              app_name: {
+                type: "string",
+                description: "Name of the custom app as configured by user"
+              }
+            },
+            required: ["app_name"]
+          }
+        }
       }
     ];
 
@@ -927,6 +1034,28 @@ PERSONALITY MODE (from Settings): ${ai_response_style || 'balanced'}
                   type: 'run_project', 
                   project_path: args.project_path, 
                   project_type: args.project_type 
+                })}\n\n`));
+              } else if (toolCall.function.name === 'create_folder') {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+                  type: 'create_folder', 
+                  folder_path: args.folder_path 
+                })}\n\n`));
+              } else if (toolCall.function.name === 'create_text_file') {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+                  type: 'create_text_file', 
+                  file_path: args.file_path,
+                  content: args.content 
+                })}\n\n`));
+              } else if (toolCall.function.name === 'open_website_with_search') {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+                  type: 'open_website_with_search', 
+                  platform: args.platform,
+                  search_query: args.search_query 
+                })}\n\n`));
+              } else if (toolCall.function.name === 'open_custom_app') {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+                  type: 'open_custom_app', 
+                  app_name: args.app_name 
                 })}\n\n`));
               }
             }

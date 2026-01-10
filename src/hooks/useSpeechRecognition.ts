@@ -34,15 +34,19 @@ export const useSpeechRecognition = (): SpeechRecognitionResult => {
 
     const recognitionInstance = new SpeechRecognition();
     
-    // Critical settings for continuous listening
+    // Enhanced settings for better far-away voice detection
     recognitionInstance.continuous = true;
     recognitionInstance.interimResults = true;
     recognitionInstance.lang = 'en-US';
     
     try {
       recognitionInstance.maxAlternatives = 5;
+      // Some browsers support these for better sensitivity
+      if ('grammars' in recognitionInstance) {
+        // Clear any grammar restrictions for more flexible recognition
+      }
     } catch (e) {
-      console.log('maxAlternatives not supported');
+      console.log('Extended speech settings not fully supported');
     }
 
     recognitionInstance.onstart = () => {

@@ -27,6 +27,12 @@ interface CustomSite {
   url: string;
 }
 
+interface CustomApp {
+  id: string;
+  name: string;
+  path: string;
+}
+
 const Settings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -57,6 +63,11 @@ const [preferences, setPreferences] = useState({
   const [newSiteName, setNewSiteName] = useState('');
   const [newSiteUrl, setNewSiteUrl] = useState('');
 
+  // Custom apps state
+  const [customApps, setCustomApps] = useState<CustomApp[]>([]);
+  const [newAppName, setNewAppName] = useState('');
+  const [newAppPath, setNewAppPath] = useState('');
+
   useEffect(() => {
     loadPreferences();
     loadLocalSettings();
@@ -80,6 +91,16 @@ const [preferences, setPreferences] = useState({
         setCustomSites(JSON.parse(savedSites));
       } catch (e) {
         console.error('Error loading custom sites:', e);
+      }
+    }
+
+    // Load custom apps from localStorage
+    const savedApps = localStorage.getItem('alsa_custom_apps');
+    if (savedApps) {
+      try {
+        setCustomApps(JSON.parse(savedApps));
+      } catch (e) {
+        console.error('Error loading custom apps:', e);
       }
     }
 
@@ -153,6 +174,7 @@ const [preferences, setPreferences] = useState({
       // Save local settings (including voice_gender which isn't in DB)
       localStorage.setItem('alsa_output_paths', JSON.stringify(outputPaths));
       localStorage.setItem('alsa_user_sites', JSON.stringify(customSites));
+      localStorage.setItem('alsa_custom_apps', JSON.stringify(customApps));
       localStorage.setItem('alsa_ai_response_style', preferences.ai_response_style);
       localStorage.setItem('alsa_voice_gender', preferences.voice_gender);
       localStorage.setItem('alsa_voice_enabled', String(preferences.voice_enabled));
@@ -235,6 +257,40 @@ const [preferences, setPreferences] = useState({
     toast({
       title: "Site Removed",
       description: "Custom site has been removed"
+    });
+  };
+
+  const addCustomApp = () => {
+    if (!newAppName.trim() || !newAppPath.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter both app name and path",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const newApp: CustomApp = {
+      id: crypto.randomUUID(),
+      name: newAppName.trim().toLowerCase(),
+      path: newAppPath.trim()
+    };
+
+    setCustomApps(prev => [...prev, newApp]);
+    setNewAppName('');
+    setNewAppPath('');
+
+    toast({
+      title: "App Added",
+      description: `${newApp.name} has been added. Say "open ${newApp.name}" to launch it.`
+    });
+  };
+
+  const removeCustomApp = (id: string) => {
+    setCustomApps(prev => prev.filter(a => a.id !== id));
+    toast({
+      title: "App Removed",
+      description: "Custom app has been removed"
     });
   };
 
@@ -537,6 +593,72 @@ const [preferences, setPreferences] = useState({
                         className="flex-[2]"
                       />
                       <Button onClick={addCustomSite} size="icon">
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Custom Apps */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FolderOpen className="w-5 h-5" />
+                  Custom Apps
+                </CardTitle>
+                <CardDescription>
+                  Add your own applications with their paths. Say "open [app name]" to launch them.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {customApps.length > 0 && (
+                    <div className="space-y-2">
+                      {customApps.map((app) => (
+                        <div key={app.id} className="flex items-center gap-2 p-3 bg-secondary/30 rounded-lg">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm capitalize">{app.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{app.path}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeCustomApp(app.id)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="text-xs text-muted-foreground bg-secondary/20 rounded-lg p-3 space-y-1">
+                    <p className="font-medium">Examples:</p>
+                    <ul className="list-disc list-inside space-y-0.5">
+                      <li>Name: "antigravity", Path: C:\Program Files\Antigravity\antigravity.exe</li>
+                      <li>Name: "vscode", Path: C:\Users\...\AppData\Local\Programs\Microsoft VS Code\Code.exe</li>
+                    </ul>
+                  </div>
+
+                  <div className="space-y-2 pt-2 border-t border-border">
+                    <Label>Add New App</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newAppName}
+                        onChange={(e) => setNewAppName(e.target.value)}
+                        placeholder="App name (e.g., antigravity)"
+                        className="flex-1"
+                      />
+                      <Input
+                        value={newAppPath}
+                        onChange={(e) => setNewAppPath(e.target.value)}
+                        placeholder="Full path to .exe file"
+                        className="flex-[2]"
+                      />
+                      <Button onClick={addCustomApp} size="icon">
                         <Plus className="w-4 h-4" />
                       </Button>
                     </div>
