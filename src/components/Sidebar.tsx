@@ -1,139 +1,247 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { 
-  MessageSquare, 
-  Settings, 
-  History, 
-  User, 
-  BarChart3, 
-  Menu,
-  X,
-  Wifi,
-  WifiOff
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+    Wifi, WifiOff, MessageSquare, BarChart3, Lightbulb,
+    Database, User, ChevronDown, ChevronRight,
+    Edit, Share2, Trash2, Settings, MoreVertical
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import {
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
 
 interface SidebarProps {
-  bridgeConnected?: boolean;
-  onToggleBridge?: () => void;
-  onNewChat?: () => void;
-  onOpenMemory?: () => void;
-  currentConversationId?: string;
+    bridgeConnected: boolean;
+    onNewChat: () => void;
+    onOpenMemory: () => void;
+    onToggleBridge?: () => void;
+    currentConversationId?: string | null;
 }
 
-const Sidebar = ({ bridgeConnected = false, onToggleBridge, onNewChat, onOpenMemory, currentConversationId }: SidebarProps) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
+const Sidebar = ({ bridgeConnected, onNewChat, onOpenMemory, onToggleBridge, currentConversationId }: SidebarProps) => {
+    const navigate = useNavigate();
+    const { toast } = useToast();
+    const [user, setUser] = useState<any>(null);
+    const [recentChats, setRecentChats] = useState<any[]>([]);
+    const [showRecent, setShowRecent] = useState(true);
 
-  const menuItems = [
-    { icon: MessageSquare, label: "Chat", path: "/" },
-    { icon: History, label: "History", path: "/history" },
-    { icon: BarChart3, label: "Analytics", path: "/analytics" },
-    { icon: User, label: "Profile", path: "/profile" },
-    { icon: Settings, label: "Settings", path: "/settings" },
-  ];
+    // --- LOGIC FROM SECOND CODE ---
+    const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+    const [renameTitle, setRenameTitle] = useState('');
+    const [renamingChatId, setRenamingChatId] = useState<string | null>(null);
 
-  const handleNavigation = (path: string) => {
-    navigate(path);
-    setIsOpen(false);
-  };
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setUser(session?.user ?? null);
+        });
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+        });
+        return () => subscription.unsubscribe();
+    }, []);
 
-  return (
-    <>
-      {/* Mobile menu button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed top-4 left-4 z-50 md:hidden bg-background/80 backdrop-blur-sm"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </Button>
+    useEffect(() => {
+        const loadRecentChats = async () => {
+            if (!user) return;
+            const { data } = await supabase
+                .from('conversations')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('updated_at', { ascending: false })
+                .limit(15);
 
-      {/* Overlay for mobile */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
+            if (data) setRecentChats(data);
+        };
+        loadRecentChats();
+    }, [user, currentConversationId]);
 
-      {/* Sidebar */}
-      <div className={cn(
-        "fixed left-0 top-0 h-full w-64 bg-card border-r border-border z-40 transform transition-transform duration-300 ease-in-out",
-        "md:translate-x-0",
-        isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-      )}>
-        <div className="flex flex-col h-full">
-          {/* Logo/Brand */}
-          <div className="p-6 border-b border-border">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              JARVIS AI
-            </h1>
-            <p className="text-xs text-muted-foreground mt-1">Your AI Assistant</p>
-          </div>
+    const handleRenameChat = async () => {
+        if (!renamingChatId || !renameTitle.trim()) return;
+        try {
+            const { error } = await supabase
+                .from('conversations')
+                .update({ title: renameTitle.trim() })
+                .eq('id', renamingChatId);
 
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2">
-            {menuItems.map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <button
-                  key={item.path}
-                  onClick={() => handleNavigation(item.path)}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200",
-                    "hover:bg-accent hover:text-accent-foreground",
-                    isActive 
-                      ? "bg-primary/10 text-primary border border-primary/20" 
-                      : "text-muted-foreground"
-                  )}
+            if (error) throw error;
+
+            setRecentChats(prev => prev.map(chat =>
+                chat.id === renamingChatId ? { ...chat, title: renameTitle.trim() } : chat
+            ));
+
+            toast({ title: "Chat renamed successfully" });
+            setRenameDialogOpen(false);
+            setRenamingChatId(null);
+            setRenameTitle('');
+        } catch (error) {
+            toast({ title: "Failed to rename chat", variant: "destructive" });
+        }
+    };
+
+    const handleDeleteChat = async (chatId: string) => {
+        try {
+            const { error } = await supabase
+                .from('conversations')
+                .delete()
+                .eq('id', chatId);
+
+            if (error) throw error;
+
+            setRecentChats(prev => prev.filter(chat => chat.id !== chatId));
+            toast({ title: "Chat deleted successfully" });
+
+            if (currentConversationId === chatId) {
+                onNewChat();
+            }
+        } catch (error) {
+            toast({ title: "Failed to delete chat", variant: "destructive" });
+        }
+    };
+
+    const handleShareChat = async (chatId: string) => {
+        try {
+            const shareUrl = `${window.location.origin}/shared/${chatId}`;
+            await navigator.clipboard.writeText(shareUrl);
+            toast({ title: "Share link copied to clipboard!" });
+        } catch (error) {
+            toast({ title: "Failed to copy share link", variant: "destructive" });
+        }
+    };
+
+    return (
+        <div className="w-64 h-screen bg-[#1a1a1a]/95 border-r border-white/5 flex flex-col sticky top-0 z-40 backdrop-blur-xl">
+
+            {/* Bridge Status - Clickable to toggle */}
+            <div className="p-6 border-b border-white/5">
+                <button 
+                    onClick={onToggleBridge}
+                    className="w-full flex items-center justify-between bg-black/40 p-2.5 rounded-xl border border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
+                    title={bridgeConnected ? 'Click to disconnect PC Bridge' : 'Click to connect PC Bridge'}
                 >
-                  <item.icon className="h-5 w-5" />
-                  <span className="font-medium">{item.label}</span>
+                    <div className="flex items-center gap-2">
+                        {bridgeConnected ? <Wifi className="w-3.5 h-3.5 text-green-400 animate-pulse" /> : <WifiOff className="w-3.5 h-3.5 text-red-400" />}
+                        <span className="text-[11px] font-bold uppercase tracking-widest text-white/70">PC Bridge</span>
+                    </div>
+                    <div className={`h-1.5 w-1.5 rounded-full ${bridgeConnected ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500'}`} />
                 </button>
-              );
-            })}
-          </nav>
+            </div>
 
-          {/* PC Bridge Status - Clickable Toggle */}
-          <div className="p-4 border-t border-border">
-            <button
-              onClick={onToggleBridge}
-              className={cn(
-                "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200",
-                "hover:bg-accent/50",
-                bridgeConnected 
-                  ? "bg-green-500/10 text-green-500 border border-green-500/20" 
-                  : "bg-destructive/10 text-destructive border border-destructive/20"
-              )}
-            >
-              {bridgeConnected ? (
-                <Wifi className="h-5 w-5" />
-              ) : (
-                <WifiOff className="h-5 w-5" />
-              )}
-              <div className="text-left">
-                <span className="font-medium text-sm block">PC Bridge</span>
-                <span className="text-xs opacity-75">
-                  {bridgeConnected ? "Connected - Click to disconnect" : "Disconnected - Click to connect"}
-                </span>
-              </div>
-            </button>
-          </div>
+            {/* Actions */}
+            <div className="p-4 space-y-2">
+                <Button onClick={onNewChat} className="w-full bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-xl justify-start h-11">
+                    <MessageSquare className="w-4 h-4 mr-3" />
+                    <span className="font-semibold text-sm">New Intelligence</span>
+                </Button>
+            </div>
 
-          {/* Footer */}
-          <div className="p-4 border-t border-border">
-            <p className="text-xs text-muted-foreground text-center">
-              Powered by Gemini AI
-            </p>
-          </div>
+            {/* Nav */}
+            <div className="px-3 space-y-1">
+                {[
+                    { icon: BarChart3, label: 'Analytics', path: '/analytics' },
+                    { icon: Lightbulb, label: 'Creative Hub', path: '/history' },
+                    { icon: Database, label: 'Neural Memory', action: onOpenMemory },
+                ].map((item, idx) => (
+                    <Button key={idx} variant="ghost" className="w-full justify-start text-white/50 hover:text-white hover:bg-white/5 rounded-lg h-10 transition-all"
+                        onClick={item.path ? () => navigate(item.path!) : item.action}>
+                        <item.icon className="w-4 h-4 mr-3 opacity-70" />
+                        <span className="text-sm font-medium">{item.label}</span>
+                    </Button>
+                ))}
+            </div>
+
+            {/* History Section with ContextMenu Logic */}
+            <div className="flex-1 flex flex-col min-h-0 mt-6">
+                <button className="flex items-center justify-between px-6 py-2 text-white/40 hover:text-white/80 transition-colors group" onClick={() => setShowRecent(!showRecent)}>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Recent Sessions</span>
+                    {showRecent ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                </button>
+
+                {showRecent && (
+                    <ScrollArea className="flex-1 px-3 mt-2">
+                        <div className="space-y-1 pr-2">
+                            {recentChats.map((chat) => (
+                                <ContextMenu key={chat.id}>
+                                    <ContextMenuTrigger>
+                                        <Button
+                                            variant="ghost"
+                                            className={`w-full justify-start text-white/50 hover:text-white hover:bg-white/5 rounded-lg h-9 group transition-all relative overflow-hidden ${currentConversationId === chat.id ? 'bg-white/10 text-white border-l-2 border-blue-500' : ''}`}
+                                            onClick={() => navigate(`/c/${chat.id}`)}
+                                        >
+                                            <span className="truncate text-xs font-normal">{chat.title || 'Untitled Session'}</span>
+                                        </Button>
+                                    </ContextMenuTrigger>
+                                    <ContextMenuContent className="w-48 bg-[#2a2a2a] border-white/10 text-white">
+                                        <ContextMenuItem className="flex items-center gap-2 cursor-pointer" onClick={() => {
+                                            setRenamingChatId(chat.id);
+                                            setRenameTitle(chat.title || '');
+                                            setRenameDialogOpen(true);
+                                        }}>
+                                            <Edit className="w-4 h-4" /> Rename
+                                        </ContextMenuItem>
+                                        <ContextMenuItem className="flex items-center gap-2 cursor-pointer" onClick={() => handleShareChat(chat.id)}>
+                                            <Share2 className="w-4 h-4" /> Share
+                                        </ContextMenuItem>
+                                        <ContextMenuItem className="flex items-center gap-2 cursor-pointer text-red-400 focus:text-red-400" onClick={() => handleDeleteChat(chat.id)}>
+                                            <Trash2 className="w-4 h-4" /> Delete
+                                        </ContextMenuItem>
+                                    </ContextMenuContent>
+                                </ContextMenu>
+                            ))}
+                        </div>
+                    </ScrollArea>
+                )}
+            </div>
+
+            {/* Rename Dialog UI */}
+            <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
+                <DialogContent className="bg-[#1a1a1a] border-white/10 text-white">
+                    <DialogHeader>
+                        <DialogTitle>Rename Chat</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <Input
+                            value={renameTitle}
+                            onChange={(e) => setRenameTitle(e.target.value)}
+                            className="bg-white/5 border-white/10 text-white focus:border-blue-500"
+                            placeholder="Enter new title..."
+                            onKeyDown={(e) => e.key === 'Enter' && handleRenameChat()}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setRenameDialogOpen(false)}>Cancel</Button>
+                        <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleRenameChat}>Save</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Profile Section */}
+            <div className="p-4 mt-auto border-t border-white/5 bg-black/20">
+                <Button variant="ghost" className="w-full justify-start text-white/60 hover:text-white hover:bg-white/5 rounded-xl p-2 h-auto" onClick={() => user ? navigate('/profile') : navigate('/auth')}>
+                    <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold">
+                        {user?.email?.charAt(0).toUpperCase() || <User className="w-5 h-5" />}
+                    </div>
+                    <div className="ml-3 flex flex-col items-start overflow-hidden">
+                        <span className="text-xs font-bold text-white truncate w-full">{user?.email?.split('@')[0] || 'Guest User'}</span>
+                        <span className="text-[9px] text-white/30 uppercase tracking-tighter">System Operator</span>
+                    </div>
+                </Button>
+            </div>
         </div>
-      </div>
-    </>
-  );
+    );
 };
 
 export default Sidebar;
