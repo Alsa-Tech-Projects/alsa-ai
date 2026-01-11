@@ -242,6 +242,45 @@ export type Database = {
           },
         ]
       }
+      payment_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string | null
+          id: string
+          razorpay_order_id: string | null
+          razorpay_payment_id: string
+          razorpay_signature: string | null
+          status: string
+          tier: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string | null
+          id?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id: string
+          razorpay_signature?: string | null
+          status?: string
+          tier: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string | null
+          id?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string
+          razorpay_signature?: string | null
+          status?: string
+          tier?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -249,6 +288,11 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          razorpay_customer_id: string | null
+          razorpay_subscription_id: string | null
+          subscription_expires_at: string | null
+          subscription_tier: string | null
+          trial_started_at: string | null
           updated_at: string
           user_id: string
         }
@@ -258,6 +302,11 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          razorpay_customer_id?: string | null
+          razorpay_subscription_id?: string | null
+          subscription_expires_at?: string | null
+          subscription_tier?: string | null
+          trial_started_at?: string | null
           updated_at?: string
           user_id: string
         }
@@ -267,6 +316,11 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          razorpay_customer_id?: string | null
+          razorpay_subscription_id?: string | null
+          subscription_expires_at?: string | null
+          subscription_tier?: string | null
+          trial_started_at?: string | null
           updated_at?: string
           user_id?: string
         }
