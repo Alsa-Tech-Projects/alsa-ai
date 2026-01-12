@@ -229,18 +229,26 @@ const Index = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleVoice, handleNewConversation, handleScreenshot]);
 
-  // Auth state management
+  // Auth state management - redirect unauthenticated users to landing
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+      if (!session?.user) {
+        navigate('/landing');
+      } else {
+        setUser(session.user);
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
+      if (!session?.user) {
+        navigate('/landing');
+      } else {
+        setUser(session.user);
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
   // Load conversation from URL param
   useEffect(() => {
