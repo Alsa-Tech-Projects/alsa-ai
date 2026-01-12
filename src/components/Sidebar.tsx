@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     Wifi, WifiOff, MessageSquare, BarChart3, Lightbulb,
     Database, User, ChevronDown, ChevronRight,
-    Edit, Share2, Trash2, Settings, MoreVertical
+    Edit, Share2, Trash2, Settings, MoreVertical, Crown, Sparkles, Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import NotificationMenu from '@/components/NotificationMenu';
+import { isAdminEmail } from '@/utils/adminConfig';
 import {
     ContextMenu,
     ContextMenuContent,
@@ -24,6 +25,7 @@ import {
     DialogTitle,
     DialogFooter,
 } from "@/components/ui/dialog";
+import { Badge } from '@/components/ui/badge';
 
 interface SidebarProps {
     bridgeConnected: boolean;
@@ -44,6 +46,7 @@ const Sidebar = ({ bridgeConnected, onNewChat, onOpenMemory, onToggleBridge, cur
     const [renameDialogOpen, setRenameDialogOpen] = useState(false);
     const [renameTitle, setRenameTitle] = useState('');
     const [renamingChatId, setRenamingChatId] = useState<string | null>(null);
+    const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -54,6 +57,47 @@ const Sidebar = ({ bridgeConnected, onNewChat, onOpenMemory, onToggleBridge, cur
         });
         return () => subscription.unsubscribe();
     }, []);
+
+    // Load subscription tier
+    useEffect(() => {
+        const loadSubscription = async () => {
+            if (!user) return;
+            
+            // Check if admin (unlimited elite)
+            if (isAdminEmail(user.email)) {
+                setSubscriptionTier('elite');
+                return;
+            }
+            
+            const { data } = await supabase
+                .from('profiles')
+                .select('subscription_tier, subscription_expires_at, trial_started_at')
+                .eq('user_id', user.id)
+                .single();
+            
+            if (data) {
+                // Check if subscription is still valid
+                if (data.subscription_expires_at) {
+                    const expiresAt = new Date(data.subscription_expires_at);
+                    if (expiresAt > new Date()) {
+                        setSubscriptionTier(data.subscription_tier || 'free');
+                        return;
+                    }
+                }
+                // Check if in trial period (3 days)
+                if (data.trial_started_at) {
+                    const trialStart = new Date(data.trial_started_at);
+                    const trialEnd = new Date(trialStart.getTime() + 3 * 24 * 60 * 60 * 1000);
+                    if (trialEnd > new Date()) {
+                        setSubscriptionTier('trial');
+                        return;
+                    }
+                }
+                setSubscriptionTier('free');
+            }
+        };
+        loadSubscription();
+    }, [user]);
 
     useEffect(() => {
         const loadRecentChats = async () => {
@@ -232,8 +276,35 @@ const Sidebar = ({ bridgeConnected, onNewChat, onOpenMemory, onToggleBridge, cur
                 </DialogContent>
             </Dialog>
 
-            {/* Profile Section */}
-            <div className="p-4 mt-auto border-t border-white/5 bg-black/20">
+            {/* Profile Section with Subscription Badge */}
+            <div className="p-4 mt-auto border-t border-white/5 bg-black/20 space-y-3">
+                {/* Subscription Badge */}
+                <div className="flex justify-center">
+                    {subscriptionTier === 'elite' && (
+                        <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0 px-3 py-1 flex items-center gap-1.5 shadow-lg shadow-purple-500/30">
+                            <Crown className="w-3.5 h-3.5" />
+                            <span className="font-bold text-xs">ELITE</span>
+                        </Badge>
+                    )}
+                    {subscriptionTier === 'pro' && (
+                        <Badge className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white border-0 px-3 py-1 flex items-center gap-1.5 shadow-lg shadow-blue-500/30">
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span className="font-bold text-xs">PRO</span>
+                        </Badge>
+                    )}
+                    {subscriptionTier === 'trial' && (
+                        <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 px-3 py-1 flex items-center gap-1.5 shadow-lg shadow-amber-500/30">
+                            <Zap className="w-3.5 h-3.5" />
+                            <span className="font-bold text-xs">TRIAL</span>
+                        </Badge>
+                    )}
+                    {subscriptionTier === 'free' && (
+                        <Badge variant="outline" className="border-white/20 text-white/60 px-3 py-1 flex items-center gap-1.5">
+                            <span className="font-medium text-xs">FREE</span>
+                        </Badge>
+                    )}
+                </div>
+                
                 <Button variant="ghost" className="w-full justify-start text-white/60 hover:text-white hover:bg-white/5 rounded-xl p-2 h-auto" onClick={() => user ? navigate('/profile') : navigate('/auth')}>
                     <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold">
                         {user?.email?.charAt(0).toUpperCase() || <User className="w-5 h-5" />}
