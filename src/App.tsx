@@ -13,6 +13,8 @@ import Analytics from "./pages/Analytics";
 import Contact from "./pages/Contact";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
+import Pricing from "./pages/Pricing";
+import BridgeSetup from "./pages/BridgeSetup";
 import SharedConversation from "./pages/SharedConversation";
 import NotFound from "./pages/NotFound";
 
@@ -27,6 +29,8 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/landing" element={<Landing />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/bridge-setup" element={<BridgeSetup />} />
           <Route path="/c/:conversationId" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/settings" element={<Settings />} />

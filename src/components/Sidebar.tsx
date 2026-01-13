@@ -276,6 +276,19 @@ const Sidebar = ({ bridgeConnected, onNewChat, onOpenMemory, onToggleBridge, cur
                 </DialogContent>
             </Dialog>
 
+            {/* Upgrade Prompt for Free Users */}
+            {(subscriptionTier === 'free' || subscriptionTier === 'trial') && (
+                <div className="px-3 mb-2">
+                    <Button
+                        onClick={() => navigate('/pricing')}
+                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white text-xs py-2 h-auto"
+                    >
+                        <Crown className="w-3.5 h-3.5 mr-2" />
+                        {subscriptionTier === 'trial' ? 'Upgrade to Pro/Elite' : 'Unlock PC Bridge'}
+                    </Button>
+                </div>
+            )}
+
             {/* Profile Section with Subscription Badge */}
             <div className="p-4 mt-auto border-t border-white/5 bg-black/20 space-y-3">
                 {/* Subscription Badge */}
