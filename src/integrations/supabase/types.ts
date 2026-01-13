@@ -184,6 +184,33 @@ export type Database = {
           },
         ]
       }
+      daily_message_counts: {
+        Row: {
+          created_at: string
+          id: string
+          message_count: number
+          message_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_count?: number
+          message_date?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_count?: number
+          message_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       favorite_conversations: {
         Row: {
           conversation_id: string
@@ -323,6 +350,39 @@ export type Database = {
           trial_started_at?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      promo_codes: {
+        Row: {
+          code: string
+          created_at: string
+          current_uses: number
+          discount_percent: number
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          valid_until: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          current_uses?: number
+          discount_percent?: number
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          valid_until?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          current_uses?: number
+          discount_percent?: number
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          valid_until?: string | null
         }
         Relationships: []
       }
