@@ -85,6 +85,7 @@ const Admin = () => {
       if (data.success) {
         setIsAuthenticated(true);
         localStorage.setItem('admin_session', Date.now().toString());
+        localStorage.setItem('admin_key', adminKey); // Store key for subsequent API calls
         toast({ title: 'Access Granted', description: 'Welcome to Admin Panel' });
         fetchAllData();
       } else {
@@ -281,6 +282,7 @@ const Admin = () => {
             </Button>
             <Button variant="ghost" size="sm" onClick={() => {
               localStorage.removeItem('admin_session');
+              localStorage.removeItem('admin_key');
               setIsAuthenticated(false);
             }}>
               Logout
