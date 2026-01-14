@@ -168,9 +168,9 @@ const Landing = () => {
                 const demoSection = document.getElementById('demo');
                 demoSection?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="border-white/20 text-white hover:bg-white/5 text-lg px-10 py-7 font-bold rounded-2xl backdrop-blur-xl"
+              className="border-2 border-purple-500/50 text-purple-300 hover:bg-purple-500/20 hover:border-purple-400 text-lg px-10 py-7 font-bold rounded-2xl backdrop-blur-xl bg-purple-500/10 shadow-lg shadow-purple-500/20 transition-all hover:scale-105"
             >
-              <Play className="mr-2 w-5 h-5" />
+              <Play className="mr-2 w-5 h-5 text-purple-400" />
               Watch Demo
             </Button>
           </div>
