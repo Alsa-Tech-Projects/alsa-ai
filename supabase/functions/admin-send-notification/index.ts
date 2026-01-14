@@ -48,24 +48,55 @@ serve(async (req) => {
       );
     }
 
-    // Fetch all contact messages
-    const { data, error } = await supabase
-      .from("contact_messages")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { title, message, target, targetUserId } = await req.json();
 
-    if (error) {
-      throw error;
+    if (!title || !message) {
+      return new Response(
+        JSON.stringify({ error: "Title and message are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    let count = 0;
+
+    if (target === 'single' && targetUserId) {
+      // Send to single user
+      const { error } = await supabase
+        .from("admin_notifications")
+        .insert({ user_id: targetUserId, title, message });
+
+      if (error) throw error;
+      count = 1;
+    } else {
+      // Send to all users
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id");
+
+      if (profiles && profiles.length > 0) {
+        const notifications = profiles.map(p => ({
+          user_id: p.user_id,
+          title,
+          message
+        }));
+
+        const { error } = await supabase
+          .from("admin_notifications")
+          .insert(notifications);
+
+        if (error) throw error;
+        count = notifications.length;
+      }
     }
 
     return new Response(
-      JSON.stringify(data || []),
+      JSON.stringify({ success: true, count }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error:", error);
     return new Response(
-      JSON.stringify({ error: "Failed to fetch messages" }),
+      JSON.stringify({ error: "Failed to send notification" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

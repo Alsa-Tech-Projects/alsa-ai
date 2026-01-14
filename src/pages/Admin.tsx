@@ -9,9 +9,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { 
-  Shield, Users, MessageSquare, Bell, BarChart3, Mail, 
-  Lock, CheckCircle, XCircle, Send, Eye, EyeOff, ArrowLeft,
-  Crown, Zap, Sparkles, Search, RefreshCw
+  Shield, Users, MessageSquare, Bell, Mail, 
+  Lock, CheckCircle, Send, Eye, EyeOff, ArrowLeft,
+  Crown, Zap, Sparkles, Search, RefreshCw, AlertTriangle
 } from 'lucide-react';
 import alsaLogo from '@/assets/alsa-logo.png';
 
@@ -21,7 +21,6 @@ interface User {
   subscription_tier: string | null;
   subscription_expires_at: string | null;
   created_at: string;
-  email?: string;
 }
 
 interface ContactMessage {
@@ -49,9 +48,11 @@ const Admin = () => {
   const { toast } = useToast();
   
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [adminKey, setAdminKey] = useState('');
   const [showKey, setShowKey] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
   
   const [stats, setStats] = useState<Stats>({
     totalUsers: 0, freeUsers: 0, proUsers: 0, eliteUsers: 0,
@@ -67,8 +68,83 @@ const Admin = () => {
   const [notificationMessage, setNotificationMessage] = useState('');
   const [notificationTarget, setNotificationTarget] = useState<'all' | 'single'>('all');
   const [targetUserId, setTargetUserId] = useState('');
+  const [sendingNotification, setSendingNotification] = useState(false);
 
+  // Check auth and admin role
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) {
+        setLoading(false);
+        return;
+      }
+      
+      setUser(session.user);
+      setIsAuthenticated(true);
+      
+      // Check if user has admin role
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id);
+      
+      const hasAdminRole = roles?.some(r => r.role === 'admin');
+      setIsAdmin(hasAdminRole || false);
+      setLoading(false);
+      
+      if (hasAdminRole) {
+        fetchAllData();
+        setupRealtimeSubscriptions();
+      }
+    };
+    
+    checkAuth();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      if (!session) {
+        setIsAuthenticated(false);
+        setIsAdmin(false);
+        setUser(null);
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Setup realtime subscriptions
+  const setupRealtimeSubscriptions = () => {
+    const channel = supabase
+      .channel('admin-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+        fetchAllData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contact_messages' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setContactMessages(prev => [payload.new as ContactMessage, ...prev]);
+          setStats(prev => ({ ...prev, unreadContacts: prev.unreadContacts + 1 }));
+          toast({ title: 'New Contact Message', description: 'A new message has arrived!' });
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_notifications' }, () => {
+        // Refresh stats
+        fetchAllData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
+
+  // Verify admin key via edge function and grant admin role
   const verifyAdminKey = async () => {
+    if (!user) {
+      toast({ title: 'Please Login', description: 'You must be logged in first', variant: 'destructive' });
+      navigate('/auth');
+      return;
+    }
+    
     setLoading(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-verify`, {
@@ -77,19 +153,18 @@ const Admin = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
         },
-        body: JSON.stringify({ adminKey })
+        body: JSON.stringify({ adminKey, userId: user.id })
       });
       
       const data = await response.json();
       
       if (data.success) {
-        setIsAuthenticated(true);
-        localStorage.setItem('admin_session', Date.now().toString());
-        localStorage.setItem('admin_key', adminKey);
+        setIsAdmin(true);
         toast({ title: 'Access Granted', description: 'Welcome to Admin Panel' });
-        fetchAllData(adminKey); // Pass key directly to avoid race condition
+        fetchAllData();
+        setupRealtimeSubscriptions();
       } else {
-        toast({ title: 'Access Denied', description: 'Invalid admin key', variant: 'destructive' });
+        toast({ title: 'Access Denied', description: data.error || 'Invalid admin key', variant: 'destructive' });
       }
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to verify key', variant: 'destructive' });
@@ -97,8 +172,7 @@ const Admin = () => {
     setLoading(false);
   };
 
-  const fetchAllData = async (keyOverride?: string) => {
-    const storedKey = keyOverride || localStorage.getItem('admin_key') || '';
+  const fetchAllData = async () => {
     setLoading(true);
     try {
       // Fetch profiles for user stats
@@ -139,25 +213,35 @@ const Admin = () => {
       
       const todayTotal = todayData?.reduce((sum, d) => sum + d.message_count, 0) || 0;
 
-      // Fetch contact messages via edge function (admin only)
-      const contactResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-get-contacts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
-        },
-        body: JSON.stringify({ adminKey: storedKey })
-      });
-      const contacts: ContactMessage[] = contactResponse.ok ? await contactResponse.json() : [];
+      // Fetch contact messages via edge function
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const contactResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-get-contacts`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({})
+        });
+        
+        if (contactResponse.ok) {
+          const contacts = await contactResponse.json();
+          setContactMessages(contacts);
+          setStats(prev => ({
+            ...prev,
+            totalMessages: totalMsgs || 0,
+            todayMessages: todayTotal,
+            unreadContacts: contacts.filter((c: ContactMessage) => !c.is_read).length || 0
+          }));
+        }
+      }
       
       setStats(prev => ({
         ...prev,
         totalMessages: totalMsgs || 0,
-        todayMessages: todayTotal,
-        unreadContacts: contacts.filter((c: ContactMessage) => !c.is_read).length || 0
+        todayMessages: todayTotal
       }));
-      
-      setContactMessages(contacts);
     } catch (error) {
       console.error('Fetch error:', error);
     }
@@ -170,39 +254,59 @@ const Admin = () => {
       return;
     }
 
+    setSendingNotification(true);
     try {
-      if (notificationTarget === 'all') {
-        // Send to all users
-        const { data: profiles } = await supabase.from('profiles').select('user_id');
-        if (profiles) {
-          const notifications = profiles.map(p => ({
-            user_id: p.user_id,
-            title: notificationTitle,
-            message: notificationMessage
-          }));
-          await supabase.from('admin_notifications').insert(notifications);
-        }
-      } else {
-        // Send to single user
-        await supabase.from('admin_notifications').insert({
-          user_id: targetUserId,
-          title: notificationTitle,
-          message: notificationMessage
-        });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({ title: 'Error', description: 'Not authenticated', variant: 'destructive' });
+        return;
       }
-      
-      toast({ title: 'Success', description: 'Notification sent!' });
-      setNotificationTitle('');
-      setNotificationMessage('');
-      setTargetUserId('');
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-send-notification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          title: notificationTitle,
+          message: notificationMessage,
+          target: notificationTarget,
+          targetUserId: notificationTarget === 'single' ? targetUserId : null
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({ title: 'Success', description: `Notification sent to ${data.count || 1} user(s)!` });
+        setNotificationTitle('');
+        setNotificationMessage('');
+        setTargetUserId('');
+      } else {
+        toast({ title: 'Error', description: data.error || 'Failed to send notification', variant: 'destructive' });
+      }
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to send notification', variant: 'destructive' });
     }
+    setSendingNotification(false);
   };
 
   const markMessageRead = async (id: string) => {
-    // This would need an edge function for admin-only updates
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-mark-read`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ messageId: id })
+    });
+
     setContactMessages(prev => prev.map(m => m.id === id ? { ...m, is_read: true } : m));
+    setStats(prev => ({ ...prev, unreadContacts: Math.max(0, prev.unreadContacts - 1) }));
   };
 
   const filteredUsers = users.filter(u => 
@@ -210,15 +314,15 @@ const Admin = () => {
     u.user_id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Check for existing session
-  useEffect(() => {
-    const session = localStorage.getItem('admin_session');
-    if (session && Date.now() - parseInt(session) < 3600000) { // 1 hour
-      setIsAuthenticated(true);
-      fetchAllData();
-    }
-  }, []);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
+  // Not logged in
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6">
@@ -228,7 +332,41 @@ const Admin = () => {
               <Shield className="w-8 h-8 text-white" />
             </div>
             <CardTitle className="text-white text-2xl">Admin Access</CardTitle>
-            <p className="text-white/60 text-sm mt-2">Enter your admin key to continue</p>
+            <p className="text-white/60 text-sm mt-2">Please login first to access admin panel</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button 
+              onClick={() => navigate('/auth')}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
+            >
+              Login First
+              <ArrowLeft className="w-4 h-4 ml-2" />
+            </Button>
+            <Button variant="ghost" onClick={() => navigate('/')} className="w-full text-white/60">
+              Back to App
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Logged in but not admin - show key verification
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6">
+        <Card className="w-full max-w-md bg-slate-900/80 border-white/10 backdrop-blur-xl">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center mb-4">
+              <Shield className="w-8 h-8 text-white" />
+            </div>
+            <CardTitle className="text-white text-2xl">Admin Verification</CardTitle>
+            <p className="text-white/60 text-sm mt-2">Enter admin key to access panel</p>
+            <div className="flex items-center justify-center gap-2 mt-3">
+              <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
+                Logged in as: {user?.email}
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="relative">
@@ -252,7 +390,7 @@ const Admin = () => {
               disabled={loading}
               className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500"
             >
-              {loading ? 'Verifying...' : 'Access Admin Panel'}
+              {loading ? 'Verifying...' : 'Verify Admin Access'}
               <Lock className="w-4 h-4 ml-2" />
             </Button>
             <Button variant="ghost" onClick={() => navigate('/')} className="w-full text-white/60">
@@ -264,6 +402,7 @@ const Admin = () => {
     );
   }
 
+  // Admin dashboard
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
       {/* Header */}
@@ -272,8 +411,13 @@ const Admin = () => {
           <div className="flex items-center gap-3">
             <img src={alsaLogo} alt="ALSA AI" className="w-10 h-10 rounded-xl" />
             <div>
-              <h1 className="font-bold text-lg">Admin Panel</h1>
-              <p className="text-xs text-white/40">ALSA AI Management</p>
+              <h1 className="font-bold text-lg flex items-center gap-2">
+                Admin Panel
+                <Badge className="bg-green-500/20 text-green-300 border-green-500/30 text-xs">
+                  Live
+                </Badge>
+              </h1>
+              <p className="text-xs text-white/40">{user?.email}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -281,12 +425,8 @@ const Admin = () => {
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => {
-              localStorage.removeItem('admin_session');
-              localStorage.removeItem('admin_key');
-              setIsAuthenticated(false);
-            }}>
-              Logout
+            <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
+              Back to App
             </Button>
           </div>
         </div>
@@ -324,6 +464,9 @@ const Admin = () => {
             </TabsTrigger>
             <TabsTrigger value="messages" className="data-[state=active]:bg-white/10">
               <Mail className="w-4 h-4 mr-2" /> Contact Messages
+              {stats.unreadContacts > 0 && (
+                <Badge className="ml-2 bg-red-500 text-white text-xs">{stats.unreadContacts}</Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="notifications" className="data-[state=active]:bg-white/10">
               <Bell className="w-4 h-4 mr-2" /> Send Notifications
@@ -368,11 +511,16 @@ const Admin = () => {
                         }>
                           {user.subscription_tier || 'Free'}
                         </Badge>
-                        {user.subscription_expires_at && (
-                          <span className="text-xs text-white/40">
-                            Expires: {new Date(user.subscription_expires_at).toLocaleDateString()}
-                          </span>
-                        )}
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => {
+                            setNotificationTarget('single');
+                            setTargetUserId(user.user_id);
+                          }}
+                        >
+                          <Bell className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -467,8 +615,18 @@ const Admin = () => {
                   className="bg-white/5 border-white/10 text-white min-h-[100px]"
                 />
 
-                <Button onClick={sendNotification} className="bg-gradient-to-r from-blue-600 to-purple-600">
-                  <Send className="w-4 h-4 mr-2" /> Send Notification
+                <Button 
+                  onClick={sendNotification} 
+                  disabled={sendingNotification}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600"
+                >
+                  {sendingNotification ? (
+                    <>Sending...</>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" /> Send Notification
+                    </>
+                  )}
                 </Button>
               </CardContent>
             </Card>
