@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Mic, Send, Settings, Plus, ImageIcon, Paperclip, Menu, X, Video, Camera } from 'lucide-react';
+import { Mic, Send, Settings, Plus, ImageIcon, Paperclip, Menu, X, Video, Camera, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
+import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { checkBridgeConnection, executeSystemCommand, scanSystem, SystemScanResult, captureScreenshot, startScreenRecording, stopScreenRecording, parseNaturalLanguage, WEBSITES, createProject, createPowerPoint, createExcel, createDatabase, executePythonFile, executeCmdCommand, runCommand, checkInstallation, sendCommand, adbConnect, adbCommand, closeWindow, openFolder, runProject, createFolder, createTextFile, openWebsiteWithSearch, openCustomApp } from '@/utils/pcBridge';
 import ChatMessage from '@/components/ChatMessage';
@@ -59,7 +60,10 @@ const Index = () => {
   const [backupKeyActive, setBackupKeyActive] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSavedPath, setRecordingSavedPath] = useState<string | null>(null);
+  const [screenshotPending, setScreenshotPending] = useState(false);
   
+  // Subscription hook for free tier restrictions
+  const subscription = useSubscription();
   const { toast } = useToast();
   const {
     transcript,
@@ -105,7 +109,18 @@ const Index = () => {
   }, [bridgeConnected, toast]);
 
   // Toggle voice with callback - stays open until manually closed
+  // DISABLED FOR FREE TIER USERS
   const toggleVoice = useCallback(() => {
+    if (subscription.isFree) {
+      toast({ 
+        title: 'Premium Feature', 
+        description: 'Voice commands require Pro or Elite subscription',
+        variant: 'destructive'
+      });
+      navigate('/pricing');
+      return;
+    }
+    
     if (isListening) {
       stopListening();
       speak('Voice input disabled');
@@ -115,7 +130,7 @@ const Index = () => {
       speak('Voice input is now active. Speak your full command.');
       toast({ title: 'Voice Active', description: 'Listening continuously' });
     }
-  }, [isListening, startListening, stopListening, speak, toast]);
+  }, [isListening, startListening, stopListening, speak, toast, subscription.isFree, navigate]);
 
   // New conversation handler
   const handleNewConversation = useCallback(() => {
@@ -142,8 +157,18 @@ const Index = () => {
     }
   }, [toast, speak]);
 
-  // Screen recording handler
+  // Screen recording handler - DISABLED FOR FREE TIER USERS
   const handleRecording = useCallback(async () => {
+    if (subscription.isFree) {
+      toast({ 
+        title: 'Premium Feature', 
+        description: 'Screen recording requires Pro or Elite subscription',
+        variant: 'destructive'
+      });
+      navigate('/pricing');
+      return;
+    }
+    
     if (isRecording) {
       const result = await stopScreenRecording();
       setIsRecording(false);
@@ -170,7 +195,7 @@ const Index = () => {
         });
       }
     }
-  }, [isRecording, toast, speak]);
+  }, [isRecording, toast, speak, subscription.isFree, navigate]);
 
   // Listen for recording saved event
   useEffect(() => {
@@ -406,6 +431,22 @@ const Index = () => {
 
   const handleSubmit = async (text: string = inputText) => {
     if (!text.trim() && uploadedFiles.length === 0) return;
+
+    // Check 50 message/day limit for free tier users
+    if (subscription.isFree && !subscription.canSendMessage) {
+      toast({
+        title: 'Daily Limit Reached',
+        description: 'Free tier is limited to 50 messages/day. Upgrade for unlimited access!',
+        variant: 'destructive'
+      });
+      navigate('/pricing');
+      return;
+    }
+
+    // Increment message count for free users
+    if (subscription.isFree) {
+      subscription.incrementMessageCount();
+    }
 
     const userMessage: Message = { role: 'user', content: text, files: uploadedFiles };
     setMessages(prev => [...prev, userMessage]);
