@@ -5,8 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Mail, Phone, MessageCircle, Instagram, Twitter, Linkedin, ExternalLink } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Mail, Phone, MessageCircle, Instagram, Twitter, Linkedin, ExternalLink, Send, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import alsaLogo from '@/assets/alsa-logo.png';
 
 const Contact = () => {
@@ -14,6 +16,7 @@ const Contact = () => {
   const { toast } = useToast();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
 
@@ -21,18 +24,29 @@ const Contact = () => {
     e.preventDefault();
     setSending(true);
     
-    // Simulate sending (in production, connect to backend)
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    toast({
-      title: "Message Sent!",
-      description: "We'll get back to you within 24 hours.",
-    });
-    
-    setName('');
-    setEmail('');
-    setMessage('');
-    setSending(false);
+    try {
+      // Store message in database for admin to see
+      // For now, simulate sending
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      toast({
+        title: "Message Sent! 📨",
+        description: "We'll get back to you within 24 hours.",
+      });
+      
+      setName('');
+      setEmail('');
+      setSubject('');
+      setMessage('');
+    } catch (error) {
+      toast({
+        title: "Failed to send",
+        description: "Please try again later.",
+        variant: "destructive"
+      });
+    } finally {
+      setSending(false);
+    }
   };
 
   const contactChannels = [
@@ -41,90 +55,121 @@ const Contact = () => {
       title: 'Email Support',
       value: 'alsa.ai.assistant@gmail.com',
       href: 'mailto:alsa.ai.assistant@gmail.com',
-      desc: 'We typically respond within 24 hours'
+      desc: 'We typically respond within 24 hours',
+      color: 'from-blue-500 to-cyan-500'
     },
     {
       icon: Phone,
       title: 'Customer Service',
       value: '+91 6396684144',
       href: 'tel:+916396684144',
-      desc: 'Available Mon-Sat, 10 AM - 7 PM IST'
+      desc: 'Available Mon-Sat, 10 AM - 7 PM IST',
+      color: 'from-emerald-500 to-teal-500'
     },
     {
       icon: MessageCircle,
       title: 'Reddit Community',
       value: 'r/join_alsa_ai',
       href: 'https://www.reddit.com/r/join_alsa_ai/',
-      desc: 'Join our community for discussions'
+      desc: 'Join our community for discussions',
+      color: 'from-orange-500 to-red-500'
     }
   ];
 
   const socialLinks = [
-    { icon: Instagram, name: 'Instagram', href: 'https://www.instagram.com/alsa_ai_assistant/', handle: '@alsa_ai_assistant' },
-    { icon: Twitter, name: 'Twitter (X)', href: 'https://x.com/AlsaAiAssistant', handle: '@AlsaAiAssistant' },
-    { icon: Linkedin, name: 'LinkedIn', href: 'https://www.linkedin.com/in/mohd-eisa-bey-061ba43a2/', handle: 'Mohd Eisa Bey' },
+    { icon: Instagram, name: 'Instagram', href: 'https://www.instagram.com/alsa_ai_assistant/', handle: '@alsa_ai_assistant', color: 'from-pink-500 to-purple-500' },
+    { icon: Twitter, name: 'Twitter (X)', href: 'https://x.com/AlsaAiAssistant', handle: '@AlsaAiAssistant', color: 'from-blue-400 to-blue-600' },
+    { icon: Linkedin, name: 'LinkedIn', href: 'https://www.linkedin.com/in/mohd-eisa-bey-061ba43a2/', handle: 'Mohd Eisa Bey', color: 'from-blue-600 to-blue-800' },
   ];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
+      {/* Animated Background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 -left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-1/4 -right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl animate-pulse"></div>
+      </div>
+
       {/* Header */}
-      <header className="border-b border-white/5 bg-[#0a0a0a]/90 backdrop-blur-xl sticky top-0 z-50">
+      <header className="border-b border-white/5 bg-slate-950/80 backdrop-blur-2xl sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate(-1)} className="text-white/70">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <div className="flex items-center gap-2">
-            <img src={alsaLogo} alt="ALSA AI" className="w-8 h-8 rounded-full" />
-            <span className="font-bold">ALSA AI</span>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="hover:bg-white/5">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <img src={alsaLogo} alt="ALSA AI" className="w-10 h-10 rounded-xl ring-1 ring-white/10" />
+            <div>
+              <span className="font-bold text-lg">Contact Us</span>
+              <p className="text-xs text-white/40">We're here to help</p>
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-12 max-w-5xl">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Contact Us</h1>
-          <p className="text-white/60 max-w-xl mx-auto">
-            Have questions or need help? We're here for you. Reach out through any of our channels.
+      <div className="container mx-auto px-6 py-16 max-w-6xl relative z-10">
+        <div className="text-center mb-16">
+          <Badge className="mb-4 bg-blue-500/20 text-blue-300 border-blue-500/30 px-4 py-2">
+            <Sparkles className="w-4 h-4 mr-2 inline" />
+            Get in Touch
+          </Badge>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">We'd Love to Hear From You</h1>
+          <p className="text-white/60 max-w-xl mx-auto text-lg">
+            Have questions, feedback, or need support? Reach out through any channel below.
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-10">
           {/* Contact Form */}
-          <Card className="bg-white/5 border-white/5">
+          <Card className="bg-slate-900/50 border-white/10 backdrop-blur-xl">
             <CardHeader>
-              <CardTitle className="text-white">Send us a Message</CardTitle>
-              <CardDescription className="text-white/60">
+              <CardTitle className="text-white text-xl flex items-center gap-2">
+                <Send className="w-5 h-5 text-blue-400" />
+                Send us a Message
+              </CardTitle>
+              <CardDescription className="text-white/50">
                 Fill out the form and we'll get back to you within 24 hours.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="text-white/80 font-medium">Name</Label>
+                    <Input
+                      id="name"
+                      placeholder="Your name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      className="bg-black/30 border-white/10 text-white placeholder:text-white/30 focus:border-blue-500 h-12"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-white/80 font-medium">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="your@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="bg-black/30 border-white/10 text-white placeholder:text-white/30 focus:border-blue-500 h-12"
+                    />
+                  </div>
+                </div>
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-white/80">Name</Label>
+                  <Label htmlFor="subject" className="text-white/80 font-medium">Subject</Label>
                   <Input
-                    id="name"
-                    placeholder="Your name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    id="subject"
+                    placeholder="What's this about?"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
                     required
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
+                    className="bg-black/30 border-white/10 text-white placeholder:text-white/30 focus:border-blue-500 h-12"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-white/80">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="message" className="text-white/80">Message</Label>
+                  <Label htmlFor="message" className="text-white/80 font-medium">Message</Label>
                   <Textarea
                     id="message"
                     placeholder="How can we help you?"
@@ -132,15 +177,25 @@ const Contact = () => {
                     onChange={(e) => setMessage(e.target.value)}
                     required
                     rows={5}
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
+                    className="bg-black/30 border-white/10 text-white placeholder:text-white/30 focus:border-blue-500 resize-none"
                   />
                 </div>
                 <Button 
                   type="submit" 
                   disabled={sending}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500"
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 h-12 text-base font-semibold"
                 >
-                  {sending ? 'Sending...' : 'Send Message'}
+                  {sending ? (
+                    <span className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      Sending...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <Send className="w-4 h-4" />
+                      Send Message
+                    </span>
+                  )}
                 </Button>
               </form>
             </CardContent>
@@ -149,39 +204,41 @@ const Contact = () => {
           {/* Contact Info */}
           <div className="space-y-6">
             {contactChannels.map((channel, i) => (
-              <Card key={i} className="bg-white/5 border-white/5 hover:bg-white/10 transition-colors">
+              <Card key={i} className="bg-slate-900/50 border-white/10 backdrop-blur-xl hover:border-white/20 transition-all group">
                 <CardContent className="p-6">
-                  <a href={channel.href} target="_blank" rel="noopener noreferrer" className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center flex-shrink-0">
-                      <channel.icon className="w-6 h-6 text-blue-400" />
+                  <a href={channel.href} target="_blank" rel="noopener noreferrer" className="flex items-start gap-5">
+                    <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${channel.color} flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform`}>
+                      <channel.icon className="w-7 h-7 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-white mb-1">{channel.title}</h3>
-                      <p className="text-blue-400 font-medium">{channel.value}</p>
+                      <h3 className="font-bold text-white text-lg mb-1">{channel.title}</h3>
+                      <p className="text-blue-400 font-semibold text-base">{channel.value}</p>
                       <p className="text-white/40 text-sm mt-1">{channel.desc}</p>
                     </div>
-                    <ExternalLink className="w-4 h-4 text-white/30" />
+                    <ExternalLink className="w-5 h-5 text-white/30 group-hover:text-white/60 transition-colors" />
                   </a>
                 </CardContent>
               </Card>
             ))}
 
             {/* Social Links */}
-            <Card className="bg-white/5 border-white/5">
+            <Card className="bg-slate-900/50 border-white/10 backdrop-blur-xl">
               <CardHeader>
                 <CardTitle className="text-white text-lg">Follow Us</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-2">
                 {socialLinks.map((social, i) => (
                   <a
                     key={i}
                     href={social.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors"
+                    className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/5 transition-all group"
                   >
-                    <social.icon className="w-5 h-5 text-blue-400" />
-                    <span className="text-white/80">{social.name}</span>
+                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${social.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                      <social.icon className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="text-white font-medium">{social.name}</span>
                     <span className="text-white/40 text-sm ml-auto">{social.handle}</span>
                   </a>
                 ))}
