@@ -122,6 +122,20 @@ CREATE TABLE public.conversations (
 
 
 --
+-- Name: daily_message_counts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.daily_message_counts (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    message_date date DEFAULT CURRENT_DATE NOT NULL,
+    message_count integer DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: favorite_conversations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -146,6 +160,26 @@ CREATE TABLE public.favorite_messages (
 
 
 --
+-- Name: payment_transactions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.payment_transactions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    razorpay_payment_id text NOT NULL,
+    razorpay_order_id text,
+    razorpay_signature text,
+    amount integer NOT NULL,
+    currency text DEFAULT 'INR'::text,
+    status text DEFAULT 'pending'::text NOT NULL,
+    tier text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT payment_transactions_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'captured'::text, 'failed'::text, 'refunded'::text]))),
+    CONSTRAINT payment_transactions_tier_check CHECK ((tier = ANY (ARRAY['pro'::text, 'elite'::text])))
+);
+
+
+--
 -- Name: profiles; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -156,7 +190,29 @@ CREATE TABLE public.profiles (
     avatar_url text,
     bio text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    subscription_tier text DEFAULT 'free'::text,
+    subscription_expires_at timestamp with time zone,
+    trial_started_at timestamp with time zone,
+    razorpay_customer_id text,
+    razorpay_subscription_id text,
+    CONSTRAINT profiles_subscription_tier_check CHECK ((subscription_tier = ANY (ARRAY['free'::text, 'trial'::text, 'pro'::text, 'elite'::text])))
+);
+
+
+--
+-- Name: promo_codes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.promo_codes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    code text NOT NULL,
+    discount_percent integer DEFAULT 0 NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    max_uses integer,
+    current_uses integer DEFAULT 0 NOT NULL,
+    valid_until timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 
@@ -232,6 +288,22 @@ ALTER TABLE ONLY public.conversations
 
 
 --
+-- Name: daily_message_counts daily_message_counts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.daily_message_counts
+    ADD CONSTRAINT daily_message_counts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: daily_message_counts daily_message_counts_user_id_message_date_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.daily_message_counts
+    ADD CONSTRAINT daily_message_counts_user_id_message_date_key UNIQUE (user_id, message_date);
+
+
+--
 -- Name: favorite_conversations favorite_conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -264,6 +336,14 @@ ALTER TABLE ONLY public.favorite_messages
 
 
 --
+-- Name: payment_transactions payment_transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payment_transactions
+    ADD CONSTRAINT payment_transactions_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: profiles profiles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -277,6 +357,22 @@ ALTER TABLE ONLY public.profiles
 
 ALTER TABLE ONLY public.profiles
     ADD CONSTRAINT profiles_user_id_key UNIQUE (user_id);
+
+
+--
+-- Name: promo_codes promo_codes_code_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.promo_codes
+    ADD CONSTRAINT promo_codes_code_key UNIQUE (code);
+
+
+--
+-- Name: promo_codes promo_codes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.promo_codes
+    ADD CONSTRAINT promo_codes_pkey PRIMARY KEY (id);
 
 
 --
@@ -396,6 +492,13 @@ CREATE TRIGGER update_conversations_updated_at BEFORE UPDATE ON public.conversat
 
 
 --
+-- Name: daily_message_counts update_daily_message_counts_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER update_daily_message_counts_updated_at BEFORE UPDATE ON public.daily_message_counts FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
 -- Name: profiles update_profiles_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -474,6 +577,13 @@ ALTER TABLE ONLY public.profiles
 
 
 --
+-- Name: promo_codes Anyone can read active promo codes; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Anyone can read active promo codes" ON public.promo_codes FOR SELECT USING ((is_active = true));
+
+
+--
 -- Name: shared_conversations Anyone can view active shared conversations; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -485,6 +595,13 @@ CREATE POLICY "Anyone can view active shared conversations" ON public.shared_con
 --
 
 CREATE POLICY "Authenticated users can view profiles" ON public.profiles FOR SELECT TO authenticated USING (true);
+
+
+--
+-- Name: payment_transactions Service role can manage transactions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Service role can manage transactions" ON public.payment_transactions USING ((auth.role() = 'service_role'::text)) WITH CHECK ((auth.role() = 'service_role'::text));
 
 
 --
@@ -582,6 +699,13 @@ CREATE POLICY "Users can insert their own conversations" ON public.conversations
 
 
 --
+-- Name: daily_message_counts Users can insert their own message counts; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can insert their own message counts" ON public.daily_message_counts FOR INSERT WITH CHECK ((auth.uid() = user_id));
+
+
+--
 -- Name: user_preferences Users can insert their own preferences; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -621,6 +745,13 @@ CREATE POLICY "Users can update their own conversations" ON public.conversations
 --
 
 CREATE POLICY "Users can update their own folders" ON public.conversation_folders FOR UPDATE USING ((auth.uid() = user_id));
+
+
+--
+-- Name: daily_message_counts Users can update their own message counts; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can update their own message counts" ON public.daily_message_counts FOR UPDATE USING ((auth.uid() = user_id));
 
 
 --
@@ -693,10 +824,24 @@ CREATE POLICY "Users can view their own folders" ON public.conversation_folders 
 
 
 --
+-- Name: daily_message_counts Users can view their own message counts; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view their own message counts" ON public.daily_message_counts FOR SELECT USING ((auth.uid() = user_id));
+
+
+--
 -- Name: user_preferences Users can view their own preferences; Type: POLICY; Schema: public; Owner: -
 --
 
 CREATE POLICY "Users can view their own preferences" ON public.user_preferences FOR SELECT USING ((auth.uid() = user_id));
+
+
+--
+-- Name: payment_transactions Users can view their own transactions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view their own transactions" ON public.payment_transactions FOR SELECT USING ((auth.uid() = user_id));
 
 
 --
@@ -730,6 +875,12 @@ ALTER TABLE public.conversation_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: daily_message_counts; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.daily_message_counts ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: favorite_conversations; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -742,10 +893,22 @@ ALTER TABLE public.favorite_conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.favorite_messages ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: payment_transactions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.payment_transactions ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: profiles; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: promo_codes; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.promo_codes ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: shared_conversations; Type: ROW SECURITY; Schema: public; Owner: -
