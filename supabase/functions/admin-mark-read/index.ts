@@ -48,24 +48,30 @@ serve(async (req) => {
       );
     }
 
-    // Fetch all contact messages
-    const { data, error } = await supabase
-      .from("contact_messages")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { messageId } = await req.json();
 
-    if (error) {
-      throw error;
+    if (!messageId) {
+      return new Response(
+        JSON.stringify({ error: "Message ID required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
+    const { error } = await supabase
+      .from("contact_messages")
+      .update({ is_read: true })
+      .eq("id", messageId);
+
+    if (error) throw error;
+
     return new Response(
-      JSON.stringify(data || []),
+      JSON.stringify({ success: true }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error:", error);
     return new Response(
-      JSON.stringify({ error: "Failed to fetch messages" }),
+      JSON.stringify({ error: "Failed to mark as read" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
