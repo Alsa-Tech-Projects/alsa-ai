@@ -85,9 +85,9 @@ const Admin = () => {
       if (data.success) {
         setIsAuthenticated(true);
         localStorage.setItem('admin_session', Date.now().toString());
-        localStorage.setItem('admin_key', adminKey); // Store key for subsequent API calls
+        localStorage.setItem('admin_key', adminKey);
         toast({ title: 'Access Granted', description: 'Welcome to Admin Panel' });
-        fetchAllData();
+        fetchAllData(adminKey); // Pass key directly to avoid race condition
       } else {
         toast({ title: 'Access Denied', description: 'Invalid admin key', variant: 'destructive' });
       }
@@ -97,7 +97,8 @@ const Admin = () => {
     setLoading(false);
   };
 
-  const fetchAllData = async () => {
+  const fetchAllData = async (keyOverride?: string) => {
+    const storedKey = keyOverride || localStorage.getItem('admin_key') || '';
     setLoading(true);
     try {
       // Fetch profiles for user stats
@@ -145,7 +146,7 @@ const Admin = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
         },
-        body: JSON.stringify({ adminKey: localStorage.getItem('admin_key') || '' })
+        body: JSON.stringify({ adminKey: storedKey })
       });
       const contacts: ContactMessage[] = contactResponse.ok ? await contactResponse.json() : [];
       
@@ -276,7 +277,7 @@ const Admin = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={fetchAllData} disabled={loading}>
+            <Button variant="ghost" size="sm" onClick={() => fetchAllData()} disabled={loading}>
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
