@@ -9,6 +9,10 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import alsaLogo from '@/assets/alsa-logo.png';
+import heroAiImage from '@/assets/hero-ai-interface.jpg';
+import aiPcControl from '@/assets/ai-pc-control.jpg';
+import voiceAiControl from '@/assets/voice-ai-control.jpg';
+import { Helmet } from 'react-helmet';
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -86,6 +90,31 @@ const Landing = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white overflow-x-hidden">
+      <Helmet>
+        <title>ALSA AI - Best AI Assistant for PC Automation, Voice Control & Coding | India</title>
+        <meta name="description" content="ALSA AI is India's #1 AI assistant for PC automation, voice commands, full-stack coding, Android control via ADB. Automate your workflow with advanced artificial intelligence. Try free!" />
+        <meta name="keywords" content="AI assistant, PC automation, voice control AI, AI coding assistant, Android ADB control, artificial intelligence, machine learning, chatbot, virtual assistant, productivity AI, ALSA AI, best AI India, AI for developers, smart assistant, automation software, voice commands, natural language processing, AI technology" />
+        <meta property="og:title" content="ALSA AI - AI Assistant for PC Automation & Coding" />
+        <meta property="og:description" content="Automate PC tasks, generate code, control Android devices with India's best AI assistant." />
+        <meta property="og:type" content="website" />
+        <link rel="canonical" href="https://alsa-ai.lovable.app/" />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "ALSA AI",
+            "description": "AI-powered PC automation, voice control, and coding assistant",
+            "applicationCategory": "Productivity",
+            "operatingSystem": "Windows, Web",
+            "offers": {
+              "@type": "Offer",
+              "price": "1",
+              "priceCurrency": "INR"
+            }
+          })}
+        </script>
+      </Helmet>
+
       {/* Animated Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 -left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl animate-pulse"></div>
@@ -286,21 +315,11 @@ const Landing = () => {
             
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-3xl blur-3xl"></div>
-              <div className="relative bg-slate-900/80 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
-                <div className="flex items-center gap-2 mb-6">
-                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                  <span className="ml-4 text-white/40 text-sm font-mono">terminal</span>
-                </div>
-                <div className="font-mono text-sm space-y-2">
-                  <p className="text-green-400">$ alsa "create a react portfolio website"</p>
-                  <p className="text-white/60">✓ Creating project structure...</p>
-                  <p className="text-white/60">✓ Generating components...</p>
-                  <p className="text-white/60">✓ Setting up routing...</p>
-                  <p className="text-emerald-400">✓ Project created at E:\Projects\portfolio</p>
-                  <p className="text-blue-400 mt-4">$ alsa "take a screenshot"</p>
-                  <p className="text-emerald-400">✓ Screenshot saved to Desktop</p>
+              <div className="relative rounded-3xl overflow-hidden border border-white/10">
+                <img src={aiPcControl} alt="AI PC Control - Robot hand on keyboard" className="w-full h-auto" />
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 to-transparent p-6">
+                  <p className="text-sm font-mono text-green-400">$ alsa "create a react portfolio website"</p>
+                  <p className="text-xs text-white/60 mt-1">✓ Project created at E:\Projects\portfolio</p>
                 </div>
               </div>
             </div>

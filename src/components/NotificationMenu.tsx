@@ -8,6 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Notification {
   id: string;
@@ -16,58 +17,224 @@ interface Notification {
   content: string;
   time: Date;
   read: boolean;
+  isFromAdmin?: boolean;
 }
 
 const NotificationMenu = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  // Fetch admin notifications from database
+  const fetchAdminNotifications = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_notifications')
+        .select('*')
+        .or(`user_id.eq.${userId},user_id.is.null`)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching admin notifications:', error);
+        return [];
+      }
+
+      return (data || []).map(n => ({
+        id: n.id,
+        type: 'message' as const,
+        title: n.title,
+        content: n.message,
+        time: new Date(n.created_at),
+        read: n.is_read || false,
+        isFromAdmin: true
+      }));
+    } catch (e) {
+      console.error('Error fetching admin notifications:', e);
+      return [];
+    }
+  };
 
   useEffect(() => {
-    // Load notifications from localStorage
-    const saved = localStorage.getItem('alsa_notifications');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setNotifications(parsed.map((n: any) => ({ ...n, time: new Date(n.time) })));
-      } catch (e) {
-        console.error('Error loading notifications:', e);
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        // Load admin notifications from database
+        const adminNotifs = await fetchAdminNotifications(session.user.id);
+        
+        // Load local notifications from localStorage
+        const saved = localStorage.getItem('alsa_notifications');
+        let localNotifs: Notification[] = [];
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            localNotifs = parsed.map((n: any) => ({ ...n, time: new Date(n.time), isFromAdmin: false }));
+          } catch (e) {
+            console.error('Error loading local notifications:', e);
+          }
+        }
+        
+        // Combine admin and local notifications, sorted by time
+        const allNotifs = [...adminNotifs, ...localNotifs].sort(
+          (a, b) => b.time.getTime() - a.time.getTime()
+        );
+        
+        setNotifications(allNotifs);
+      } else {
+        // For guests, just load from localStorage with welcome message
+        const saved = localStorage.getItem('alsa_notifications');
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            setNotifications(parsed.map((n: any) => ({ ...n, time: new Date(n.time) })));
+          } catch (e) {
+            console.error('Error loading notifications:', e);
+          }
+        } else {
+          // Add welcome notification for new users
+          const welcomeNotification: Notification = {
+            id: 'welcome-1',
+            type: 'message',
+            title: 'Welcome to ALSA AI! 🎉',
+            content: 'Your AI assistant is ready. Try voice commands with Alt+V or type your first message!',
+            time: new Date(),
+            read: false
+          };
+          setNotifications([welcomeNotification]);
+        }
       }
-    } else {
-      // Add welcome notification for new users
-      const welcomeNotification: Notification = {
-        id: 'welcome-1',
-        type: 'message',
-        title: 'Welcome to ALSA AI! 🎉',
-        content: 'Your AI assistant is ready. Try voice commands with Alt+V or type your first message!',
-        time: new Date(),
-        read: false
-      };
-      setNotifications([welcomeNotification]);
-    }
+    };
+
+    checkUser();
+
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        const adminNotifs = await fetchAdminNotifications(session.user.id);
+        const saved = localStorage.getItem('alsa_notifications');
+        let localNotifs: Notification[] = [];
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            localNotifs = parsed.map((n: any) => ({ ...n, time: new Date(n.time), isFromAdmin: false }));
+          } catch (e) {
+            console.error('Error loading local notifications:', e);
+          }
+        }
+        const allNotifs = [...adminNotifs, ...localNotifs].sort(
+          (a, b) => b.time.getTime() - a.time.getTime()
+        );
+        setNotifications(allNotifs);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
+  // Subscribe to realtime admin notifications
   useEffect(() => {
-    // Save notifications to localStorage
-    localStorage.setItem('alsa_notifications', JSON.stringify(notifications));
+    if (!user) return;
+
+    const channel = supabase
+      .channel('admin-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'admin_notifications',
+        },
+        (payload) => {
+          const newNotif = payload.new as any;
+          // Check if this notification is for the current user or for all users
+          if (newNotif.user_id === user.id || newNotif.user_id === null) {
+            const notification: Notification = {
+              id: newNotif.id,
+              type: 'message',
+              title: newNotif.title,
+              content: newNotif.message,
+              time: new Date(newNotif.created_at),
+              read: false,
+              isFromAdmin: true
+            };
+            setNotifications(prev => [notification, ...prev]);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  // Save only local notifications to localStorage
+  useEffect(() => {
+    const localNotifs = notifications.filter(n => !n.isFromAdmin);
+    localStorage.setItem('alsa_notifications', JSON.stringify(localNotifs));
   }, [notifications]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAsRead = (id: string) => {
+  const markAsRead = async (id: string) => {
+    const notif = notifications.find(n => n.id === id);
+    
+    if (notif?.isFromAdmin && user) {
+      // Update in database
+      await supabase
+        .from('admin_notifications')
+        .update({ is_read: true })
+        .eq('id', id);
+    }
+    
     setNotifications(prev => 
       prev.map(n => n.id === id ? { ...n, read: true } : n)
     );
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
+    if (user) {
+      // Update all admin notifications for this user
+      const adminNotifIds = notifications.filter(n => n.isFromAdmin && !n.read).map(n => n.id);
+      if (adminNotifIds.length > 0) {
+        await supabase
+          .from('admin_notifications')
+          .update({ is_read: true })
+          .in('id', adminNotifIds);
+      }
+    }
+    
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
-  const deleteNotification = (id: string) => {
+  const deleteNotification = async (id: string) => {
+    const notif = notifications.find(n => n.id === id);
+    
+    if (notif?.isFromAdmin && user) {
+      // For admin notifications, just mark as read (or delete if you prefer)
+      await supabase
+        .from('admin_notifications')
+        .delete()
+        .eq('id', id);
+    }
+    
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  const clearAll = () => {
+  const clearAll = async () => {
+    if (user) {
+      // Delete all admin notifications for this user
+      const adminNotifIds = notifications.filter(n => n.isFromAdmin).map(n => n.id);
+      if (adminNotifIds.length > 0) {
+        await supabase
+          .from('admin_notifications')
+          .delete()
+          .in('id', adminNotifIds);
+      }
+    }
+    
     setNotifications([]);
   };
 
@@ -164,12 +331,14 @@ const NotificationMenu = () => {
                   >
                     <div className="flex gap-3">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        notification.isFromAdmin ? 'bg-purple-500/20' :
                         notification.type === 'alert' ? 'bg-red-500/20' :
                         notification.type === 'promo' ? 'bg-purple-500/20' :
                         notification.type === 'update' ? 'bg-green-500/20' :
                         'bg-blue-500/20'
                       }`}>
                         <Icon className={`w-4 h-4 ${
+                          notification.isFromAdmin ? 'text-purple-400' :
                           notification.type === 'alert' ? 'text-red-400' :
                           notification.type === 'promo' ? 'text-purple-400' :
                           notification.type === 'update' ? 'text-green-400' :
@@ -178,9 +347,16 @@ const NotificationMenu = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-medium text-white truncate">
-                            {notification.title}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-white truncate">
+                              {notification.title}
+                            </p>
+                            {notification.isFromAdmin && (
+                              <Badge className="bg-purple-500/20 text-purple-300 text-[10px] px-1.5 py-0">
+                                Admin
+                              </Badge>
+                            )}
+                          </div>
                           <Button
                             variant="ghost"
                             size="sm"
