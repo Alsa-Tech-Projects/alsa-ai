@@ -10,6 +10,7 @@ import { ArrowLeft, Mail, Phone, MessageCircle, Instagram, Twitter, Linkedin, Ex
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import alsaLogo from '@/assets/alsa-logo.png';
+import { Helmet } from 'react-helmet';
 
 const Contact = () => {
   const navigate = useNavigate();
@@ -26,8 +27,19 @@ const Contact = () => {
     
     try {
       // Store message in database for admin to see
-      // For now, simulate sending
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { error } = await supabase
+        .from('contact_messages')
+        .insert({
+          name,
+          email,
+          subject,
+          message,
+          is_read: false
+        });
+
+      if (error) {
+        throw error;
+      }
       
       toast({
         title: "Message Sent! 📨",
@@ -38,10 +50,11 @@ const Contact = () => {
       setEmail('');
       setSubject('');
       setMessage('');
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error sending message:', error);
       toast({
         title: "Failed to send",
-        description: "Please try again later.",
+        description: error.message || "Please try again later.",
         variant: "destructive"
       });
     } finally {
@@ -84,6 +97,15 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
+      <Helmet>
+        <title>Contact ALSA AI - AI Assistant Support | Get Help & Feedback</title>
+        <meta name="description" content="Contact ALSA AI for support, feedback, or inquiries. Reach us via email, phone, or social media. 24-hour response time for AI assistant, PC automation, and voice control questions." />
+        <meta name="keywords" content="ALSA AI contact, AI assistant support, PC automation help, voice control support, AI chatbot help, customer service, feedback, AI technology support" />
+        <meta property="og:title" content="Contact ALSA AI - AI Assistant Support" />
+        <meta property="og:description" content="Get in touch with ALSA AI team for support, feedback, or partnership inquiries." />
+        <link rel="canonical" href="https://alsa-ai.lovable.app/contact" />
+      </Helmet>
+
       {/* Animated Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 -left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl animate-pulse"></div>
@@ -114,7 +136,7 @@ const Contact = () => {
           </Badge>
           <h1 className="text-4xl md:text-5xl font-bold mb-4">We'd Love to Hear From You</h1>
           <p className="text-white/60 max-w-xl mx-auto text-lg">
-            Have questions, feedback, or need support? Reach out through any channel below.
+            Have questions about AI automation, PC control, or need support? Reach out through any channel below.
           </p>
         </div>
 
