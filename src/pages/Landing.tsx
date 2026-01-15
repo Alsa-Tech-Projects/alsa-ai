@@ -386,9 +386,9 @@ const Landing = () => {
             ))}
           </div>
           
-          <p className="text-center text-white/40 mt-10">
+          {/* <p className="text-center text-white/40 mt-10">
             💡 Use promo code <span className="text-blue-400 font-mono font-bold">BISMILLAH</span> for 99% off or <span className="text-purple-400 font-mono font-bold">WELCOMEFROMALSAAI</span> for 80% off!
-          </p>
+          </p> */}
         </div>
       </section>
 
