@@ -187,7 +187,7 @@ const Privacy = () => {
             <ul className="space-y-2 text-white/80">
               <li className="flex items-center gap-2">
                 <span>📧</span>
-                <span>Email: alsa.ai.assistant@gmail.com</span>
+                <span>Email: support@alsa-ai.in</span>
               </li>
               <li className="flex items-center gap-2">
                 <span>📞</span>
