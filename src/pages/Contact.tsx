@@ -66,8 +66,8 @@ const Contact = () => {
     {
       icon: Mail,
       title: 'Email Support',
-      value: 'alsa.ai.assistant@gmail.com',
-      href: 'mailto:alsa.ai.assistant@gmail.com',
+      value: 'support@alsa-ai.in',
+      href: 'mailto:support@alsa-ai.in',
       desc: 'We typically respond within 24 hours',
       color: 'from-blue-500 to-cyan-500'
     },
