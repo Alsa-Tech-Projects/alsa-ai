@@ -503,6 +503,33 @@ export type Database = {
         }
         Relationships: []
       }
+      team_accounts: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          is_lifetime: boolean
+          subscription_tier: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          is_lifetime?: boolean
+          subscription_tier?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          is_lifetime?: boolean
+          subscription_tier?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_preferences: {
         Row: {
           ai_response_style: string | null

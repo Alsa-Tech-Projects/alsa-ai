@@ -153,10 +153,12 @@ const ChatMessage = ({ role, content, messageId, isFavorite, onToggleFavorite }:
           <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-white/10 shadow-inner">
             <Bot className="w-6 h-6 text-blue-400" />
           </div>
-          <div className="flex flex-col gap-2">
-            <div className="bg-[#1a1a1a]/80 border border-white/10 rounded-[2rem] rounded-tl-none p-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)] backdrop-blur-2xl relative overflow-hidden">
+          <div className="flex flex-col gap-2 min-w-0 flex-1">
+            <div className="bg-[#1a1a1a]/80 border border-white/10 rounded-[2rem] rounded-tl-none p-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)] backdrop-blur-2xl relative overflow-x-auto">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/50 via-purple-500/50 to-transparent opacity-30" />
-              {renderContent()}
+              <div className="max-w-full overflow-x-auto">
+                {renderContent()}
+              </div>
             </div>
             {!isEmpty && (
               <div className="flex gap-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">

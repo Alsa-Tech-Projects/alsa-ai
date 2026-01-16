@@ -239,8 +239,12 @@ const Landing = () => {
             <video 
               className="w-full aspect-video relative z-10"
               controls
+              autoPlay
+              muted
+              loop
+              playsInline
               poster="/videos/demo-video.mp4"
-              preload="metadata"
+              preload="auto"
             >
               <source src="/videos/demo-video.mp4" type="video/mp4" />
               Your browser does not support the video tag.

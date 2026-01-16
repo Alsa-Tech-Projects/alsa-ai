@@ -1,6 +1,8 @@
 // Admin Configuration
 // These emails have unlimited access and full subscription
 
+import { isTeamEmail } from './teamAccounts';
+
 export const ADMIN_EMAILS = [
   'qadrieisa@gmail.com',
   'alsa.ai.assistant@gmail.com'
@@ -27,14 +29,16 @@ export const getAdminSubscription = () => ({
   }
 });
 
-// Check if user has active subscription (admin or paid)
+// Check if user has active subscription (admin, team, or paid)
 export const hasActiveSubscription = (email: string | undefined | null, subscriptionTier?: string | null): boolean => {
   if (isAdminEmail(email)) return true;
+  if (isTeamEmail(email)) return true;
   return subscriptionTier === 'pro' || subscriptionTier === 'elite';
 };
 
 // Get user's effective tier
 export const getEffectiveTier = (email: string | undefined | null, subscriptionTier?: string | null): string => {
   if (isAdminEmail(email)) return 'elite';
+  if (isTeamEmail(email)) return 'elite';
   return subscriptionTier || 'free';
 };

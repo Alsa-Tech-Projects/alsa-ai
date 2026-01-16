@@ -937,9 +937,13 @@ const Index = () => {
       console.error('Chat error:', error);
       setIsTyping(false);
       setBackupKeyActive(false);
+      
+      const errorMessage = `❌ I'm having trouble responding right now. Please try again or contact support at support@alsa-ai.in for assistance.`;
+      setMessages(prev => [...prev, { role: 'assistant', content: errorMessage }]);
+      
       toast({
-        title: "Error",
-        description: "Failed to communicate with AI",
+        title: "AI Response Error",
+        description: "Something went wrong. Contact support@alsa-ai.in if the issue persists.",
         variant: "destructive"
       });
     }
