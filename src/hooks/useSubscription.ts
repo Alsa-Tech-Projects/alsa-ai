@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { isTeamEmail, checkTeamAccount } from '@/utils/teamAccounts';
 
 interface SubscriptionInfo {
   tier: string | null;
@@ -34,6 +35,26 @@ export const useSubscription = () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) {
           setSubscription(prev => ({ ...prev, loading: false }));
+          return;
+        }
+
+        const userEmail = session.user.email;
+
+        // Check if user is a team member first
+        const teamCheck = await checkTeamAccount(userEmail);
+        if (teamCheck.isTeam) {
+          setSubscription({
+            tier: teamCheck.tier,
+            expiresAt: null,
+            isActive: true,
+            isPro: teamCheck.tier === 'pro',
+            isElite: teamCheck.tier === 'elite',
+            isFree: false,
+            dailyMessageCount: 0,
+            dailyMessageLimit: Infinity,
+            canSendMessage: true,
+            loading: false
+          });
           return;
         }
 

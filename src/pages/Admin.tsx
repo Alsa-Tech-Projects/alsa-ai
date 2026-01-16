@@ -11,9 +11,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { 
   Shield, Users, MessageSquare, Bell, Mail, 
   Lock, CheckCircle, Send, Eye, EyeOff, ArrowLeft,
-  Crown, Zap, Sparkles, Search, RefreshCw, AlertTriangle
+  Crown, Zap, Sparkles, Search, RefreshCw, AlertTriangle,
+  Gift, Trash2, Plus
 } from 'lucide-react';
 import alsaLogo from '@/assets/alsa-logo.png';
+
+interface PromoCode {
+  id: string;
+  code: string;
+  discount_percent: number;
+  is_active: boolean;
+  max_uses: number | null;
+  current_uses: number;
+  valid_until: string | null;
+}
 
 interface User {
   user_id: string;
@@ -69,6 +80,13 @@ const Admin = () => {
   const [notificationTarget, setNotificationTarget] = useState<'all' | 'single'>('all');
   const [targetUserId, setTargetUserId] = useState('');
   const [sendingNotification, setSendingNotification] = useState(false);
+
+  // Promo code management
+  const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
+  const [newPromoCode, setNewPromoCode] = useState('');
+  const [newPromoDiscount, setNewPromoDiscount] = useState('10');
+  const [newPromoMaxUses, setNewPromoMaxUses] = useState('');
+  const [creatingPromo, setCreatingPromo] = useState(false);
 
   // Check auth and admin role
   useEffect(() => {
@@ -235,6 +253,16 @@ const Admin = () => {
             unreadContacts: contacts.filter((c: ContactMessage) => !c.is_read).length || 0
           }));
         }
+
+        // Fetch promo codes
+        const { data: promos } = await supabase
+          .from('promo_codes')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (promos) {
+          setPromoCodes(promos);
+        }
       }
       
       setStats(prev => ({
@@ -246,6 +274,69 @@ const Admin = () => {
       console.error('Fetch error:', error);
     }
     setLoading(false);
+  };
+
+  // Promo code management functions
+  const createPromoCode = async () => {
+    if (!newPromoCode.trim()) {
+      toast({ title: 'Error', description: 'Please enter a promo code', variant: 'destructive' });
+      return;
+    }
+
+    setCreatingPromo(true);
+    try {
+      const { error } = await supabase
+        .from('promo_codes')
+        .insert({
+          code: newPromoCode.toUpperCase(),
+          discount_percent: parseInt(newPromoDiscount) || 10,
+          max_uses: newPromoMaxUses ? parseInt(newPromoMaxUses) : null,
+          is_active: true,
+          current_uses: 0
+        });
+
+      if (error) throw error;
+
+      toast({ title: 'Success', description: 'Promo code created successfully!' });
+      setNewPromoCode('');
+      setNewPromoDiscount('10');
+      setNewPromoMaxUses('');
+      fetchAllData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to create promo code', variant: 'destructive' });
+    }
+    setCreatingPromo(false);
+  };
+
+  const deletePromoCode = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('promo_codes')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({ title: 'Deleted', description: 'Promo code deleted successfully' });
+      setPromoCodes(prev => prev.filter(p => p.id !== id));
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to delete promo code', variant: 'destructive' });
+    }
+  };
+
+  const togglePromoActive = async (id: string, isActive: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('promo_codes')
+        .update({ is_active: !isActive })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setPromoCodes(prev => prev.map(p => p.id === id ? { ...p, is_active: !isActive } : p));
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
   };
 
   const sendNotification = async () => {
@@ -471,6 +562,9 @@ const Admin = () => {
             <TabsTrigger value="notifications" className="data-[state=active]:bg-white/10">
               <Bell className="w-4 h-4 mr-2" /> Send Notifications
             </TabsTrigger>
+            <TabsTrigger value="promocodes" className="data-[state=active]:bg-white/10">
+              <Gift className="w-4 h-4 mr-2" /> Promo Codes
+            </TabsTrigger>
           </TabsList>
 
           {/* Users Tab */}
@@ -500,7 +594,7 @@ const Admin = () => {
                         </div>
                         <div>
                           <p className="font-medium text-white">{user.display_name || 'Anonymous'}</p>
-                          <p className="text-xs text-white/40 font-mono">{user.user_id.slice(0, 8)}...</p>
+                          <p className="text-xs text-white/40 font-mono break-all">{user.user_id}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -628,6 +722,100 @@ const Admin = () => {
                     </>
                   )}
                 </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Promo Codes Tab */}
+          <TabsContent value="promocodes">
+            <Card className="bg-slate-900/50 border-white/5">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Gift className="w-5 h-5 text-purple-400" />
+                  Promo Code Management
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Create new promo code */}
+                <div className="p-4 bg-white/5 rounded-xl space-y-4">
+                  <h3 className="font-medium text-white flex items-center gap-2">
+                    <Plus className="w-4 h-4" /> Create New Promo Code
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Input
+                      placeholder="Code (e.g. SAVE20)"
+                      value={newPromoCode}
+                      onChange={(e) => setNewPromoCode(e.target.value.toUpperCase())}
+                      className="bg-white/5 border-white/10 text-white"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Discount %"
+                      value={newPromoDiscount}
+                      onChange={(e) => setNewPromoDiscount(e.target.value)}
+                      className="bg-white/5 border-white/10 text-white"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Max Uses (empty = unlimited)"
+                      value={newPromoMaxUses}
+                      onChange={(e) => setNewPromoMaxUses(e.target.value)}
+                      className="bg-white/5 border-white/10 text-white"
+                    />
+                    <Button
+                      onClick={createPromoCode}
+                      disabled={creatingPromo}
+                      className="bg-gradient-to-r from-purple-600 to-pink-600"
+                    >
+                      {creatingPromo ? 'Creating...' : 'Create Code'}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Existing promo codes */}
+                <div className="space-y-3">
+                  <h3 className="font-medium text-white">Existing Promo Codes</h3>
+                  {promoCodes.length === 0 ? (
+                    <p className="text-white/40 text-center py-8">No promo codes yet</p>
+                  ) : (
+                    promoCodes.map((promo) => (
+                      <div key={promo.id} className="flex items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                            <Gift className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-white text-lg">{promo.code}</p>
+                            <p className="text-sm text-white/60">
+                              {promo.discount_percent}% off • Used: {promo.current_uses}/{promo.max_uses || '∞'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge className={promo.is_active ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}>
+                            {promo.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => togglePromoActive(promo.id, promo.is_active)}
+                            className="text-white/60 hover:text-white"
+                          >
+                            {promo.is_active ? 'Disable' : 'Enable'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => deletePromoCode(promo.id)}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
