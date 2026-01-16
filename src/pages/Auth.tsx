@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Helmet } from 'react-helmet';
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -91,6 +92,24 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+      <Helmet>
+        <title>Login & Sign Up - ALSA AI | Create Your AI Assistant Account</title>
+        <meta name="description" content="Sign up or login to ALSA AI - India's best AI assistant for PC automation, voice control, and coding. Create your free account and start automating with AI today!" />
+        <meta name="keywords" content="ALSA AI login, AI assistant signup, create AI account, PC automation login, voice control AI, AI chatbot registration, free AI assistant, ALSA account, machine learning assistant, smart AI login, artificial intelligence signup, productivity AI account" />
+        <meta property="og:title" content="Login to ALSA AI - Your AI Assistant Awaits" />
+        <meta property="og:description" content="Create your free ALSA AI account and unlock PC automation, voice commands, and intelligent coding assistance." />
+        <meta property="og:type" content="website" />
+        <link rel="canonical" href="https://alsa-ai.lovable.app/auth" />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": "ALSA AI Login & Signup",
+            "description": "Create your account or login to ALSA AI for PC automation and AI assistance",
+            "url": "https://alsa-ai.lovable.app/auth"
+          })}
+        </script>
+      </Helmet>
       {/* Animated background effects */}
       <div className="absolute inset-0 bg-gradient-radial opacity-30 pointer-events-none" />
       <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-primary/20 rounded-full blur-3xl animate-pulse-glow pointer-events-none" />

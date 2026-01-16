@@ -799,13 +799,26 @@ export const captureScreenshot = async (
       }, 100);
     });
 
+    // Determine save path
+    let finalSavePath = savePath;
+    if (!finalSavePath) {
+      const storedPaths = localStorage.getItem('alsa_output_paths');
+      if (storedPaths) {
+        try {
+          const parsed = JSON.parse(storedPaths);
+          finalSavePath = parsed.screenshot;
+        } catch {}
+      }
+    }
+    if (!finalSavePath) {
+      finalSavePath = 'C:\\Users\\Mohd Eisa\\Pictures\\Screenshots';
+    }
+
     const response = await fetch(`${BRIDGE_URL}/capture_screenshot`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ 
-        save_path: savePath || localStorage.getItem('alsa_output_paths') 
-          ? JSON.parse(localStorage.getItem('alsa_output_paths') || '{}').screenshot 
-          : 'C:\\Users\\Mohd Eisa\\Pictures\\Screenshots'
+        save_path: finalSavePath
       })
     });
     const data = await response.json();

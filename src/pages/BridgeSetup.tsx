@@ -13,7 +13,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { isAdminEmail } from '@/utils/adminConfig';
+import { isTeamEmail } from '@/utils/teamAccounts';
 import alsaLogo from '@/assets/alsa-logo.png';
+import { Helmet } from 'react-helmet';
 
 const BridgeSetup = () => {
   const navigate = useNavigate();
@@ -35,8 +37,8 @@ const BridgeSetup = () => {
       
       setUser(session.user);
       
-      // Check subscription - only allow paid users
-      if (isAdminEmail(session.user.email)) {
+      // Check subscription - only allow paid users or team members
+      if (isAdminEmail(session.user.email) || isTeamEmail(session.user.email)) {
         setTier('elite');
         setLoading(false);
         return;
@@ -168,6 +170,29 @@ const BridgeSetup = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
+      <Helmet>
+        <title>PC Bridge Setup - ALSA AI | Install AI PC Control Software</title>
+        <meta name="description" content="Download and setup ALSA AI PC Bridge for Windows, macOS, and Linux. Enable AI-powered PC automation, voice control, screenshot capture, screen recording, and full-stack coding on your computer." />
+        <meta name="keywords" content="PC Bridge setup, ALSA AI installation, AI PC control, voice command software, PC automation tool, screenshot AI, screen recording AI, coding automation, Python bridge, Windows AI control, macOS AI, Linux automation, install AI assistant, PC remote control, voice assistant setup" />
+        <meta property="og:title" content="ALSA AI PC Bridge Setup - Control Your PC with AI" />
+        <meta property="og:description" content="Setup the ALSA PC Bridge to enable AI-powered automation, voice commands, and coding on your computer." />
+        <meta property="og:type" content="website" />
+        <link rel="canonical" href="https://alsa-ai.lovable.app/bridge-setup" />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "HowTo",
+            "name": "How to Setup ALSA AI PC Bridge",
+            "description": "Step-by-step guide to install and configure ALSA AI PC Bridge",
+            "step": [
+              {"@type": "HowToStep", "text": "Install Python 3.8+"},
+              {"@type": "HowToStep", "text": "Download the PC Bridge file"},
+              {"@type": "HowToStep", "text": "Install Python packages"},
+              {"@type": "HowToStep", "text": "Run the bridge script"}
+            ]
+          })}
+        </script>
+      </Helmet>
       {/* Animated Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 -left-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl animate-pulse"></div>
