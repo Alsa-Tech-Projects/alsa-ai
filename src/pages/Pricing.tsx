@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import alsaLogo from '@/assets/alsa-logo.png';
+import { Helmet } from 'react-helmet';
 
 interface PricingPlan {
   id: string;
@@ -228,6 +229,46 @@ const Pricing = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#111] to-[#0a0a0a]">
+      <Helmet>
+        <title>ALSA AI Pricing - Affordable AI Assistant Plans | Pro & Elite Features</title>
+        <meta name="description" content="Compare ALSA AI pricing plans. Start with ₹1 trial, upgrade to Pro for full-stack coding and OS commands, or Elite for ADB Android control and database management. Best AI assistant pricing in India." />
+        <meta name="keywords" content="ALSA AI pricing, AI assistant cost, PC automation pricing, voice control plans, AI subscription India, cheap AI assistant, affordable AI, Pro plan, Elite plan, trial subscription, AI chatbot pricing, machine learning cost, productivity AI pricing, best AI price" />
+        <meta property="og:title" content="ALSA AI Pricing - Affordable AI Assistant Plans" />
+        <meta property="og:description" content="Start your AI journey with just ₹1. Full-stack coding, PC automation, and Android control at affordable prices." />
+        <meta property="og:type" content="website" />
+        <link rel="canonical" href="https://alsa-ai.lovable.app/pricing" />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": "ALSA AI Subscription",
+            "description": "AI-powered PC automation and coding assistant",
+            "offers": [
+              {
+                "@type": "Offer",
+                "name": "3-Day Trial",
+                "price": "1",
+                "priceCurrency": "INR",
+                "availability": "https://schema.org/InStock"
+              },
+              {
+                "@type": "Offer", 
+                "name": "Pro Plan",
+                "price": "449",
+                "priceCurrency": "INR",
+                "availability": "https://schema.org/InStock"
+              },
+              {
+                "@type": "Offer",
+                "name": "Elite Plan",
+                "price": "999",
+                "priceCurrency": "INR",
+                "availability": "https://schema.org/InStock"
+              }
+            ]
+          })}
+        </script>
+      </Helmet>
       {/* Header */}
       <header className="border-b border-white/5 bg-black/50 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">

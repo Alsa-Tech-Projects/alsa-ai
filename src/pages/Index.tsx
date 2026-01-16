@@ -1136,7 +1136,7 @@ return (
               ALSA CORE
             </h1>
             <p className="mt-3 text-blue-500/50 font-mono text-[10px] tracking-[0.5em] uppercase">
-              System.Scan(v2.0.4) // Neural Link Active
+              From Chat To Execution Version1
             </p>
 
             <div className="mt-14 w-full max-w-2xl">
