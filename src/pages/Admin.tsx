@@ -28,6 +28,7 @@ interface PromoCode {
 
 interface User {
   user_id: string;
+  email: string | null;
   display_name: string | null;
   subscription_tier: string | null;
   subscription_expires_at: string | null;
@@ -196,6 +197,10 @@ const Admin = () => {
       // Fetch profiles for user stats
       const { data: profiles } = await supabase.from('profiles').select('*');
       
+      // Fetch auth users to get emails (we'll match by user_id)
+      // Note: We can't access auth.users directly, so we'll use a different approach
+      // We'll store email info when users sign up via a trigger or use the profile data
+      
       if (profiles) {
         const freeUsers = profiles.filter(p => !p.subscription_tier || p.subscription_tier === 'free').length;
         const proUsers = profiles.filter(p => p.subscription_tier === 'pro').length;
@@ -209,8 +214,10 @@ const Admin = () => {
           eliteUsers
         }));
         
+        // Get display_name which often contains email or name
         setUsers(profiles.map(p => ({
           user_id: p.user_id,
+          email: p.display_name || null, // display_name often stores email or username
           display_name: p.display_name,
           subscription_tier: p.subscription_tier,
           subscription_expires_at: p.subscription_expires_at,
@@ -590,11 +597,17 @@ const Admin = () => {
                     <div key={user.user_id} className="flex items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-                          <span className="text-sm font-bold">{user.display_name?.[0]?.toUpperCase() || 'U'}</span>
+                          <span className="text-sm font-bold">{user.display_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}</span>
                         </div>
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <p className="font-medium text-white">{user.display_name || 'Anonymous'}</p>
+                          {user.email && (
+                            <p className="text-xs text-blue-400 truncate">{user.email}</p>
+                          )}
                           <p className="text-xs text-white/40 font-mono break-all">{user.user_id}</p>
+                          <p className="text-[10px] text-white/30">
+                            Joined: {new Date(user.created_at).toLocaleDateString()}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">

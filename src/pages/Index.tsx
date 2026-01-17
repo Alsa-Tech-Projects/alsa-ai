@@ -55,6 +55,7 @@ const Index = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(false);
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<FileAttachment[]>([]);
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [backupKeyActive, setBackupKeyActive] = useState(false);
@@ -1202,7 +1203,7 @@ return (
     </div>
 
     {/* ========== RIGHT PANEL ========= */}
-    <div className="w-[260px] shrink-0 border-l border-white/5 bg-black/40 backdrop-blur-md">
+    <div className={`shrink-0 border-l border-white/5 bg-black/40 backdrop-blur-md transition-all duration-300 ${rightPanelCollapsed ? 'w-[50px]' : 'w-[260px]'}`}>
       <RightPanel
         user={user}
         bridgeConnected={bridgeConnected}
@@ -1211,6 +1212,8 @@ return (
         toggleVoice={toggleVoice}
         onOpenMemory={() => setShowMemoryManager(true)}
         backupKeyActive={backupKeyActive}
+        isCollapsed={rightPanelCollapsed}
+        onToggleCollapse={() => setRightPanelCollapsed(!rightPanelCollapsed)}
       />
     </div>
 

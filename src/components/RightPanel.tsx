@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Cloud, Droplets, Wind, MapPin } from 'lucide-react';
+import { Settings, Cloud, Droplets, Wind, MapPin, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import CircularSiriWave from '@/components/CircularSiriWave';
@@ -13,6 +13,8 @@ interface RightPanelProps {
   toggleVoice: () => void;
   onOpenMemory: () => void;
   backupKeyActive?: boolean;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 interface WeatherData {
@@ -38,6 +40,8 @@ const RightPanel = ({
   toggleVoice,
   onOpenMemory,
   backupKeyActive = false,
+  isCollapsed = false,
+  onToggleCollapse,
 }: RightPanelProps) => {
   const navigate = useNavigate();
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -137,8 +141,40 @@ const RightPanel = ({
     }
   };
 
+  // Collapsed state - show only toggle button
+  if (isCollapsed) {
+    return (
+      <div className="h-full flex items-center justify-center p-2 bg-[#0a0a0a] border-l border-white/5">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggleCollapse}
+          className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10"
+          title="Show Right Panel"
+        >
+          <PanelRightOpen className="w-5 h-5 text-white/60" />
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full h-full border-l border-white/5 flex flex-col bg-[#0a0a0a]">
+      {/* Collapse Toggle Button */}
+      {onToggleCollapse && (
+        <div className="p-2 border-b border-white/5 flex justify-end">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggleCollapse}
+            className="w-8 h-8 rounded-lg hover:bg-white/5"
+            title="Hide Right Panel"
+          >
+            <PanelRightClose className="w-4 h-4 text-white/40 hover:text-white/60" />
+          </Button>
+        </div>
+      )}
+      
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4">
           {/* User Info */}
