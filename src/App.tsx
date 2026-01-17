@@ -17,6 +17,7 @@ import Pricing from "./pages/Pricing";
 import BridgeSetup from "./pages/BridgeSetup";
 import SharedConversation from "./pages/SharedConversation";
 import Admin from "./pages/Admin";
+import FAQ from "./pages/FAQ";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
           <Route path="/contact" element={<Contact />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/faq" element={<FAQ />} />
           <Route path="/share/:shareToken" element={<SharedConversation />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />

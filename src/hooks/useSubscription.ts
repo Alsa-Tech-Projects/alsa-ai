@@ -40,15 +40,16 @@ export const useSubscription = () => {
 
         const userEmail = session.user.email;
 
-        // Check if user is a team member first
+        // Check if user is a team member first - this gives them full elite access
         const teamCheck = await checkTeamAccount(userEmail);
         if (teamCheck.isTeam) {
+          console.log('Team account detected:', userEmail, teamCheck);
           setSubscription({
-            tier: teamCheck.tier,
+            tier: 'elite',
             expiresAt: null,
             isActive: true,
-            isPro: teamCheck.tier === 'pro',
-            isElite: teamCheck.tier === 'elite',
+            isPro: false,
+            isElite: true,
             isFree: false,
             dailyMessageCount: 0,
             dailyMessageLimit: Infinity,
