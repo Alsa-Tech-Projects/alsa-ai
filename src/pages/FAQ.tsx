@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
-import { ArrowLeft, ChevronDown, ChevronUp, Search, MessageCircle, Zap, Shield, CreditCard, Monitor, Smartphone, HelpCircle } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, Search, MessageCircle, Zap, Shield, CreditCard, Monitor, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -146,6 +146,15 @@ const categoryIcons: Record<string, React.ReactNode> = {
   "Security": <Shield className="w-5 h-5" />,
 };
 
+const categoryColors: Record<string, string> = {
+  "General": "from-blue-500 to-cyan-500",
+  "PC Bridge": "from-purple-500 to-pink-500",
+  "Features": "from-amber-500 to-orange-500",
+  "Billing": "from-green-500 to-emerald-500",
+  "Troubleshooting": "from-red-500 to-rose-500",
+  "Security": "from-indigo-500 to-violet-500",
+};
+
 const FAQ = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
@@ -200,16 +209,16 @@ const FAQ = () => {
       <header className="border-b border-white/5 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="hover:bg-white/5">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="hover:bg-white/5 text-white">
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <img src={alsaLogo} alt="ALSA AI" className="h-10 w-10 rounded-xl ring-1 ring-white/10" />
             <div>
-              <span className="text-xl font-bold">FAQ</span>
+              <span className="text-xl font-bold text-white">FAQ</span>
               <p className="text-xs text-white/40">Frequently Asked Questions</p>
             </div>
           </div>
-          <Button onClick={() => navigate('/contact')} className="bg-gradient-to-r from-blue-600 to-purple-600">
+          <Button onClick={() => navigate('/contact')} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500">
             Contact Support
           </Button>
         </div>
@@ -234,7 +243,7 @@ const FAQ = () => {
             placeholder="Search for answers..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-12 py-6 bg-white/5 border-white/10 text-white text-lg rounded-2xl focus:ring-blue-500"
+            className="pl-12 py-6 bg-white/5 border-white/10 text-white text-lg rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-white/30"
           />
         </div>
 
@@ -246,14 +255,14 @@ const FAQ = () => {
               variant={activeCategory === category ? "default" : "outline"}
               size="sm"
               onClick={() => setActiveCategory(category)}
-              className={`rounded-full ${
+              className={`rounded-full transition-all duration-300 ${
                 activeCategory === category 
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 border-0' 
-                  : 'border-white/10 hover:bg-white/5 text-white/60'
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 border-0 text-white shadow-lg shadow-blue-500/25' 
+                  : 'border-white/20 hover:bg-white/10 text-white/70 hover:text-white'
               }`}
             >
-              {category !== 'All' && categoryIcons[category]}
-              <span className="ml-1">{category}</span>
+              {category !== 'All' && <span className="mr-1.5">{categoryIcons[category]}</span>}
+              <span>{category}</span>
             </Button>
           ))}
         </div>
@@ -268,7 +277,7 @@ const FAQ = () => {
                 <Button 
                   variant="link" 
                   onClick={() => navigate('/contact')}
-                  className="text-blue-400 mt-2"
+                  className="text-blue-400 mt-2 hover:text-blue-300"
                 >
                   Contact support for help →
                 </Button>
@@ -278,38 +287,42 @@ const FAQ = () => {
             filteredFAQs.map((faq, index) => (
               <Card 
                 key={index} 
-                className={`bg-white/5 border-white/10 hover:border-white/20 transition-all cursor-pointer ${
-                  expandedIndex === index ? 'ring-1 ring-blue-500/50' : ''
+                className={`bg-white/5 border-white/10 transition-all duration-300 cursor-pointer overflow-hidden ${
+                  expandedIndex === index 
+                    ? 'ring-2 ring-blue-500/50 bg-white/10' 
+                    : 'hover:bg-white/10 hover:border-white/20'
                 }`}
                 onClick={() => setExpandedIndex(expandedIndex === index ? null : index)}
               >
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="flex items-start gap-4">
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${categoryColors[faq.category]} flex items-center justify-center shrink-0 shadow-lg`}>
                         {categoryIcons[faq.category]}
                       </div>
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs text-blue-400 font-medium">{faq.category}</span>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`text-xs font-medium px-2 py-1 rounded-full bg-gradient-to-r ${categoryColors[faq.category]} bg-opacity-20`}>
+                            {faq.category}
+                          </span>
                         </div>
-                        <h3 className="font-semibold text-white">{faq.question}</h3>
+                        <h3 className="font-semibold text-white text-lg leading-snug">{faq.question}</h3>
                       </div>
                     </div>
-                    <div className="shrink-0">
-                      {expandedIndex === index ? (
-                        <ChevronUp className="w-5 h-5 text-white/40" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5 text-white/40" />
-                      )}
+                    <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                      expandedIndex === index ? 'bg-blue-500 rotate-180' : 'bg-white/10'
+                    }`}>
+                      <ChevronDown className="w-5 h-5 text-white" />
                     </div>
                   </div>
                   
-                  {expandedIndex === index && (
-                    <div className="mt-4 pl-13 border-t border-white/10 pt-4">
+                  <div className={`overflow-hidden transition-all duration-300 ${
+                    expandedIndex === index ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0'
+                  }`}>
+                    <div className="pl-16 pt-4 border-t border-white/10">
                       <p className="text-white/70 leading-relaxed">{faq.answer}</p>
                     </div>
-                  )}
+                  </div>
                 </CardContent>
               </Card>
             ))
@@ -317,15 +330,15 @@ const FAQ = () => {
         </div>
 
         {/* Still Need Help */}
-        <div className="mt-16 text-center p-8 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-3xl border border-white/10">
-          <h2 className="text-2xl font-bold mb-3">Still have questions?</h2>
+        <div className="mt-16 text-center p-8 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-3xl border border-white/10 backdrop-blur-sm">
+          <h2 className="text-2xl font-bold mb-3 text-white">Still have questions?</h2>
           <p className="text-white/60 mb-6">
             Can't find what you're looking for? Our support team is here to help.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               onClick={() => navigate('/contact')}
-              className="bg-gradient-to-r from-blue-600 to-purple-600"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500"
             >
               <MessageCircle className="w-4 h-4 mr-2" />
               Contact Support
@@ -333,7 +346,7 @@ const FAQ = () => {
             <Button 
               variant="outline" 
               onClick={() => window.open('mailto:support@alsa-ai.in', '_blank')}
-              className="border-white/10 hover:bg-white/5"
+              className="border-white/20 text-white hover:bg-white/10"
             >
               Email: support@alsa-ai.in
             </Button>
