@@ -11,8 +11,10 @@ import { checkBridgeConnection, executeSystemCommand, scanSystem, SystemScanResu
 import ChatMessage from '@/components/ChatMessage';
 import MemoryManager from '@/components/MemoryManager';
 import TranscriptionFeedback from '@/components/TranscriptionFeedback';
+import ReminderNotification from '@/components/ReminderNotification';
 import { getMemory, addMemory, parseMemoryCommand, getTimeBasedGreeting } from '@/utils/memoryManager';
 import { parseAndLearn, getAIContext, trackInteraction, addConversationSummary } from '@/utils/conversationMemory';
+import { parseReminderFromText, createReminder } from '@/utils/reminderManager';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -1241,6 +1243,9 @@ return (
     {/* Players & Tools */}
     <MusicPlayer song={currentSong} onClose={() => setCurrentSong(null)} />
     <GameLauncher game={currentGame as any} onClose={() => setCurrentGame(null)} />
+
+    {/* Reminder Notification System */}
+    <ReminderNotification userId={user?.id || null} />
 
     {/* Voice Overlay */}
     {isListening && (

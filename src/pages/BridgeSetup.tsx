@@ -15,6 +15,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { isAdminEmail } from '@/utils/adminConfig';
 import { isTeamEmail } from '@/utils/teamAccounts';
 import alsaLogo from '@/assets/alsa-logo.png';
+import aiPcControlImage from '@/assets/ai-pc-control.jpg';
+import voiceControlImage from '@/assets/voice-ai-control.jpg';
 import { Helmet } from 'react-helmet';
 
 const BridgeSetup = () => {
