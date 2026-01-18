@@ -245,26 +245,32 @@
 // };
 
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-
-export type VoiceGender = 'female'; // Restricted to female as per requirement
+import { useState, useCallback, useRef } from 'react';
 
 export interface VoiceOptions {
   language?: string;
 }
 
-// Focused list for Indian/International Female voice identification
+// Female-specific keywords for better filtering
 const FEMALE_IDENTIFIERS = [
   'female', 'woman', 'girl', 'she', 'heera', 'priya', 'swara', 'neha', 
   'kalpana', 'zira', 'samantha', 'victoria', 'google हिन्दी', 'microsoft heera'
 ];
 
-// Clean text: Remove emojis and excessive special characters
+/**
+ * 1. Sabse important: Emojis aur special symbols ko poori tarah saaf karna
+ */
 const cleanTextForSpeech = (text: string): string => {
+  if (!text) return '';
+
   return text
-    .replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDC00-\uDFFF])/g, '') // Remove Emojis
-    .replace(/[#*_\-~]/g, ' ') // Remove markdown-style special chars
-    .replace(/\s+/g, ' ') // Remove extra spaces
+    // A. Remove Emojis, Symbols, and Pictographs using Unicode Property Escapes
+    // \p{Extended_Pictographic} covers almost all modern emojis
+    .replace(/\p{Extended_Pictographic}/gu, '')
+    // B. Remove specific symbol categories (math symbols, currency, etc. if needed)
+    .replace(/[\u2000-\u206F\u2E00-\u2E7F\\'!"#$%&()*+,\-.\/:;<=>?@\[\]^_`{|}~]/g, ' ')
+    // C. Clean up multiple spaces
+    .replace(/\s+/g, ' ')
     .trim();
 };
 
@@ -272,32 +278,33 @@ const containsHindi = (text: string): boolean => /[\u0900-\u097F]/.test(text);
 
 const isHinglishContent = (text: string): boolean => {
   if (containsHindi(text)) return true;
-  const hinglishKeywords = ['kya', 'hai', 'aap', 'kaise', 'theek', 'nahi', 'haan', 'bhai', 'yeh', 'karo', 'shukriya'];
+  const hinglishKeywords = ['kya', 'hai', 'aap', 'kaise', 'theek', 'nahi', 'haan', 'bhai', 'yeh', 'karo'];
   const lowerText = text.toLowerCase();
   const words = lowerText.split(/\s+/);
   const matchCount = words.filter(word => hinglishKeywords.some(kw => word.includes(kw))).length;
-  return matchCount / words.length > 0.1;
+  return (matchCount / words.length) > 0.1;
 };
 
 const detectLanguage = (text: string): string => {
   if (containsHindi(text) || isHinglishContent(text)) return 'hi-IN';
-  if (/[àâçéèêëîïôùûüÿœæ]/i.test(text)) return 'fr-FR';
-  if (/[áéíóúñ¿¡]/i.test(text)) return 'es-ES';
   return 'en-US';
 };
 
-// Filter specifically for Female Voices
+/**
+ * 2. Sirf Female voices filter karna
+ */
 const getFemaleVoice = (voices: SpeechSynthesisVoice[], lang: string): SpeechSynthesisVoice | null => {
   const langLower = lang.toLowerCase().split('-')[0];
   
-  // 1. Try to find a voice that matches language AND has female keywords in name
-  const exactFemale = voices.find(v => 
+  // Pehle check karo agar koi voice name female identifiers se match ho rahi hai
+  const femaleVoice = voices.find(v => 
     v.lang.toLowerCase().startsWith(langLower) && 
-    FEMALE_IDENTIFIERS.some(name => v.name.toLowerCase().includes(name))
+    FEMALE_IDENTIFIERS.some(id => v.name.toLowerCase().includes(id))
   );
-  if (exactFemale) return exactFemale;
 
-  // 2. Fallback: Just get any voice for that language if no female keyword found
+  if (femaleVoice) return femaleVoice;
+
+  // Agar specific female nahi milti, toh us language ki pehli voice le lo (Fallback)
   return voices.find(v => v.lang.toLowerCase().startsWith(langLower)) || null;
 };
 
@@ -309,8 +316,14 @@ export const useTextToSpeech = () => {
     try {
       window.speechSynthesis.cancel();
       
+      // CLEANING STEP
       const cleanedText = cleanTextForSpeech(text);
-      if (!cleanedText) return;
+      
+      // Agar cleaning ke baad kuch bacha hi nahi (sirf emojis the), toh return kar jao
+      if (!cleanedText || cleanedText.length < 1) {
+        console.warn("Speech cancelled: Text only contained emojis/symbols.");
+        return;
+      }
 
       const utterance = new SpeechSynthesisUtterance(cleanedText);
       synthRef.current = utterance;
@@ -325,23 +338,22 @@ export const useTextToSpeech = () => {
         utterance.lang = selectedVoice.lang;
       }
 
-      // Voice settings
       utterance.rate = 0.95; 
-      utterance.pitch = 1.1; // Slightly higher pitch usually sounds more feminine
+      utterance.pitch = 1.1; // Female tone ke liye pitch high rakha hai
 
       utterance.onstart = () => setIsSpeaking(true);
       utterance.onend = () => {
         setIsSpeaking(false);
         synthRef.current = null;
       };
-      utterance.onerror = () => {
+      utterance.onerror = (e) => {
+        console.error("TTS Error:", e);
         setIsSpeaking(false);
-        synthRef.current = null;
       };
 
       window.speechSynthesis.speak(utterance);
     } catch (error) {
-      console.error('TTS Error:', error);
+      console.error('TTS execution failed:', error);
       setIsSpeaking(false);
     }
   }, []);
