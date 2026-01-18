@@ -1,66 +1,81 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 export const useTextToSpeech = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const synthRef = useRef<SpeechSynthesis | null>(null);
 
-  // 1. Sabse advanced cleaning (Emoji descriptions aur symbols ko jatt se khatam karega)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      synthRef.current = window.speechSynthesis;
+    }
+  }, []);
+
   const cleanText = (text: string): string => {
-    if (!text) return '';
     return text
-      .replace(/smiling face with\s\w+\seyes|grinning face|winking face|heart eyes|thumbs up|folded hands|partying face/gi, '') 
-      .replace(/\p{Extended_Pictographic}/gu, '') 
-      .replace(/[#*_\-~@$%^&()]/g, ' ') 
+      // Emojis aur unke descriptions ko hatana
+      .replace(/smiling face with\s\w+\seyes|grinning face|winking face|heart eyes|thumbs up|folded hands|partying face/gi, '')
+      .replace(/\p{Extended_Pictographic}/gu, '')
+      // Special characters ko space se replace karna
+      .replace(/[#*_\-~@$%^&()]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
   };
 
-  const speak = useCallback(async (text: string, voiceType: 'hindi' | 'english' = 'hindi') => {
+  const findFemaleVoice = (voices: SpeechSynthesisVoice[]) => {
+    // 1. Pehle India ki female voices check karo (Hinglish/Hindi ke liye best)
+    const indianFemale = voices.find(v => 
+      (v.lang.includes('IN') || v.lang.includes('hi')) && 
+      /female|woman|girl|heera|priya|swara|neha|neerja/i.test(v.name)
+    );
+    if (indianFemale) return indianFemale;
+
+    // 2. Phir koi bhi English female voice check karo
+    const englishFemale = voices.find(v => 
+      v.lang.startsWith('en') && 
+      /female|woman|girl|zira|samantha|victoria|aria/i.test(v.name)
+    );
+    if (englishFemale) return englishFemale;
+
+    // 3. Last fallback: koi bhi voice jisme 'female' likha ho
+    return voices.find(v => /female|woman|girl/i.test(v.name)) || voices[0];
+  };
+
+  const speak = useCallback((text: string) => {
+    if (!synthRef.current) return;
+
+    // Purani voice ko cancel karo
+    synthRef.current.cancel();
+
     const cleanedText = cleanText(text);
     if (!cleanedText) return;
 
-    // Stop if something is already playing
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
+    // Chrome mein voices async load hoti hain, isliye getVoices() call karna zaruri hai
+    const voices = synthRef.current.getVoices();
+    const utterance = new SpeechSynthesisUtterance(cleanedText);
+    
+    const selectedVoice = findFemaleVoice(voices);
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+      utterance.lang = selectedVoice.lang;
     }
 
-    setIsSpeaking(true);
+    // Professional Settings
+    utterance.pitch = 1.2; // Feminine tone
+    utterance.rate = 1.0;  // Normal speed
 
-    // Microsoft Edge ki Premium Voices (Free version via proxy)
-    // Hindi/Hinglish ke liye: Swara (Female)
-    // English ke liye: Sonia (Female)
-    const voice = voiceType === 'hindi' ? 'hi-IN-SwaraNeural' : 'en-US-AvaNeural';
-    
-    // Ye ek free public API proxy hai jo Edge voices ko audio mein convert karti hai
-    const ttsUrl = `https://api.tts.quest/v3/voicevox/synthesis?text=${encodeURIComponent(cleanedText)}&speaker=1`; 
-    
-    // Alternate Best Free Method (Google/Edge Proxy)
-    const edgeFreeUrl = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(cleanedText)}&le=${voiceType === 'hindi' ? 'zh' : 'en'}`;
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
 
-    // Note: Best natural voice ke liye hum standard reliable API use karenge
-    const finalUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanedText)}&tl=${voiceType === 'hindi' ? 'hi' : 'en'}&client=tw-ob`;
+    synthRef.current.speak(utterance);
+  }, []);
 
-    try {
-      const audio = new Audio(finalUrl);
-      audioRef.current = audio;
-
-      audio.onended = () => setIsSpeaking(false);
-      audio.onerror = () => setIsSpeaking(false);
-
-      await audio.play();
-    } catch (err) {
-      console.error("Playback error:", err);
+  const stop = useCallback(() => {
+    if (synthRef.current) {
+      synthRef.current.cancel();
       setIsSpeaking(false);
     }
   }, []);
-
-  const stop = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      setIsSpeaking(false);
-    }
-  };
 
   return { speak, stop, isSpeaking };
 };
