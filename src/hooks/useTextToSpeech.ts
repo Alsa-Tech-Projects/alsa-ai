@@ -1,52 +1,77 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 export const useTextToSpeech = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const synthRef = useRef<SpeechSynthesis | null>(null);
 
-  const cleanTextForSpeech = (text: string): string => {
-    if (!text) return '';
+  // 1. Voices ko load karne ka sahi tareeka (Browser compatibility ke liye)
+  useEffect(() => {
+    synthRef.current = window.speechSynthesis;
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices();
+      if (availableVoices.length > 0) {
+        setVoices(availableVoices);
+      }
+    };
+    loadVoices();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+  }, []);
+
+  // 2. Powerful Cleaning (Emojis + Text Descriptions + Special Chars)
+  const cleanText = (text: string): string => {
     return text
-      // Emojis aur unke descriptions dono ko saaf karta hai
-      .replace(/smiling face with\s\w+\seyes|grinning face|winking face|heart eyes|thumbs up/gi, '')
-      .replace(/\p{Extended_Pictographic}/gu, '')
-      .replace(/[#*_\-~@$%^&()]/g, ' ')
-      .replace(/\s+/g, ' ')
+      .replace(/smiling face with\s\w+\seyes|grinning face|winking face|heart eyes|thumbs up|folded hands|partying face/gi, '') // Text descriptions
+      .replace(/\p{Extended_Pictographic}/gu, '') // Actual Emojis
+      .replace(/[#*_\-~@$%^&()]/g, ' ') // Symbols
+      .replace(/\s+/g, ' ') // Extra spaces
       .trim();
   };
 
-  const speak = useCallback((text: string, lang: string = 'hi-IN') => {
-    const cleanedText = cleanTextForSpeech(text);
+  const speak = useCallback((text: string) => {
+    if (!synthRef.current) return;
+
+    // Pehle se kuch bol raha ho to band karo
+    synthRef.current.cancel();
+
+    const cleanedText = cleanText(text);
     if (!cleanedText) return;
 
-    // Stop any current playing audio
-    if (audioRef.current) {
-      audioRef.current.pause();
+    const utterance = new SpeechSynthesisUtterance(cleanedText);
+
+    // 3. Sabhi languages ke liye Premium Female Voice search logic
+    const allVoices = synthRef.current.getVoices();
+    
+    // Priority List: Pehle Microsoft ki neural voices, phir Google ki, phir koi bhi Female
+    const selectedVoice = allVoices.find(v => v.name.includes('Natural') && v.name.includes('Female')) || 
+                          allVoices.find(v => v.name.toLowerCase().includes('heera') || v.name.toLowerCase().includes('neerja')) || // Indian Female
+                          allVoices.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira')) || // Global Female
+                          allVoices.find(v => v.lang.startsWith('en-IN') || v.lang.startsWith('hi-IN')); // Indian Accent
+
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+      utterance.lang = selectedVoice.lang;
     }
 
-    // Google Translate TTS URL (Natural Female Voice)
-    // Ye har language support karta hai: 'hi-IN' for Hindi/Hinglish, 'en-US' for English
-    const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanedText)}&tl=${lang}&client=tw-ob`;
+    // Professional Settings
+    utterance.pitch = 1.1; // Female tone
+    utterance.rate = 0.95;  // Thoda thahrav ke saath (natural)
 
-    const audio = new Audio(url);
-    audioRef.current = audio;
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
 
-    audio.onplay = () => setIsSpeaking(true);
-    audio.onended = () => setIsSpeaking(false);
-    audio.onerror = () => setIsSpeaking(false);
-
-    audio.play().catch(err => {
-      console.error("Playback failed. User interaction might be required.", err);
-      setIsSpeaking(false);
-    });
+    synthRef.current.speak(utterance);
   }, []);
 
   const stop = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
+    if (synthRef.current) {
+      synthRef.current.cancel();
       setIsSpeaking(false);
     }
   };
 
-  return { speak, stop, isSpeaking };
+  return { speak, stop, isSpeaking, availableVoices: voices };
 };
