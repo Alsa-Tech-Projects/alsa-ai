@@ -1,80 +1,105 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 
+export type VoiceGender = 'male' | 'female' | 'auto';
+
+export interface VoiceOptions {
+  gender?: VoiceGender;
+  language?: string;
+}
+
+// ONLY English Male voices
+const MALE_VOICE_NAMES = [
+  'david', 'alex', 'google us english', 'microsoft david', 'en-us male'
+];
+
+// Female voices (Hindi + English)
+const FEMALE_VOICE_NAMES = [
+  'heera', 'priya', 'swara', 'neha', 'google हिन्दी', 'microsoft heera', 
+  'samantha', 'zira', 'google us english female'
+];
+
+const containsHindi = (text: string): boolean => /[\u0900-\u097F]/.test(text);
+
+const isHinglishContent = (text: string): boolean => {
+  if (containsHindi(text)) return true;
+  const keywords = ['kya', 'hai', 'aap', 'kaise', 'theek', 'nahi', 'karo', 'hai', 'hain', 'mein', 'tum', 'yeh', 'woh'];
+  const words = text.toLowerCase().split(/\s+/);
+  return words.some(word => keywords.includes(word));
+};
+
 export const useTextToSpeech = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const synthRef = useRef<SpeechSynthesis | null>(null);
+  const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      synthRef.current = window.speechSynthesis;
+  const speak = useCallback((text: string, options?: VoiceOptions) => {
+    if (!text) return;
+
+    try {
+      window.speechSynthesis.cancel();
+      
+      // ==========================================
+      // CLEANING LOGIC (No Emojis, No Special Chars)
+      // ==========================================
+      const cleanedText = text
+        .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '') // Emojis saaf karega
+        .replace(/[*_#~`>|\[\]\(\)]/g, ' ') // Markdown symbols ko space se badlega
+        .replace(/[\\/=+^]/g, ' ') // Mathematics/Special symbols hata dega
+        .replace(/\s+/g, ' ') // Extra spaces saaf karega
+        .trim();
+
+      if (!cleanedText) return;
+
+      const utterance = new SpeechSynthesisUtterance(cleanedText);
+      const isHindiOrHinglish = isHinglishContent(cleanedText);
+      const requestedGender = options?.gender || 'auto';
+      const voices = window.speechSynthesis.getVoices();
+
+      let selectedVoice: SpeechSynthesisVoice | null = null;
+
+      // Logic: Male -> Only English, Female/Auto -> Hinglish/Hindi
+      if (requestedGender === 'male') {
+        selectedVoice = voices.find(v => 
+          v.lang.startsWith('en') && 
+          MALE_VOICE_NAMES.some(name => v.name.toLowerCase().includes(name))
+        );
+      } else {
+        if (isHindiOrHinglish) {
+          selectedVoice = voices.find(v => 
+            (v.lang.startsWith('hi') || v.lang.startsWith('en-IN')) && 
+            FEMALE_VOICE_NAMES.some(name => v.name.toLowerCase().includes(name))
+          );
+        }
+        
+        // Fallback for English Female
+        if (!selectedVoice) {
+          selectedVoice = voices.find(v => 
+            FEMALE_VOICE_NAMES.some(name => v.name.toLowerCase().includes(name))
+          );
+        }
+      }
+
+      // Voice setting
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+        utterance.lang = selectedVoice.lang; 
+      } else {
+        utterance.lang = isHindiOrHinglish ? 'hi-IN' : 'en-US';
+      }
+
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+
+      window.speechSynthesis.speak(utterance);
+    } catch (error) {
+      console.error("TTS Error:", error);
+      setIsSpeaking(false);
     }
-  }, []);
-
-  const cleanText = (text: string): string => {
-    return text
-      // Emojis aur unke descriptions ko hatana
-      .replace(/smiling face with\s\w+\seyes|grinning face|winking face|heart eyes|thumbs up|folded hands|partying face/gi, '')
-      .replace(/\p{Extended_Pictographic}/gu, '')
-      // Special characters ko space se replace karna
-      .replace(/[#*_\-~@$%^&()]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-  };
-
-  const findFemaleVoice = (voices: SpeechSynthesisVoice[]) => {
-    // 1. Pehle India ki female voices check karo (Hinglish/Hindi ke liye best)
-    const indianFemale = voices.find(v => 
-      (v.lang.includes('IN') || v.lang.includes('hi')) && 
-      /female|woman|girl|heera|priya|swara|neha|neerja/i.test(v.name)
-    );
-    if (indianFemale) return indianFemale;
-
-    // 2. Phir koi bhi English female voice check karo
-    const englishFemale = voices.find(v => 
-      v.lang.startsWith('en') && 
-      /female|woman|girl|zira|samantha|victoria|aria/i.test(v.name)
-    );
-    if (englishFemale) return englishFemale;
-
-    // 3. Last fallback: koi bhi voice jisme 'female' likha ho
-    return voices.find(v => /female|woman|girl/i.test(v.name)) || voices[0];
-  };
-
-  const speak = useCallback((text: string) => {
-    if (!synthRef.current) return;
-
-    // Purani voice ko cancel karo
-    synthRef.current.cancel();
-
-    const cleanedText = cleanText(text);
-    if (!cleanedText) return;
-
-    // Chrome mein voices async load hoti hain, isliye getVoices() call karna zaruri hai
-    const voices = synthRef.current.getVoices();
-    const utterance = new SpeechSynthesisUtterance(cleanedText);
-    
-    const selectedVoice = findFemaleVoice(voices);
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-      utterance.lang = selectedVoice.lang;
-    }
-
-    // Professional Settings
-    utterance.pitch = 1.2; // Feminine tone
-    utterance.rate = 1.0;  // Normal speed
-
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-
-    synthRef.current.speak(utterance);
   }, []);
 
   const stop = useCallback(() => {
-    if (synthRef.current) {
-      synthRef.current.cancel();
-      setIsSpeaking(false);
-    }
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
   }, []);
 
   return { speak, stop, isSpeaking };
