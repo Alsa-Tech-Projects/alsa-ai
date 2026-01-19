@@ -63,8 +63,8 @@ const Pricing = () => {
     {
       id: 'pro',
       name: 'Alsa Pro',
-      price: 449,
-      originalPrice: 699,
+      price: 720,
+      originalPrice: 800,
       period: 'month',
       description: 'For developers who want full control',
       tier: 'pro',
@@ -85,8 +85,8 @@ const Pricing = () => {
     {
       id: 'elite',
       name: 'Alsa Elite',
-      price: 999,
-      originalPrice: 1200,
+      price: 1200,
+      originalPrice: 1500,
       period: 'month',
       description: 'Maximum power for power users',
       tier: 'elite',
