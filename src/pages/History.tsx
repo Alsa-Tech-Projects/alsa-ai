@@ -89,45 +89,45 @@ const History = () => {
         return;
       }
 
-      const { data, error } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('updated_at', { ascending: false });
+      // Optimized: Single query with all data using joins
+      const [conversationsResult, favoritesResult, tagsResult] = await Promise.all([
+        supabase
+          .from('conversations')
+          .select('*, chat_messages(count)')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false })
+          .limit(100), // Limit for performance
+        supabase
+          .from('favorite_conversations')
+          .select('conversation_id')
+          .eq('user_id', user.id),
+        supabase
+          .from('conversation_tags')
+          .select('conversation_id, tag')
+      ]);
 
-      if (error) throw error;
+      if (conversationsResult.error) throw conversationsResult.error;
 
-      // Get additional data for each conversation
-      const conversationsWithData = await Promise.all(
-        (data || []).map(async (conv) => {
-          // Get message count
-          const { count } = await supabase
-            .from('chat_messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('conversation_id', conv.id);
-
-          // Check if favorite
-          const { data: favData } = await supabase
-            .from('favorite_conversations')
-            .select('id')
-            .eq('conversation_id', conv.id)
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-          // Get tags
-          const { data: tagsData } = await supabase
-            .from('conversation_tags')
-            .select('tag')
-            .eq('conversation_id', conv.id);
-
-          return {
-            ...conv,
-            message_count: count || 0,
-            isFavorite: !!favData,
-            tags: tagsData?.map(t => t.tag) || []
-          };
-        })
+      // Create lookup maps for O(1) access
+      const favoriteIds = new Set(
+        (favoritesResult.data || []).map(f => f.conversation_id)
       );
+      
+      const tagsByConversation: Record<string, string[]> = {};
+      (tagsResult.data || []).forEach(t => {
+        if (!tagsByConversation[t.conversation_id]) {
+          tagsByConversation[t.conversation_id] = [];
+        }
+        tagsByConversation[t.conversation_id].push(t.tag);
+      });
+
+      // Map conversations with enriched data
+      const conversationsWithData = (conversationsResult.data || []).map(conv => ({
+        ...conv,
+        message_count: (conv.chat_messages as any)?.[0]?.count || 0,
+        isFavorite: favoriteIds.has(conv.id),
+        tags: tagsByConversation[conv.id] || []
+      }));
 
       setConversations(conversationsWithData);
     } catch (error) {

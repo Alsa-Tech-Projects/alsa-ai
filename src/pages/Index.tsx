@@ -472,6 +472,39 @@ const Index = () => {
       return;
     }
 
+    // Handle reminder commands - check if user wants to set a reminder
+    const reminderPatterns = [
+      /remind(?:er)?\s+(?:me\s+)?(?:to\s+)?(.+?)(?:\s+(?:at|on|in|tomorrow|today|next)\s+.+)/i,
+      /(?:set|create|add)\s+(?:a\s+)?reminder\s+(?:for\s+)?(.+?)(?:\s+(?:at|on|in|tomorrow|today)\s+.+)/i,
+      /mujhe\s+(.+?)\s+(?:ke\s+liye\s+)?remind\s+kar(?:o|na)?/i,
+      /(.+?)\s+(?:ka|ke|ki)\s+reminder\s+(?:set|laga|bana)/i,
+      /याद\s+दिलाना\s+(.+)/i,
+    ];
+    
+    const isReminderRequest = reminderPatterns.some(p => p.test(text));
+    if (isReminderRequest && user) {
+      const reminderData = parseReminderFromText(text);
+      if (reminderData) {
+        try {
+          // createReminder signature: (userId, title, reminderTime, description?)
+          await createReminder(user.id, reminderData.title, reminderData.time, reminderData.description);
+          const timeStr = reminderData.time.toLocaleString('en-IN', { 
+            dateStyle: 'medium', 
+            timeStyle: 'short' 
+          });
+          const response = `⏰ Reminder set!\n\n**${reminderData.title}**\n📅 ${timeStr}\n\nI'll notify you 1 hour before and when it's time! 🔔`;
+          setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+          speak(`Reminder set for ${reminderData.title}`);
+          if (user) {
+            await saveConversation(userMessage, { role: 'assistant', content: response });
+          }
+          return;
+        } catch (error) {
+          console.error('Error creating reminder:', error);
+        }
+      }
+    }
+
     // Check for PC Bridge commands using natural language parser
     const parsedCommand = parseNaturalLanguage(text);
     if (parsedCommand && bridgeConnected) {
