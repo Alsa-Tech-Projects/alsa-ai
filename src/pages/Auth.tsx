@@ -89,18 +89,34 @@ const Auth = () => {
 
       if (error) throw error;
 
-      // Create profile with additional data
+      // Create profile with additional data immediately
       if (data.user) {
-        await supabase.from('profiles').upsert({
+        const { error: profileError } = await supabase.from('profiles').upsert({
           user_id: data.user.id,
           display_name: fullName,
+          subscription_tier: 'free', // Default to free tier
+        }, {
+          onConflict: 'user_id'
         });
+        
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+        }
       }
 
-      toast({
-        title: "Welcome to ALSA AI!",
-        description: "Account created successfully. You can now sign in.",
-      });
+      // If session exists (auto-confirm enabled), navigate to home
+      if (data.session) {
+        toast({
+          title: "Welcome to ALSA AI!",
+          description: "Account created and signed in successfully.",
+        });
+        navigate('/');
+      } else {
+        toast({
+          title: "Account Created!",
+          description: "Please check your email to confirm your account.",
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Sign up failed",

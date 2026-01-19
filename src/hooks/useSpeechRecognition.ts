@@ -296,5 +296,9 @@ export const useSpeechRecognition = () => {
     }
   }, []);
 
-  return { transcript, isListening, startListening, stopListening };
+  const resetTranscript = useCallback(() => {
+    setTranscript('');
+  }, []);
+
+  return { transcript, isListening, startListening, stopListening, resetTranscript };
 };

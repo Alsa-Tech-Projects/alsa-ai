@@ -253,6 +253,38 @@ const BridgeSetup = () => {
           </div>
         </div>
 
+        {/* AI Control Showcase */}
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+            <Monitor className="w-6 h-6 text-cyan-400" />
+            AI-Powered PC Control
+          </h2>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 backdrop-blur-xl transition-all hover:border-white/20">
+              <img 
+                src={aiPcControlImage} 
+                alt="AI PC Control Interface" 
+                className="w-full h-64 object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+              />
+              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-950 to-transparent">
+                <h3 className="font-bold text-white">Full System Control</h3>
+                <p className="text-sm text-white/60">Execute commands, manage files, and automate tasks</p>
+              </div>
+            </div>
+            <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 backdrop-blur-xl transition-all hover:border-white/20">
+              <img 
+                src={voiceControlImage} 
+                alt="Voice AI Control" 
+                className="w-full h-64 object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+              />
+              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-950 to-transparent">
+                <h3 className="font-bold text-white">Voice Command System</h3>
+                <p className="text-sm text-white/60">Control your PC with natural voice commands</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Features Grid */}
         <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
           <Sparkles className="w-6 h-6 text-purple-400" />
