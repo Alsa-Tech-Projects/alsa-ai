@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import winapps
 
 app = Flask(__name__)
 CORS(app, origins=[
@@ -21,7 +22,6 @@ ALLOWED_BASE_DIRS = [
     os.path.expanduser('~\\Desktop'),
     os.path.expanduser('~\\Pictures'),
     os.path.expanduser('~\\Music'),
-    'E:\\Eisa',
     'E:\\Projects',
     'C:\\Projects',
     'G:\\',
@@ -83,6 +83,37 @@ def status():
         'status': 'running',
         'message': 'ALSA AI PC Bridge is active'
     })
+
+ # Iske liye 'pip install winapps' karna padega
+
+@app.route('/scan', methods=['GET'])
+def scan_system():
+    try:
+        # 1. Installed Applications Scan (Windows)
+        apps = []
+        for app in winapps.list_installed():
+            apps.append(app.name)
+        
+        # 2. Common Folders Scan
+        user_path = os.path.expanduser('~')
+        common_folders = ['Desktop', 'Documents', 'Downloads', 'Music', 'Videos']
+        
+        # 3. Recent Files Scan (Optional)
+        recent_path = os.path.join(os.getenv('APPDATA'), 'Microsoft', 'Windows', 'Recent')
+        recent_files = []
+        if os.path.exists(recent_path):
+            recent_files = os.listdir(recent_path)[:10] # Top 10 files
+
+        return jsonify({
+            'success': True,
+            'data': {
+                'applications': apps[:50], # Pehli 50 apps bhej rahe hain
+                'commonFolders': common_folders,
+                'recentFiles': recent_files
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/create_folder', methods=['POST'])
 def create_folder():
@@ -1050,6 +1081,5 @@ if __name__ == '__main__':
     print("=" * 50)
     print("ALSA AI Elite PC Control Bridge Started")
     print("Bridge is running on http://localhost:5001")
-    Print("You can now control your PC through ALSA AI!\nFeatures: Project creation, PPT, Excel, Database, Screenshots, ADB, Music")
+    print("You can now control your PC through ALSA AI!\nFeatures: Project creation, PPT, Excel, Database, Screenshots, ADB, Music")
     app.run(host='127.0.0.1', port=5001, debug=True)
-
