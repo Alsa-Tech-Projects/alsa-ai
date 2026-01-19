@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-"""
-ALSA AI PC Control Bridge
-Allows the web app to control your PC locally
-Security hardened with input validation and API key authentication
-"""
-
 import os
 import sys
 import subprocess
@@ -1059,3 +1052,4 @@ if __name__ == '__main__':
     print("Bridge is running on http://localhost:5001")
     Print("You can now control your PC through ALSA AI!\nFeatures: Project creation, PPT, Excel, Database, Screenshots, ADB, Music")
     app.run(host='127.0.0.1', port=5001, debug=True)
+
