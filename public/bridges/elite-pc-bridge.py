@@ -17,7 +17,10 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, origins=['*'])  # Allow all origins for local bridge
+CORS(app, origins=[
+    'https://www.alsa-ai.in', 
+    'https://alsa-ai.in'
+])
 
 # Allowed base directories for file operations
 ALLOWED_BASE_DIRS = [
@@ -82,13 +85,10 @@ def validate_adb_command(command):
 
 @app.route('/status', methods=['GET'])
 def status():
-    """Check if bridge is running and return API key status"""
-    has_api_key = AI_API_KEY and AI_API_KEY != 'YOUR_GEMINI_API_KEY_HERE'
+    """Check if bridge is running"""
     return jsonify({
         'status': 'running',
-        'message': 'ALSA AI PC Bridge is active',
-        'has_api_key': has_api_key,
-        'api_key_hint': AI_API_KEY[:8] + '...' if has_api_key else None
+        'message': 'ALSA AI PC Bridge is active'
     })
 
 @app.route('/create_folder', methods=['POST'])
@@ -1055,8 +1055,7 @@ def stop_song():
 
 if __name__ == '__main__':
     print("=" * 50)
-    print("ALSA AI PC Control Bridge Started")
+    print("ALSA AI Elite PC Control Bridge Started")
     print("Bridge is running on http://localhost:5001")
-    print("You can now control your PC through ALSA AI!")
-    print("Features: Project creation, PPT, Excel, Database, Screenshots, ADB, Music")
+    Print("You can now control your PC through ALSA AI!\nFeatures: Project creation, PPT, Excel, Database, Screenshots, ADB, Music")
     app.run(host='127.0.0.1', port=5001, debug=True)
