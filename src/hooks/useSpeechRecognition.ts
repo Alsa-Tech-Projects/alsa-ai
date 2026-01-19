@@ -1,223 +1,3 @@
-// import { useState, useEffect, useCallback, useRef } from 'react';
-
-// interface SpeechRecognitionResult {
-//   transcript: string;
-//   finalTranscript: string;
-//   isListening: boolean;
-//   startListening: () => void;
-//   stopListening: () => void;
-//   resetTranscript: () => void;
-// }
-
-// export const useSpeechRecognition = (): SpeechRecognitionResult => {
-//   const [transcript, setTranscript] = useState('');
-//   const [finalTranscript, setFinalTranscript] = useState('');
-//   const [isListening, setIsListening] = useState(false);
-//   const recognitionRef = useRef<any>(null);
-//   const shouldRestartRef = useRef(false);
-//   const manualStopRef = useRef(false);
-
-//   const resetTranscript = useCallback(() => {
-//     setTranscript('');
-//     setFinalTranscript('');
-//   }, []);
-
-//   useEffect(() => {
-//     if (typeof window === 'undefined') return;
-
-//     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    
-//     if (!SpeechRecognition) {
-//       console.error('Speech recognition not supported in this browser');
-//       return;
-//     }
-
-//     const recognitionInstance = new SpeechRecognition();
-    
-//     // Enhanced settings for better far-away voice detection
-//     recognitionInstance.continuous = true;
-//     recognitionInstance.interimResults = true;
-//     recognitionInstance.lang = 'en-US';
-    
-//     try {
-//       recognitionInstance.maxAlternatives = 5;
-//       // Some browsers support these for better sensitivity
-//       if ('grammars' in recognitionInstance) {
-//         // Clear any grammar restrictions for more flexible recognition
-//       }
-//     } catch (e) {
-//       console.log('Extended speech settings not fully supported');
-//     }
-
-//     recognitionInstance.onstart = () => {
-//       console.log('🎤 Voice recognition ACTIVE - Speak your command');
-//       setIsListening(true);
-//       manualStopRef.current = false;
-//     };
-
-//     recognitionInstance.onresult = (event: any) => {
-//       let interim = '';
-//       let final = '';
-      
-//       for (let i = event.resultIndex; i < event.results.length; i++) {
-//         const result = event.results[i];
-//         const transcriptText = result[0].transcript;
-        
-//         if (result.isFinal) {
-//           final += transcriptText + ' ';
-//         } else {
-//           interim += transcriptText;
-//         }
-//       }
-      
-//       const currentTranscript = (final + interim).trim();
-//       console.log('Speech:', currentTranscript);
-      
-//       setTranscript(currentTranscript);
-      
-//       if (final.trim()) {
-//         setFinalTranscript(prev => (prev + ' ' + final).trim());
-//       }
-//     };
-
-//     recognitionInstance.onaudiostart = () => {
-//       console.log('Audio capture started');
-//     };
-
-//     recognitionInstance.onspeechend = () => {
-//       console.log('Speech ended, continuing to listen...');
-//     };
-
-//     recognitionInstance.onend = () => {
-//       console.log('Recognition ended, manualStop:', manualStopRef.current, 'shouldRestart:', shouldRestartRef.current);
-      
-//       // Only restart if not manually stopped and should be listening
-//       if (!manualStopRef.current && shouldRestartRef.current) {
-//         setTimeout(() => {
-//           if (!manualStopRef.current && shouldRestartRef.current && recognitionRef.current) {
-//             try {
-//               recognitionRef.current.start();
-//               console.log('🔄 Voice recognition auto-restarted');
-//             } catch (e: any) {
-//               if (e.name !== 'InvalidStateError') {
-//                 console.error('Restart failed:', e.message);
-//                 setIsListening(false);
-//               }
-//             }
-//           }
-//         }, 100);
-//       } else {
-//         setIsListening(false);
-//       }
-//     };
-
-//     recognitionInstance.onerror = (event: any) => {
-//       console.error('Speech recognition error:', event.error);
-      
-//       switch (event.error) {
-//         case 'no-speech':
-//           // No speech detected - keep listening (don't stop)
-//           console.log('No speech detected, still listening...');
-//           break;
-//         case 'aborted':
-//           console.log('Recognition aborted');
-//           break;
-//         case 'audio-capture':
-//           console.error('No microphone found');
-//           setIsListening(false);
-//           shouldRestartRef.current = false;
-//           manualStopRef.current = true;
-//           break;
-//         case 'not-allowed':
-//           console.error('Microphone access denied');
-//           setIsListening(false);
-//           shouldRestartRef.current = false;
-//           manualStopRef.current = true;
-//           break;
-//         case 'network':
-//           console.error('Network error');
-//           break;
-//         default:
-//           console.error('Unhandled error:', event.error);
-//       }
-//     };
-
-//     recognitionRef.current = recognitionInstance;
-
-//     return () => {
-//       if (recognitionRef.current) {
-//         shouldRestartRef.current = false;
-//         manualStopRef.current = true;
-//         try {
-//           recognitionRef.current.stop();
-//         } catch (e) {}
-//       }
-//     };
-//   }, []);
-
-//   const startListening = useCallback(() => {
-//     if (!recognitionRef.current) {
-//       console.error('Speech recognition not initialized');
-//       return;
-//     }
-
-//     try {
-//       setTranscript('');
-//       setFinalTranscript('');
-//       shouldRestartRef.current = true;
-//       manualStopRef.current = false;
-//       setIsListening(true);
-      
-//       navigator.mediaDevices.getUserMedia({ audio: true })
-//         .then(() => {
-//           console.log('🎤 Microphone permission granted');
-//           try {
-//             recognitionRef.current.start();
-//           } catch (error: any) {
-//             if (error.name === 'InvalidStateError') {
-//               console.log('Recognition already running');
-//             } else {
-//               throw error;
-//             }
-//           }
-//         })
-//         .catch((err) => {
-//           console.error('Microphone access error:', err);
-//           setIsListening(false);
-//           shouldRestartRef.current = false;
-//         });
-//     } catch (error: any) {
-//       console.error('Error starting recognition:', error);
-//       setIsListening(false);
-//       shouldRestartRef.current = false;
-//     }
-//   }, []);
-
-//   const stopListening = useCallback(() => {
-//     if (recognitionRef.current) {
-//       try {
-//         manualStopRef.current = true;
-//         shouldRestartRef.current = false;
-//         recognitionRef.current.stop();
-//         setIsListening(false);
-//         console.log('🔇 Voice recognition STOPPED manually');
-//       } catch (error) {
-//         console.error('Error stopping recognition:', error);
-//       }
-//     }
-//   }, []);
-
-//   return {
-//     transcript,
-//     finalTranscript,
-//     isListening,
-//     startListening,
-//     stopListening,
-//     resetTranscript,
-//   };
-// };
-
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 export const useSpeechRecognition = () => {
@@ -230,17 +10,18 @@ export const useSpeechRecognition = () => {
     if (typeof window === 'undefined') return;
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    
     if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
     
-    // Mobile optimization settings
     recognition.continuous = true;
-    recognition.interimResults = true; // Isse mobile par real-time dikhta hai
-    recognition.lang = 'hi-IN'; // Hinglish ke liye best
+    recognition.interimResults = true;
 
-    recognition.onstart = () => setIsListening(true);
+    // --- MAGIC LINE HERE ---
+    // Hum 'en-US' ke saath backup languages bhi de sakte hain (kuch browsers support karte hain)
+    // Lekin best result ke liye hum 'hi-IN' rakhte hain kyunki isme English aur Hindi mixed rehti hai.
+    // Agar Turkish/Urdu chahiye to hume language switch karni padegi.
+    recognition.lang = 'hi-IN'; 
 
     recognition.onresult = (event: any) => {
       let current = '';
@@ -251,40 +32,40 @@ export const useSpeechRecognition = () => {
     };
 
     recognition.onend = () => {
-      // Mobile browsers connection drop karte rehte hain, ye use zinda rakhega
       if (shouldRestartRef.current) {
-        try {
-          recognition.start();
-        } catch (e) {
-          console.log("Restarting...");
-        }
+        try { recognition.start(); } catch (e) {}
       } else {
         setIsListening(false);
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error("Mic Error:", event.error);
-      if (event.error === 'not-allowed') {
-        alert("Bhai settings mein jaakar mic permission allow karo!");
       }
     };
 
     recognitionRef.current = recognition;
   }, []);
 
+  // Language Change karne wala function
+  const setLanguage = useCallback((langCode: string) => {
+    // langCode values: 
+    // English: 'en-US', Hindi/Hinglish: 'hi-IN', Urdu: 'ur-PK', Turkish: 'tr-TR'
+    if (recognitionRef.current) {
+      const wasListening = isListening;
+      if (wasListening) stopListening();
+      
+      recognitionRef.current.lang = langCode;
+      console.log("Language switched to:", langCode);
+      
+      if (wasListening) startListening();
+    }
+  }, [isListening]);
+
   const startListening = useCallback(async () => {
     if (!recognitionRef.current) return;
-
     try {
-      // Mobile Fix: Pehle mic permission check karo
       await navigator.mediaDevices.getUserMedia({ audio: true });
-      
       shouldRestartRef.current = true;
       setTranscript('');
       recognitionRef.current.start();
     } catch (err) {
-      console.error("Mic start failed:", err);
+      console.error("Mic access denied");
     }
   }, []);
 
@@ -296,9 +77,5 @@ export const useSpeechRecognition = () => {
     }
   }, []);
 
-  const resetTranscript = useCallback(() => {
-    setTranscript('');
-  }, []);
-
-  return { transcript, isListening, startListening, stopListening, resetTranscript };
+  return { transcript, isListening, startListening, stopListening, setLanguage };
 };
