@@ -4,8 +4,7 @@ export const useSpeechRecognition = (isAISpeaking: boolean) => {
   const [transcript, setTranscript] = useState('');
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
-  const shouldRestartRef = useRef(false);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const manualStopRef = useRef(true); // Default stop rakhenge
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -16,12 +15,15 @@ export const useSpeechRecognition = (isAISpeaking: boolean) => {
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = 'en-IN'; // Roman script (English alphabets) ke liye
+    recognition.lang = 'en-IN'; // Roman alphabets ke liye
 
-    recognition.onstart = () => setIsListening(true);
+    recognition.onstart = () => {
+      console.log("Mic Started...");
+      setIsListening(true);
+    };
 
     recognition.onresult = (event: any) => {
-      // Agar AI bol raha hai toh result ignore karo (Double safety)
+      // Agar AI bol raha hai toh mic ignore karega
       if (isAISpeaking) return;
 
       let current = '';
@@ -32,12 +34,13 @@ export const useSpeechRecognition = (isAISpeaking: boolean) => {
     };
 
     recognition.onend = () => {
-      // AI bol raha ho ya manual stop ho toh restart mat karo
-      if (shouldRestartRef.current && !isAISpeaking) {
+      console.log("Mic Ended. ManualStop:", manualStopRef.current);
+      // Agar user ne manually stop nahi kiya hai aur AI nahi bol raha, toh restart karo
+      if (!manualStopRef.current && !isAISpeaking) {
         try {
           recognition.start();
         } catch (e) {
-          console.log("Restarting mic...");
+          console.error("Auto-restart failed:", e);
         }
       } else {
         setIsListening(false);
@@ -45,48 +48,41 @@ export const useSpeechRecognition = (isAISpeaking: boolean) => {
     };
 
     recognitionRef.current = recognition;
+
+    return () => {
+      if (recognitionRef.current) recognitionRef.current.abort();
+    };
   }, [isAISpeaking]);
 
-  // AI Bolte waqt mic ko band karne ka logic
+  // AI Bolte waqt mic ko sirf pause karega, stop nahi
   useEffect(() => {
     if (isAISpeaking) {
-      console.log("AI is speaking, stopping mic...");
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
+      if (recognitionRef.current) recognitionRef.current.stop();
+    } else {
+      // AI ke chup hote hi agar manual stop nahi kiya tha, toh wapas shuru
+      if (!manualStopRef.current && recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+        } catch (e) {}
       }
-    } else if (shouldRestartRef.current) {
-      // AI chup hote hi mic wapas shuru
-      try {
-        recognitionRef.current.start();
-      } catch (e) {}
     }
   }, [isAISpeaking]);
 
-  const startListening = useCallback(async () => {
+  const startListening = useCallback(() => {
     if (!recognitionRef.current) return;
+    
+    manualStopRef.current = false; // Ab user ne manually start kiya hai
+    setTranscript('');
+    
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      // Phone Sensitivity Boost: AudioContext setup
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const source = audioContextRef.current.createMediaStreamSource(stream);
-        const processor = audioContextRef.current.createScriptProcessor(1024, 1, 1);
-        source.connect(processor);
-        processor.connect(audioContextRef.current.destination);
-        // Isse mic line active rehti hai aur phone sensor fast respond karta hai
-      }
-
-      shouldRestartRef.current = true;
-      setTranscript('');
       recognitionRef.current.start();
-    } catch (err) {
-      console.error("Mic access denied");
+    } catch (e) {
+      console.log("Mic is already active");
     }
   }, []);
 
   const stopListening = useCallback(() => {
-    shouldRestartRef.current = false;
+    manualStopRef.current = true; // Ab user ne manually stop kiya hai
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       setIsListening(false);
