@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-"""
-ALSA AI PC Control Bridge
-Allows the web app to control your PC locally
-Security hardened with input validation and API key authentication
-"""
-
 import os
 import sys
 import subprocess
@@ -15,9 +8,13 @@ import re
 from pathlib import Path
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import winapps
 
 app = Flask(__name__)
-CORS(app, origins=['*'])  # Allow all origins for local bridge
+CORS(app, origins=[
+    'https://www.alsa-ai.in', 
+    'https://alsa-ai.in'
+])
 
 # Allowed base directories for file operations
 ALLOWED_BASE_DIRS = [
@@ -59,36 +56,44 @@ def is_path_allowed(file_path):
     except Exception:
         return False
 
-
-def validate_ip_address(ip):
-    """Validate IP address format"""
-    pattern = re.compile(r'^(\d{1,3}\.){3}\d{1,3}(:\d+)?$')
-    return bool(pattern.match(ip))
-
-
-def validate_adb_command(command):
-    """Validate ADB command is safe"""
-    allowed_prefixes = [
-        'shell', 'install', 'uninstall', 'push', 'pull',
-        'devices', 'connect', 'disconnect', 'reboot',
-        'logcat', 'bugreport', 'forward', 'reverse'
-    ]
-    cmd_parts = command.strip().split()
-    if not cmd_parts:
-        return False
-    return cmd_parts[0] in allowed_prefixes
-
-
 @app.route('/status', methods=['GET'])
 def status():
-    """Check if bridge is running and return API key status"""
-    has_api_key = AI_API_KEY and AI_API_KEY != 'YOUR_GEMINI_API_KEY_HERE'
+    """Check if bridge is running"""
     return jsonify({
         'status': 'running',
-        'message': 'ALSA AI PC Bridge is active',
-        'has_api_key': has_api_key,
-        'api_key_hint': AI_API_KEY[:8] + '...' if has_api_key else None
+        'message': 'ALSA AI PC Bridge is active'
     })
+
+ # Iske liye 'pip install winapps' karna padega
+
+@app.route('/scan', methods=['GET'])
+def scan_system():
+    try:
+        # 1. Installed Applications Scan (Windows)
+        apps = []
+        for app in winapps.list_installed():
+            apps.append(app.name)
+        
+        # 2. Common Folders Scan
+        user_path = os.path.expanduser('~')
+        common_folders = ['Desktop', 'Documents', 'Downloads', 'Music', 'Videos']
+        
+        # 3. Recent Files Scan (Optional)
+        recent_path = os.path.join(os.getenv('APPDATA'), 'Microsoft', 'Windows', 'Recent')
+        recent_files = []
+        if os.path.exists(recent_path):
+            recent_files = os.listdir(recent_path)[:10] # Top 10 files
+
+        return jsonify({
+            'success': True,
+            'data': {
+                'applications': apps[:50], # Pehli 50 apps bhej rahe hain
+                'commonFolders': common_folders,
+                'recentFiles': recent_files
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/create_folder', methods=['POST'])
 def create_folder():
@@ -767,10 +772,112 @@ def create_excel():
         print(f"Error creating Excel: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+# Global music player process reference
+current_music_process = None
+
+
+@app.route('/get_songs', methods=['GET'])
+def get_songs():
+    """Get list of songs from music directories"""
+    try:
+        songs = []
+        audio_extensions = ('.mp3', '.wav', '.flac', '.m4a', '.aac', '.ogg', '.wma')
+        
+        for music_path in MUSIC_PATHS:
+            if os.path.exists(music_path):
+                for root, dirs, files in os.walk(music_path):
+                    for file in files:
+                        if file.lower().endswith(audio_extensions):
+                            full_path = os.path.join(root, file)
+                            # Extract artist from folder structure if possible
+                            parts = root.replace(music_path, '').strip(os.sep).split(os.sep)
+                            artist = parts[0] if parts else 'Unknown'
+                            album = parts[1] if len(parts) > 1 else 'Unknown'
+                            
+                            songs.append({
+                                'name': os.path.splitext(file)[0],
+                                'path': full_path,
+                                'artist': artist,
+                                'album': album
+                            })
+        
+        return jsonify({
+            'success': True,
+            'songs': songs,
+            'count': len(songs),
+            'message': f'Found {len(songs)} songs'
+        })
+        
+    except Exception as e:
+        print(f"Error getting songs: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/play_song', methods=['POST'])
+def play_song():
+    """Play a song using default media player"""
+    global current_music_process
+    try:
+        data = request.get_json()
+        song_path = data.get('song_path', '')
+        
+        if not song_path:
+            return jsonify({'error': 'No song path provided'}), 400
+        
+        if not os.path.exists(song_path):
+            return jsonify({'error': 'Song file not found'}), 404
+        
+        # Stop current song if playing
+        if current_music_process:
+            try:
+                current_music_process.terminate()
+            except:
+                pass
+        
+        # Play using default media player
+        if os.name == 'nt':  # Windows
+            current_music_process = subprocess.Popen(['start', '', song_path], shell=True)
+        else:
+            current_music_process = subprocess.Popen(['xdg-open', song_path])
+        
+        song_name = os.path.splitext(os.path.basename(song_path))[0]
+        
+        return jsonify({
+            'success': True,
+            'message': f'Playing: {song_name}'
+        })
+        
+    except Exception as e:
+        print(f"Error playing song: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/stop_song', methods=['POST'])
+def stop_song():
+    """Stop currently playing song"""
+    global current_music_process
+    try:
+        if current_music_process:
+            current_music_process.terminate()
+            current_music_process = None
+        
+        # Also try to close common media players
+        subprocess.run(['taskkill', '/F', '/IM', 'wmplayer.exe'], capture_output=True)
+        subprocess.run(['taskkill', '/F', '/IM', 'groove.exe'], capture_output=True)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Music stopped'
+        })
+        
+    except Exception as e:
+        print(f"Error stopping song: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     print("=" * 50)
-    print("ALSA AI PC Control Bridge Started")
+    print("ALSA Ai Pro PC Control Bridge Started")
     print("Bridge is running on http://localhost:5001")
-    print("You can now control your PC through ALSA AI!")
-    print("Features: Project creation, PPT, Excel, Database, Screenshots, ADB, Music")
+    print("You can now control your PC through ALSA AI!\nFeatures: Project creation, PPT, Excel, Screenshots, Music")
     app.run(host='127.0.0.1', port=5001, debug=True)
