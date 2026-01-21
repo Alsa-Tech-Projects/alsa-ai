@@ -68,14 +68,14 @@ const Index = () => {
   // Subscription hook for free tier restrictions
   const subscription = useSubscription();
   const { toast } = useToast();
+  const { speak: ttsSpeak, stop, isSpeaking } = useTextToSpeech();
   const {
     transcript,
     isListening,
     startListening,
     stopListening,
     resetTranscript
-  } = useSpeechRecognition();
-  const { speak: ttsSpeak, stop, isSpeaking } = useTextToSpeech();
+  } = useSpeechRecognition(isSpeaking);
   
   // Wrapper for speak that checks if voice is enabled
   const speak = useCallback((text: string) => {
@@ -586,6 +586,20 @@ const Index = () => {
       setIsTyping(true);
       const memory = getMemory();
 
+      // Get user session for authenticated API calls
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        toast({
+          title: 'Authentication Required',
+          description: 'Please sign in to use chat features',
+          variant: 'destructive'
+        });
+        navigate('/auth');
+        setIsTyping(false);
+        return;
+      }
+
       // API endpoint
       const apiEndpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
@@ -593,7 +607,7 @@ const Index = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
+          'Authorization': `Bearer ${session.access_token}` // Use user JWT instead of anon key
         },
         body: JSON.stringify({
           messages: [...messages, userMessage].map(m => ({
