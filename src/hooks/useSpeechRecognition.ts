@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-export const useSpeechRecognition = (isAISpeaking: boolean) => {
+export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
   const [transcript, setTranscript] = useState('');
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
-  const manualStopRef = useRef(true); // Default stop rakhenge
+  const manualStopRef = useRef(true);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -15,7 +15,7 @@ export const useSpeechRecognition = (isAISpeaking: boolean) => {
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = 'en-IN'; // Roman alphabets ke liye
+    recognition.lang = 'en-IN';
 
     recognition.onstart = () => {
       console.log("Mic Started...");
@@ -23,7 +23,6 @@ export const useSpeechRecognition = (isAISpeaking: boolean) => {
     };
 
     recognition.onresult = (event: any) => {
-      // Agar AI bol raha hai toh mic ignore karega
       if (isAISpeaking) return;
 
       let current = '';
@@ -35,7 +34,6 @@ export const useSpeechRecognition = (isAISpeaking: boolean) => {
 
     recognition.onend = () => {
       console.log("Mic Ended. ManualStop:", manualStopRef.current);
-      // Agar user ne manually stop nahi kiya hai aur AI nahi bol raha, toh restart karo
       if (!manualStopRef.current && !isAISpeaking) {
         try {
           recognition.start();
@@ -54,12 +52,10 @@ export const useSpeechRecognition = (isAISpeaking: boolean) => {
     };
   }, [isAISpeaking]);
 
-  // AI Bolte waqt mic ko sirf pause karega, stop nahi
   useEffect(() => {
     if (isAISpeaking) {
       if (recognitionRef.current) recognitionRef.current.stop();
     } else {
-      // AI ke chup hote hi agar manual stop nahi kiya tha, toh wapas shuru
       if (!manualStopRef.current && recognitionRef.current) {
         try {
           recognitionRef.current.start();
@@ -71,7 +67,7 @@ export const useSpeechRecognition = (isAISpeaking: boolean) => {
   const startListening = useCallback(() => {
     if (!recognitionRef.current) return;
     
-    manualStopRef.current = false; // Ab user ne manually start kiya hai
+    manualStopRef.current = false;
     setTranscript('');
     
     try {
@@ -82,12 +78,16 @@ export const useSpeechRecognition = (isAISpeaking: boolean) => {
   }, []);
 
   const stopListening = useCallback(() => {
-    manualStopRef.current = true; // Ab user ne manually stop kiya hai
+    manualStopRef.current = true;
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       setIsListening(false);
     }
   }, []);
 
-  return { transcript, isListening, startListening, stopListening };
+  const resetTranscript = useCallback(() => {
+    setTranscript('');
+  }, []);
+
+  return { transcript, isListening, startListening, stopListening, resetTranscript };
 };

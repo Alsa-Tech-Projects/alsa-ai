@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -158,8 +159,92 @@ serve(async (req) => {
   }
 
   try {
+    // === AUTHENTICATION CHECK ===
+    const authHeader = req.headers.get("Authorization")?.split(" ")[1];
+    if (!authHeader) {
+      console.error("No authorization header provided");
+      return new Response(
+        JSON.stringify({ error: "Authentication required. Please sign in to use chat." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create Supabase client with service role for user verification
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify user JWT token
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader);
+    
+    if (authError || !user) {
+      console.error("Auth verification failed:", authError?.message || "No user found");
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired authentication token. Please sign in again." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`✅ Authenticated user: ${user.email} (${user.id})`);
+
+    // === SERVER-SIDE SUBSCRIPTION & RATE LIMIT CHECK ===
+    const userEmail = user.email?.toLowerCase() || '';
+    
+    // Check if user is a team member (bypass all limits)
+    const { data: teamCheck } = await supabase
+      .from('team_accounts')
+      .select('email, subscription_tier')
+      .eq('email', userEmail)
+      .single();
+    
+    const isTeamMember = !!teamCheck;
+    
+    if (!isTeamMember) {
+      // Check subscription status for non-team users
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('subscription_tier, subscription_expires_at')
+        .eq('user_id', user.id)
+        .single();
+      
+      const tier = profile?.subscription_tier || 'free';
+      const isExpired = profile?.subscription_expires_at && 
+                        new Date(profile.subscription_expires_at) < new Date();
+      const isActive = tier !== 'free' && !isExpired;
+      
+      // For free/expired users, check daily message limit
+      if (!isActive) {
+        const today = new Date().toISOString().split('T')[0];
+        const { data: todayCount } = await supabase
+          .from('daily_message_counts')
+          .select('message_count')
+          .eq('user_id', user.id)
+          .eq('message_date', today)
+          .single();
+        
+        const messageCount = todayCount?.message_count || 0;
+        const DAILY_LIMIT = 50;
+        
+        if (messageCount >= DAILY_LIMIT) {
+          console.log(`Rate limit reached for user ${user.email}: ${messageCount}/${DAILY_LIMIT}`);
+          return new Response(
+            JSON.stringify({ 
+              error: "Daily message limit reached (50 messages). Upgrade to Pro for unlimited messages.",
+              limit_reached: true,
+              current_count: messageCount,
+              limit: DAILY_LIMIT
+            }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+    } else {
+      console.log(`✅ Team member access: ${userEmail}`);
+    }
+
+    // === PARSE REQUEST BODY ===
     const body = await req.json();
-    const { messages, memory, conversationContext, ai_response_style, files } = body; // files = array of { name, type, data (base64) }
+    const { messages, memory, conversationContext, ai_response_style, files } = body;
     
     // Use Lovable AI (auto-provisioned) - fallback to Gemini if available
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
