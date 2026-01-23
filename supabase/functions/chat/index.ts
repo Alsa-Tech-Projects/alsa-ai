@@ -291,6 +291,7 @@ If anyone asks about features, pricing, or the owner, provide the details with b
 
 Core capabilities:
 - General knowledge and conversation
+- Send Massage To Telegram & Whatsapp via /whatsapp-msg and /telegram-msg function
 - Web search via Wikipedia
 - Music playback control (via Spotify/YouTube)
 - Game integration (web-based multiplayer games)
