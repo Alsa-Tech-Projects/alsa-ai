@@ -179,7 +179,7 @@ const BridgeSetup = () => {
         <meta property="og:title" content="ALSA AI PC Bridge Setup - Control Your PC with AI" />
         <meta property="og:description" content="Setup the ALSA PC Bridge to enable AI-powered automation, voice commands, and coding on your computer." />
         <meta property="og:type" content="website" />
-        <link rel="canonical" href="https://alsa-ai.lovable.app/bridge-setup" />
+        <link rel="canonical" href="https://www.alsa-ai.in/bridge-setup" />
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
