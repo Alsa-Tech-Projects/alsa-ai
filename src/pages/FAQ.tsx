@@ -193,7 +193,7 @@ const FAQ = () => {
         <meta property="og:title" content="ALSA AI FAQ - Frequently Asked Questions" />
         <meta property="og:description" content="Get answers to all your questions about ALSA AI, the intelligent PC control assistant." />
         <meta property="og:type" content="website" />
-        <link rel="canonical" href="https://alsa-ai.lovable.app/faq" />
+        <link rel="canonical" href="https://www.alsa-ai.in/faq" />
         <script type="application/ld+json">
           {JSON.stringify(faqSchema)}
         </script>
