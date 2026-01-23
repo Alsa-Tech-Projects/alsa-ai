@@ -164,6 +164,15 @@ const Auth = () => {
         <meta property="og:title" content="Login to ALSA AI - Your AI Assistant Awaits" />
         <meta property="og:description" content="Create your free ALSA AI account and unlock PC automation, voice commands, and intelligent coding assistance." />
         <meta property="og:type" content="website" />
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-693WHRMHFN"></script>
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-693WHRMHFN');
+        </script>        
         <link rel="canonical" href="https://alsa-ai.lovable.app/auth" />
         <script type="application/ld+json">
           {JSON.stringify({
