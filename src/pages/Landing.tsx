@@ -97,7 +97,7 @@ const Landing = () => {
         <meta property="og:title" content="ALSA AI - AI Assistant for PC Automation & Coding" />
         <meta property="og:description" content="Automate PC tasks, generate code, control Android devices with India's best AI assistant." />
         <meta property="og:type" content="website" />
-        <link rel="canonical" href="https://alsa-ai.lovable.app/" />
+        <link rel="canonical" href="https://www.alsa-ai.in/" />
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
