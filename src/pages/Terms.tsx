@@ -138,7 +138,7 @@ const Terms = () => {
         <meta name="keywords" content="ALSA AI terms of service, usage agreement, AI assistant terms, PC automation policy, subscription terms, refund policy, user agreement" />
         <meta property="og:title" content="Terms of Service - ALSA AI" />
         <meta property="og:description" content="Review ALSA AI's terms of service, usage policies, and subscription agreements." />
-        <link rel="canonical" href="https://alsa-ai.lovable.app/terms" />
+        <link rel="canonical" href="https://www.alsa-ai.in/terms" />
       </Helmet>
 
       {/* Header */}
