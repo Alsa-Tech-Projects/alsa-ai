@@ -115,7 +115,7 @@ const Privacy = () => {
         <meta name="keywords" content="ALSA AI privacy, data protection, AI assistant privacy policy, PC automation security, user data rights, GDPR compliance, data encryption" />
         <meta property="og:title" content="Privacy Policy - ALSA AI" />
         <meta property="og:description" content="Learn how ALSA AI protects your privacy and handles your data securely." />
-        <link rel="canonical" href="https://alsa-ai.lovable.app/privacy" />
+        <link rel="canonical" href="https://www.alsa-ai.in/privacy" />
       </Helmet>
 
       {/* Header */}
