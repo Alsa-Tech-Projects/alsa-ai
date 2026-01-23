@@ -103,7 +103,7 @@ const Contact = () => {
         <meta name="keywords" content="ALSA AI contact, AI assistant support, PC automation help, voice control support, AI chatbot help, customer service, feedback, AI technology support" />
         <meta property="og:title" content="Contact ALSA AI - AI Assistant Support" />
         <meta property="og:description" content="Get in touch with ALSA AI team for support, feedback, or partnership inquiries." />
-        <link rel="canonical" href="https://alsa-ai.lovable.app/contact" />
+        <link rel="canonical" href="https://www.alsa-ai.in/contact" />
       </Helmet>
 
       {/* Animated Background */}
