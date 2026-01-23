@@ -236,7 +236,7 @@ const Pricing = () => {
         <meta property="og:title" content="ALSA AI Pricing - Affordable AI Assistant Plans" />
         <meta property="og:description" content="Start your AI journey with just ₹1. Full-stack coding, PC automation, and Android control at affordable prices." />
         <meta property="og:type" content="website" />
-        <link rel="canonical" href="https://alsa-ai.lovable.app/pricing" />
+        <link rel="canonical" href="https://www.alsa-ai.in/pricing" />
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
