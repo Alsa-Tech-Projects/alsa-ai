@@ -14,3 +14,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://www.alsa-ai.in/sitemap.xml
+Sitemap: https://www.alsa-ai.in/site.xml
