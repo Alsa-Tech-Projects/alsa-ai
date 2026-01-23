@@ -17,7 +17,7 @@ export const checkBridgeConnection = async (): Promise<BridgeStatus> => {
       headers: { 'Content-Type': 'application/json' },
     });
     if (response.ok) {
-      const j = await response.json().catch(()=>({}));
+      const j = await response.json().catch(() => ({}));
       return { connected: true, message: j.message || 'Bridge connected' };
     }
     return { connected: false, message: 'Bridge not responding' };
@@ -46,7 +46,7 @@ export const WEBSITES: Record<string, { name: string; url: string; category: str
   'quora': { name: 'Quora', url: 'https://www.quora.com', category: 'Social Media' },
   'threads': { name: 'Threads', url: 'https://www.threads.net', category: 'Social Media' },
   'mastodon': { name: 'Mastodon', url: 'https://mastodon.social', category: 'Social Media' },
-  
+
   // Entertainment
   'netflix': { name: 'Netflix', url: 'https://www.netflix.com', category: 'Entertainment' },
   'spotify': { name: 'Spotify', url: 'https://open.spotify.com', category: 'Entertainment' },
@@ -69,7 +69,7 @@ export const WEBSITES: Record<string, { name: string; url: string; category: str
   'sonyliv': { name: 'SonyLIV', url: 'https://www.sonyliv.com', category: 'Entertainment' },
   'mxplayer': { name: 'MX Player', url: 'https://www.mxplayer.in', category: 'Entertainment' },
   'crunchyroll': { name: 'Crunchyroll', url: 'https://www.crunchyroll.com', category: 'Entertainment' },
-  
+
   // Productivity
   'google': { name: 'Google', url: 'https://www.google.com', category: 'Productivity' },
   'gmail': { name: 'Gmail', url: 'https://mail.google.com', category: 'Productivity' },
@@ -97,7 +97,7 @@ export const WEBSITES: Record<string, { name: string; url: string; category: str
   'miro': { name: 'Miro', url: 'https://miro.com', category: 'Productivity' },
   'figma': { name: 'Figma', url: 'https://www.figma.com', category: 'Productivity' },
   'canva': { name: 'Canva', url: 'https://www.canva.com', category: 'Productivity' },
-  
+
   // Developer Tools
   'github': { name: 'GitHub', url: 'https://github.com', category: 'Developer' },
   'gitlab': { name: 'GitLab', url: 'https://gitlab.com', category: 'Developer' },
@@ -125,7 +125,7 @@ export const WEBSITES: Record<string, { name: string; url: string; category: str
   'codeforces': { name: 'Codeforces', url: 'https://codeforces.com', category: 'Developer' },
   'kaggle': { name: 'Kaggle', url: 'https://www.kaggle.com', category: 'Developer' },
   'w3schools': { name: 'W3Schools', url: 'https://www.w3schools.com', category: 'Developer' },
-  
+
   // Shopping
   'amazon': { name: 'Amazon', url: 'https://www.amazon.in', category: 'Shopping' },
   'flipkart': { name: 'Flipkart', url: 'https://www.flipkart.com', category: 'Shopping' },
@@ -140,7 +140,7 @@ export const WEBSITES: Record<string, { name: string; url: string; category: str
   'swiggy': { name: 'Swiggy', url: 'https://www.swiggy.com', category: 'Shopping' },
   'bigbasket': { name: 'BigBasket', url: 'https://www.bigbasket.com', category: 'Shopping' },
   'blinkit': { name: 'Blinkit', url: 'https://blinkit.com', category: 'Shopping' },
-  
+
   // Education
   'coursera': { name: 'Coursera', url: 'https://www.coursera.org', category: 'Education' },
   'udemy': { name: 'Udemy', url: 'https://www.udemy.com', category: 'Education' },
@@ -156,7 +156,7 @@ export const WEBSITES: Record<string, { name: string; url: string; category: str
   'unacademy': { name: 'Unacademy', url: 'https://unacademy.com', category: 'Education' },
   'byjus': { name: "BYJU'S", url: 'https://byjus.com', category: 'Education' },
   'vedantu': { name: 'Vedantu', url: 'https://www.vedantu.com', category: 'Education' },
-  
+
   // AI Tools
   'chatgpt': { name: 'ChatGPT', url: 'https://chat.openai.com', category: 'AI Tools' },
   'claude': { name: 'Claude AI', url: 'https://claude.ai', category: 'AI Tools' },
@@ -173,7 +173,7 @@ export const WEBSITES: Record<string, { name: string; url: string; category: str
   'jasper': { name: 'Jasper AI', url: 'https://www.jasper.ai', category: 'AI Tools' },
   'writesonic': { name: 'Writesonic', url: 'https://writesonic.com', category: 'AI Tools' },
   'grammarly': { name: 'Grammarly', url: 'https://www.grammarly.com', category: 'AI Tools' },
-  
+
   // News & Information
   'wikipedia': { name: 'Wikipedia', url: 'https://www.wikipedia.org', category: 'Information' },
   'bbc': { name: 'BBC News', url: 'https://www.bbc.com/news', category: 'Information' },
@@ -187,7 +187,7 @@ export const WEBSITES: Record<string, { name: string; url: string; category: str
   'theverge': { name: 'The Verge', url: 'https://www.theverge.com', category: 'Information' },
   'wired': { name: 'Wired', url: 'https://www.wired.com', category: 'Information' },
   'arstechnica': { name: 'Ars Technica', url: 'https://arstechnica.com', category: 'Information' },
-  
+
   // Maps & Travel
   'maps': { name: 'Google Maps', url: 'https://maps.google.com', category: 'Travel' },
   'googlemaps': { name: 'Google Maps', url: 'https://maps.google.com', category: 'Travel' },
@@ -202,7 +202,7 @@ export const WEBSITES: Record<string, { name: string; url: string; category: str
   'yatra': { name: 'Yatra', url: 'https://www.yatra.com', category: 'Travel' },
   'cleartrip': { name: 'Cleartrip', url: 'https://www.cleartrip.com', category: 'Travel' },
   'skyscanner': { name: 'Skyscanner', url: 'https://www.skyscanner.com', category: 'Travel' },
-  
+
   // Finance
   'paytm': { name: 'Paytm', url: 'https://paytm.com', category: 'Finance' },
   'phonepe': { name: 'PhonePe', url: 'https://www.phonepe.com', category: 'Finance' },
@@ -212,7 +212,7 @@ export const WEBSITES: Record<string, { name: string; url: string; category: str
   'groww': { name: 'Groww', url: 'https://groww.in', category: 'Finance' },
   'upstox': { name: 'Upstox', url: 'https://upstox.com', category: 'Finance' },
   'moneycontrol': { name: 'MoneyControl', url: 'https://www.moneycontrol.com', category: 'Finance' },
-  
+
   // Gaming
   'steam': { name: 'Steam', url: 'https://store.steampowered.com', category: 'Gaming' },
   'epicgames': { name: 'Epic Games', url: 'https://store.epicgames.com', category: 'Gaming' },
@@ -240,8 +240,8 @@ export const sendCommand = async (command: string): Promise<{ success: boolean; 
     }
 
     const data = await response.json();
-    return { 
-      success: data.success ?? true, 
+    return {
+      success: data.success ?? true,
       message: data.message || 'Command executed',
       output: data.output || data.stdout || data.stderr
     };
@@ -319,7 +319,7 @@ const MULTILANG_PATTERNS = {
 // Parse natural language input in ANY language
 export const parseNaturalLanguage = (input: string): { action: string; target: string; params: Record<string, any> } | null => {
   const lowerInput = input.toLowerCase().trim();
-  
+
   // Check for website opening (only when the user explicitly asks to open/visit)
   for (const [key, site] of Object.entries(WEBSITES)) {
     const matchesSite = lowerInput.includes(key) || lowerInput.includes(site.name.toLowerCase());
@@ -330,17 +330,17 @@ export const parseNaturalLanguage = (input: string): { action: string; target: s
       return { action: 'open_website', target: site.url, params: { name: site.name } };
     }
   }
-  
+
   // Check for screenshot
   if (MULTILANG_PATTERNS.screenshot.some(p => p.test(lowerInput))) {
     const delayMatch = lowerInput.match(/(\d+)\s*(?:sec|second|seconds|सेकंड)/i);
-    return { 
-      action: 'screenshot', 
-      target: '', 
-      params: { delay: delayMatch ? parseInt(delayMatch[1]) : 0 } 
+    return {
+      action: 'screenshot',
+      target: '',
+      params: { delay: delayMatch ? parseInt(delayMatch[1]) : 0 }
     };
   }
-  
+
   // Check for screen recording
   if (MULTILANG_PATTERNS.recording.some(p => p.test(lowerInput))) {
     const stopMatch = MULTILANG_PATTERNS.stop.some(p => p.test(lowerInput));
@@ -348,13 +348,13 @@ export const parseNaturalLanguage = (input: string): { action: string; target: s
       return { action: 'stop_recording', target: '', params: {} };
     }
     const durationMatch = lowerInput.match(/(\d+)\s*(?:sec|second|seconds|min|minute|minutes|सेकंड|मिनट)/i);
-    return { 
-      action: 'start_recording', 
-      target: '', 
-      params: { duration: durationMatch ? parseInt(durationMatch[1]) : 30 } 
+    return {
+      action: 'start_recording',
+      target: '',
+      params: { duration: durationMatch ? parseInt(durationMatch[1]) : 30 }
     };
   }
-  
+
   // Power commands
   if (MULTILANG_PATTERNS.shutdown.some(p => p.test(lowerInput))) {
     return { action: 'shutdown', target: '', params: {} };
@@ -365,7 +365,7 @@ export const parseNaturalLanguage = (input: string): { action: string; target: s
   if (MULTILANG_PATTERNS.sleep.some(p => p.test(lowerInput))) {
     return { action: 'sleep', target: '', params: {} };
   }
-  
+
   // Application map - add "antigravity" as requested
   const appMap: Record<string, string> = {
     'notepad': 'notepad',
@@ -423,22 +423,22 @@ export const parseNaturalLanguage = (input: string): { action: string; target: s
     'terminal': 'wt', // Windows Terminal
     'git bash': 'git-bash',
   };
-  
+
   // Check for app opening
   if (MULTILANG_PATTERNS.open.some(p => p.test(lowerInput))) {
     for (const [appName, appCmd] of Object.entries(appMap)) {
       if (lowerInput.includes(appName)) {
         // Check if there's a path specified
         const pathMatch = input.match(/(?:in|at|में|पर)\s+(.+?)(?:\s|$)/i);
-        return { 
-          action: 'open_app', 
-          target: appCmd, 
-          params: { name: appName, path: pathMatch ? pathMatch[1].trim() : null } 
+        return {
+          action: 'open_app',
+          target: appCmd,
+          params: { name: appName, path: pathMatch ? pathMatch[1].trim() : null }
         };
       }
     }
   }
-  
+
   // Check for app closing
   if (MULTILANG_PATTERNS.close.some(p => p.test(lowerInput))) {
     for (const [appName, appCmd] of Object.entries(appMap)) {
@@ -452,17 +452,17 @@ export const parseNaturalLanguage = (input: string): { action: string; target: s
       return { action: 'close_window', target: windowMatch[1].trim(), params: {} };
     }
   }
-  
+
   return null;
 };
 
 // Execute system command with natural language support
 export const executeSystemCommand = async (action: string): Promise<{ success: boolean; message: string; output?: string }> => {
   console.log('Executing system command:', action);
-  
+
   // First try natural language parsing
   const parsed = parseNaturalLanguage(action);
-  
+
   if (parsed) {
     switch (parsed.action) {
       case 'open_website':
@@ -515,7 +515,7 @@ export const executeSystemCommand = async (action: string): Promise<{ success: b
         return await sendCommand('sleep');
     }
   }
-  
+
   // Fallback: Try to execute as raw command (no whitelist)
   return await sendCommand(action);
 };
@@ -535,8 +535,8 @@ export const executePythonFile = async (filePath: string): Promise<{ success: bo
 
     const data = await response.json();
     const output = data.stdout || data.stderr || '';
-    return { 
-      success: data.returncode === 0, 
+    return {
+      success: data.returncode === 0,
       message: data.message,
       output: output
     };
@@ -563,8 +563,8 @@ export const executeCmdCommand = async (command: string): Promise<{ success: boo
 
     const data = await response.json();
     const output = data.stdout || data.stderr || '';
-    return { 
-      success: data.returncode === 0, 
+    return {
+      success: data.returncode === 0,
       message: data.message,
       output: output
     };
@@ -623,6 +623,26 @@ export const createFolder = async (folderPath: string): Promise<{ success: boole
   }
 };
 
+// whatsapp massage automation
+export const sendWhatsAppMsg = async (phone: string, message: string) => {
+  const response = await fetch(`${BRIDGE_URL}/whatsapp-msg`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ phone, message })
+  });
+  return await response.json();
+};
+
+// telegram automation massage
+export const sendTelegramMsg = async (link: string, message: string) => {
+  const response = await fetch(`${BRIDGE_URL}/telegram-msg`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ link, message })
+  });
+  return await response.json();
+};
+
 // Create a text file with content at any path
 export const createTextFile = async (filePath: string, content: string): Promise<{ success: boolean; message: string }> => {
   try {
@@ -654,7 +674,7 @@ export const openWebsiteWithSearch = (platform: 'youtube' | 'spotify' | 'google'
     spotify: `https://open.spotify.com/search/${encodeURIComponent(searchQuery)}`,
     google: `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`
   };
-  
+
   const url = searchUrls[platform];
   if (url) {
     window.open(url, '_blank');
@@ -667,11 +687,11 @@ export const openCustomApp = async (appName: string): Promise<{ success: boolean
     // Get custom apps from localStorage
     const customApps = JSON.parse(localStorage.getItem('alsa_custom_apps') || '[]');
     const app = customApps.find((a: any) => a.name.toLowerCase() === appName.toLowerCase());
-    
+
     if (!app) {
       return { success: false, message: `Custom app "${appName}" not found in settings` };
     }
-    
+
     const response = await fetch(`${BRIDGE_URL}/execute`, {
       method: 'POST',
       headers: getHeaders(),
@@ -701,8 +721,8 @@ export const checkInstallation = async (software: string): Promise<{ success: bo
     });
 
     const data = await response.json();
-    return { 
-      success: data.success, 
+    return {
+      success: data.success,
       installed: data.installed,
       message: data.message,
       version: data.version
@@ -725,8 +745,8 @@ export const adbConnect = async (ipAddress?: string): Promise<{ success: boolean
     });
 
     const data = await response.json();
-    return { 
-      success: data.success, 
+    return {
+      success: data.success,
       message: data.message,
       output: data.output
     };
@@ -748,8 +768,8 @@ export const adbCommand = async (command: string): Promise<{ success: boolean; m
 
     const data = await response.json();
     const output = data.stdout || data.stderr || '';
-    return { 
-      success: data.success, 
+    return {
+      success: data.success,
       message: data.message,
       output: output
     };
@@ -787,7 +807,7 @@ export const captureScreenshot = async (
       transition: opacity 0.1s ease-in-out;
     `;
     document.body.appendChild(blinkOverlay);
-    
+
     // Trigger blink
     requestAnimationFrame(() => {
       blinkOverlay.style.opacity = '1';
@@ -807,7 +827,7 @@ export const captureScreenshot = async (
         try {
           const parsed = JSON.parse(storedPaths);
           finalSavePath = parsed.screenshot;
-        } catch {}
+        } catch { }
       }
     }
     if (!finalSavePath) {
@@ -817,21 +837,21 @@ export const captureScreenshot = async (
     const response = await fetch(`${BRIDGE_URL}/capture_screenshot`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         save_path: finalSavePath
       })
     });
     const data = await response.json();
-    
+
     if (data.error) {
       return {
         success: false,
         message: `Screenshot failed: ${data.error}`
       };
     }
-    
-    return { 
-      success: data.success ?? true, 
+
+    return {
+      success: data.success ?? true,
       message: data.message || 'Screenshot captured',
       filename: data.filename,
       path: data.path || savePath
@@ -851,7 +871,7 @@ let recordingStream: MediaStream | null = null;
 
 // Save recording to disk via PC Bridge
 export const saveRecordingToDisk = async (
-  blob: Blob, 
+  blob: Blob,
   savePath: string
 ): Promise<{ success: boolean; message: string; filePath?: string }> => {
   try {
@@ -860,27 +880,27 @@ export const saveRecordingToDisk = async (
     const base64 = btoa(
       new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
     );
-    
+
     const filename = `recording-${Date.now()}.webm`;
-    
+
     const response = await fetch(`${BRIDGE_URL}/save_recording`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         save_path: savePath,
         filename,
         data: base64
       })
     });
-    
+
     const data = await response.json();
-    
+
     if (!data.success) {
       throw new Error(data.message || 'Failed to save recording');
     }
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       message: data.message || 'Recording saved',
       filePath: data.file_path || `${savePath}\\${filename}`
     };
@@ -902,8 +922,8 @@ export const openFolder = async (folderPath: string): Promise<{ success: boolean
       body: JSON.stringify({ folder_path: folderPath })
     });
     const data = await response.json();
-    return { 
-      success: data.success ?? true, 
+    return {
+      success: data.success ?? true,
       message: data.message || 'Folder opened'
     };
   } catch (error: any) {
@@ -922,7 +942,7 @@ export const startScreenRecording = async (durationSeconds?: number): Promise<{ 
     recordingStream = stream;
     recordingChunks = [];
     recordingMediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-    
+
     recordingMediaRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) {
         recordingChunks.push(e.data);
@@ -931,11 +951,11 @@ export const startScreenRecording = async (durationSeconds?: number): Promise<{ 
 
     recordingMediaRecorder.onstop = async () => {
       const blob = new Blob(recordingChunks, { type: 'video/webm' });
-      
+
       // Try to save to settings path via PC Bridge
       const outputPaths = localStorage.getItem('alsa_output_paths');
       let savePath = 'C:\\Users\\Mohd Eisa\\Videos\\Recordings';
-      
+
       if (outputPaths) {
         try {
           const parsed = JSON.parse(outputPaths);
@@ -946,10 +966,10 @@ export const startScreenRecording = async (durationSeconds?: number): Promise<{ 
           console.error('Failed to parse output paths:', e);
         }
       }
-      
+
       // Try to save via PC Bridge
       const saveResult = await saveRecordingToDisk(blob, savePath);
-      
+
       if (!saveResult.success) {
         // Fallback: Download via browser
         const url = URL.createObjectURL(blob);
@@ -959,20 +979,20 @@ export const startScreenRecording = async (durationSeconds?: number): Promise<{ 
         a.click();
         URL.revokeObjectURL(url);
       }
-      
+
       // Stop all tracks
       if (recordingStream) {
         recordingStream.getTracks().forEach(track => track.stop());
         recordingStream = null;
       }
-      
+
       // Dispatch event for UI to show "Open Folder" button
-      window.dispatchEvent(new CustomEvent('recording-saved', { 
-        detail: { 
-          success: saveResult.success, 
+      window.dispatchEvent(new CustomEvent('recording-saved', {
+        detail: {
+          success: saveResult.success,
           filePath: saveResult.filePath,
           folderPath: savePath
-        } 
+        }
       }));
     };
 
@@ -1022,8 +1042,8 @@ export const closeWindow = async (windowName: string): Promise<{ success: boolea
       body: JSON.stringify({ window_name: windowName })
     });
     const data = await response.json();
-    return { 
-      success: data.success, 
+    return {
+      success: data.success,
       message: data.message,
       output: data.output
     };
@@ -1043,16 +1063,16 @@ export const runCommand = async (command: string): Promise<{ success: boolean; m
       body: JSON.stringify({ command })
     });
     const data = await response.json();
-    
+
     if (data.error) {
       return {
         success: false,
         message: `Failed: ${data.error}`
       };
     }
-    
-    return { 
-      success: data.success ?? true, 
+
+    return {
+      success: data.success ?? true,
       message: data.message || `Command executed`
     };
   } catch (error: any) {
@@ -1079,7 +1099,7 @@ export const createPowerPoint = async (
     const response = await fetch(`${BRIDGE_URL}/create_powerpoint`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         file_path: filePath,
         title,
         slides,
@@ -1087,13 +1107,13 @@ export const createPowerPoint = async (
       })
     });
     const data = await response.json();
-    
+
     if (data.error) {
       return { success: false, message: data.error };
     }
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       message: data.message || 'PowerPoint created',
       file_path: data.file_path
     };
@@ -1122,7 +1142,7 @@ export const createExcel = async (
     const response = await fetch(`${BRIDGE_URL}/create_excel`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         file_path: filePath,
         sheet_name: sheetName,
         headers,
@@ -1131,13 +1151,13 @@ export const createExcel = async (
       })
     });
     const data_response = await response.json();
-    
+
     if (data_response.error) {
       return { success: false, message: data_response.error };
     }
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       message: data_response.message || 'Excel file created',
       file_path: data_response.file_path
     };
@@ -1170,20 +1190,20 @@ export const createDatabase = async (
     const response = await fetch(`${BRIDGE_URL}/create_database`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         file_path: filePath,
         db_type: dbType,
         tables
       })
     });
     const data = await response.json();
-    
+
     if (data.error) {
       return { success: false, message: data.error };
     }
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       message: data.message || 'Database created',
       file_path: data.file_path,
       tables: data.tables
@@ -1211,13 +1231,13 @@ export const getSongList = async (): Promise<{ success: boolean; songs: SongInfo
       headers: getHeaders(),
     });
     const data = await response.json();
-    
+
     if (data.error) {
       return { success: false, songs: [], message: data.error };
     }
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       songs: data.songs || [],
       message: data.message
     };
@@ -1238,13 +1258,13 @@ export const playSong = async (songPath: string): Promise<{ success: boolean; me
       body: JSON.stringify({ song_path: songPath })
     });
     const data = await response.json();
-    
+
     if (data.error) {
       return { success: false, message: data.error };
     }
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       message: data.message || 'Playing song'
     };
   } catch (error: any) {
@@ -1262,9 +1282,9 @@ export const stopSong = async (): Promise<{ success: boolean; message: string }>
       headers: getHeaders(),
     });
     const data = await response.json();
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       message: data.message || 'Music stopped'
     };
   } catch (error: any) {
@@ -1280,12 +1300,12 @@ export const uploadFileToBridge = async (file: File): Promise<{ success: boolean
   try {
     const formData = new FormData();
     formData.append('file', file);
-    
+
     const response = await fetch(`${BRIDGE_URL}/upload_file`, {
       method: 'POST',
       body: formData
     });
-    
+
     const data = await response.json();
     return {
       success: data.success ?? true,
@@ -1302,7 +1322,7 @@ export const uploadFileToBridge = async (file: File): Promise<{ success: boolean
 
 // Run a project on localhost
 export const runProject = async (
-  projectPath: string, 
+  projectPath: string,
   projectType: 'react' | 'node' | 'python' | 'html'
 ): Promise<{ success: boolean; message: string; output?: string }> => {
   try {
@@ -1328,9 +1348,9 @@ export const runProject = async (
         'start index.html'
       ]
     };
-    
+
     const projectCommands = commands[projectType] || commands.html;
-    
+
     // Execute via PC Bridge - open cmd and run commands
     const response = await fetch(`${BRIDGE_URL}/run_project`, {
       method: 'POST',
@@ -1341,7 +1361,7 @@ export const runProject = async (
         commands: projectCommands
       })
     });
-    
+
     const data = await response.json();
     return {
       success: data.success ?? true,
