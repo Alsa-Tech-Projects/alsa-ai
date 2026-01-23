@@ -33,13 +33,19 @@ interface CustomApp {
   path: string;
 }
 
+interface Contact {
+  id: string;
+  name: string;
+  value: string; // WhatsApp ke liye number, TG ke liye link
+}
+
 const Settings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
-const [preferences, setPreferences] = useState({
+
+  const [preferences, setPreferences] = useState({
     ai_response_style: 'balanced',
     voice_enabled: true,
     voice_name: 'default',
@@ -63,10 +69,54 @@ const [preferences, setPreferences] = useState({
   const [newSiteName, setNewSiteName] = useState('');
   const [newSiteUrl, setNewSiteUrl] = useState('');
 
+  const [whatsappContacts, setWhatsappContacts] = useState<Contact[]>([]);
+  const [telegramContacts, setTelegramContacts] = useState<Contact[]>([]);
+  // Naye input ke liye
+  const [newWpName, setNewWpName] = useState('');
+  const [newWpNum, setNewWpNum] = useState('');
+  const [newTgName, setNewTgName] = useState('');
+  const [newTgLink, setNewTgLink] = useState('');
+
   // Custom apps state
   const [customApps, setCustomApps] = useState<CustomApp[]>([]);
   const [newAppName, setNewAppName] = useState('');
   const [newAppPath, setNewAppPath] = useState('');
+
+  // useEffect(() => {
+  //   loadPreferences();
+  //   loadLocalSettings();
+  // }, []);
+
+  // const loadLocalSettings = () => {
+  //   // Load output paths from localStorage
+  //   const savedPaths = localStorage.getItem('alsa_output_paths');
+  //   if (savedPaths) {
+  //     try {
+  //       setOutputPaths(JSON.parse(savedPaths));
+  //     } catch (e) {
+  //       console.error('Error loading output paths:', e);
+  //     }
+  //   }
+
+  //   // Load custom sites from localStorage
+  //   const savedSites = localStorage.getItem('alsa_user_sites');
+  //   if (savedSites) {
+  //     try {
+  //       setCustomSites(JSON.parse(savedSites));
+  //     } catch (e) {
+  //       console.error('Error loading custom sites:', e);
+  //     }
+  //   }
+
+  //   // Load custom apps from localStorage
+  //   const savedApps = localStorage.getItem('alsa_custom_apps');
+  //   if (savedApps) {
+  //     try {
+  //       setCustomApps(JSON.parse(savedApps));
+  //     } catch (e) {
+  //       console.error('Error loading custom apps:', e);
+  //     }
+  //   }
 
   useEffect(() => {
     loadPreferences();
@@ -74,33 +124,43 @@ const [preferences, setPreferences] = useState({
   }, []);
 
   const loadLocalSettings = () => {
-    // Load output paths from localStorage
+    // 1. Load output paths
     const savedPaths = localStorage.getItem('alsa_output_paths');
     if (savedPaths) {
-      try {
-        setOutputPaths(JSON.parse(savedPaths));
-      } catch (e) {
-        console.error('Error loading output paths:', e);
-      }
+      try { setOutputPaths(JSON.parse(savedPaths)); } catch (e) { console.error('Error:', e); }
     }
 
-    // Load custom sites from localStorage
+    // 2. Load custom sites
     const savedSites = localStorage.getItem('alsa_user_sites');
     if (savedSites) {
+      try { setCustomSites(JSON.parse(savedSites)); } catch (e) { console.error('Error:', e); }
+    }
+
+    // 3. Load custom apps
+    const savedApps = localStorage.getItem('alsa_custom_apps');
+    if (savedApps) {
+      try { setCustomApps(JSON.parse(savedApps)); } catch (e) { console.error('Error:', e); }
+    }
+
+    // --- NAYA MESSAGING AUTOMATION DATA YAHAN SE ---
+
+    // 4. Load WhatsApp Contacts
+    const savedWp = localStorage.getItem('alsa_whatsapp_contacts');
+    if (savedWp) {
       try {
-        setCustomSites(JSON.parse(savedSites));
+        setWhatsappContacts(JSON.parse(savedWp));
       } catch (e) {
-        console.error('Error loading custom sites:', e);
+        console.error('Error loading WhatsApp contacts:', e);
       }
     }
 
-    // Load custom apps from localStorage
-    const savedApps = localStorage.getItem('alsa_custom_apps');
-    if (savedApps) {
+    // 5. Load Telegram Contacts
+    const savedTg = localStorage.getItem('alsa_telegram_contacts');
+    if (savedTg) {
       try {
-        setCustomApps(JSON.parse(savedApps));
+        setTelegramContacts(JSON.parse(savedTg));
       } catch (e) {
-        console.error('Error loading custom apps:', e);
+        console.error('Error loading Telegram contacts:', e);
       }
     }
 
@@ -152,7 +212,7 @@ const [preferences, setPreferences] = useState({
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (user) {
         // Only save DB-compatible fields (voice_gender is localStorage only)
         const { error } = await supabase
@@ -178,6 +238,9 @@ const [preferences, setPreferences] = useState({
       localStorage.setItem('alsa_ai_response_style', preferences.ai_response_style);
       localStorage.setItem('alsa_voice_gender', preferences.voice_gender);
       localStorage.setItem('alsa_voice_enabled', String(preferences.voice_enabled));
+      // savePreferences function ke andar jahan localStorage.setItem ho rahe hain:
+      localStorage.setItem('alsa_whatsapp_contacts', JSON.stringify(whatsappContacts));
+      localStorage.setItem('alsa_telegram_contacts', JSON.stringify(telegramContacts));
 
       // Apply theme immediately
       applyTheme(preferences.theme);
@@ -201,7 +264,7 @@ const [preferences, setPreferences] = useState({
   const applyTheme = (theme: string) => {
     const root = document.documentElement;
     root.style.transition = 'background-color 0.3s ease, color 0.3s ease';
-    
+
     if (theme === 'dark') {
       root.classList.add('dark');
     } else if (theme === 'light') {
@@ -664,6 +727,64 @@ const [preferences, setPreferences] = useState({
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Messaging Automation (WhatsApp & Telegram)</CardTitle>
+                <CardDescription>Save contacts for AI automation</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+
+                {/* WhatsApp Section */}
+                <div className="space-y-4">
+                  <Label className="text-primary font-bold">WhatsApp Contacts (Name & Number)</Label>
+                  {whatsappContacts.map((c) => (
+                    <div key={c.id} className="flex gap-2 items-center">
+                      <Input value={`${c.name} - ${c.value}`} readOnly className="flex-1" />
+                      <Button variant="ghost" size="icon" onClick={() => setWhatsappContacts(whatsappContacts.filter(i => i.id !== c.id))}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                  <div className="flex gap-2 bg-secondary/20 p-2 rounded-md">
+                    <Input placeholder="Eisa" value={newWpName} onChange={e => setNewWpName(e.target.value)} />
+                    <Input placeholder="91..." value={newWpNum} onChange={e => setNewWpNum(e.target.value)} />
+                    <Button onClick={() => {
+                      if (newWpName && newWpNum) {
+                        setWhatsappContacts([...whatsappContacts, { id: Date.now().toString(), name: newWpName, value: newWpNum }]);
+                        setNewWpName(''); setNewWpNum('');
+                      }
+                    }}><Plus /></Button>
+                  </div>
+                </div>
+
+                <div className="border-t border-border my-4" /> {/* Separator Line */}
+
+                {/* Telegram Section */}
+                <div className="space-y-4">
+                  <Label className="text-primary font-bold">Telegram Contacts (Name & Link/Username)</Label>
+                  {telegramContacts.map((c) => (
+                    <div key={c.id} className="flex gap-2 items-center">
+                      <Input value={`${c.name} - ${c.value}`} readOnly className="flex-1" />
+                      <Button variant="ghost" size="icon" onClick={() => setTelegramContacts(telegramContacts.filter(i => i.id !== c.id))}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                  <div className="flex gap-2 bg-secondary/20 p-2 rounded-md">
+                    <Input placeholder="Eisa" value={newTgName} onChange={e => setNewTgName(e.target.value)} />
+                    <Input placeholder="https://web.telegram.org/k/#@..." value={newTgLink} onChange={e => setNewTgLink(e.target.value)} />
+                    <Button onClick={() => {
+                      if (newTgName && newTgLink) {
+                        setTelegramContacts([...telegramContacts, { id: Date.now().toString(), name: newTgName, value: newTgLink }]);
+                        setNewTgName(''); setNewTgLink('');
+                      }
+                    }}><Plus /></Button>
+                  </div>
+                </div>
+
               </CardContent>
             </Card>
 
