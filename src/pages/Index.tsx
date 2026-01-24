@@ -7,7 +7,7 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
-import { checkBridgeConnection, executeSystemCommand, scanSystem, SystemScanResult, captureScreenshot, startScreenRecording, stopScreenRecording, parseNaturalLanguage, WEBSITES, createProject, createPowerPoint, createExcel, createDatabase, executePythonFile, executeCmdCommand, runCommand, checkInstallation, sendCommand, adbConnect, adbCommand, closeWindow, openFolder, runProject, createFolder, createTextFile, openWebsiteWithSearch, openCustomApp } from '@/utils/pcBridge';
+import { checkBridgeConnection, executeSystemCommand, scanSystem, SystemScanResult, captureScreenshot, startScreenRecording, stopScreenRecording, parseNaturalLanguage, WEBSITES, createProject, createPowerPoint, createExcel, createDatabase, executePythonFile, executeCmdCommand, runCommand, checkInstallation, sendCommand, adbConnect, adbCommand, closeWindow, openFolder, runProject, createFolder, createTextFile, openWebsiteWithSearch, openCustomApp, sendTelegramMsg, sendWhatsAppMsg } from '@/utils/pcBridge';
 import ChatMessage from '@/components/ChatMessage';
 import MemoryManager from '@/components/MemoryManager';
 import TranscriptionFeedback from '@/components/TranscriptionFeedback';
@@ -825,10 +825,10 @@ const Index = () => {
               // --- YAHAN DEKH: Beech mein extra '}' nahi hona chahiye ---
 
             } else if (parsed.type === 'telegram_msg') {
-              const result = await sendCommand(`telegram-msg`, { link: parsed.link, message: parsed.message });
+              const result = await sendTelegramMsg(parsed.link, parsed.message);
               const statusMsg = result.success
                 ? `✅ Telegram message sent to ${parsed.link}`
-                : `❌ Failed to send Telegram: ${result.message}`;
+                : `❌ Failed to send Telegram: ${result.message || result.error}`;
               accumulatedText += `\n\n${statusMsg}`;
               setMessages(prev => {
                 const newMessages = [...prev];
@@ -839,10 +839,10 @@ const Index = () => {
               speak(result.success ? "Telegram message sent" : "Failed to send message");
 
             } else if (parsed.type === 'whatsapp_msg') {
-              const result = await sendCommand(`whatsapp-msg`, { phone: parsed.phone, message: parsed.message });
+              const result = await sendWhatsAppMsg(parsed.phone, parsed.message);
               const statusMsg = result.success
                 ? `✅ WhatsApp message sent to ${parsed.phone}`
-                : `❌ Failed to send WhatsApp: ${result.message}`;
+                : `❌ Failed to send WhatsApp: ${result.message || result.error}`;
               accumulatedText += `\n\n${statusMsg}`;
               setMessages(prev => {
                 const newMessages = [...prev];
