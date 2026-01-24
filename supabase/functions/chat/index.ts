@@ -374,6 +374,13 @@ MULTILINGUAL SUPPORT:
 - If user speaks in Hindi/Urdu/Hinglish, respond naturally in that language
 - For code and technical content, use English but explain in user's preferred language
 
+- CONTACTS LOOKUP: If a user asks to message a specific person (e.g., "Eisa"), check the contact lists (telegramContacts/whatsappContacts) provided in the context.
+- TOOL CHOICE: If you find a matching name in telegramContacts, use 'send_telegram_message' with the saved link. If in whatsappContacts, use 'send_whatsapp_message' with the phone number.
+- FALLBACK: If the name is not found, politely ask the user for the phone number or Telegram link.
+// TELEGRAM & WHATSAPP CONTACTS (from Settings):
+${telegramContacts ? `Telegram Contacts: ${JSON.stringify(telegramContacts)}` : 'No Telegram contacts saved.'}
+${whatsappContacts ? `WhatsApp Contacts: ${JSON.stringify(whatsappContacts)}` : 'No WhatsApp contacts saved.'}
+
 RESPONSE STYLE:
 - Match the user's language preference
 - When providing code, use markdown code blocks with language identifiers
