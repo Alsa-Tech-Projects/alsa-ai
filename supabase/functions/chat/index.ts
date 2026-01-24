@@ -409,6 +409,36 @@ PERSONALITY MODE (from Settings): ${ai_response_style || 'balanced'}
       {
         type: "function",
         function: {
+          name: "send_whatsapp_message",
+          description: "Send a WhatsApp message to a contact using their phone number. Use this tool when the user specifically mentions sending a message on WhatsApp.",
+          parameters: {
+            type: "object",
+            properties: {
+              phone: { type: "string", description: "The phone number with country code (e.g., +919876543210)" },
+              message: { type: "string", description: "The message content to be sent" }
+            },
+            required: ["phone", "message"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "send_telegram_message",
+          description: "Send a Telegram message using a profile or chat link. Use this tool when the user mentions sending a message on Telegram.",
+          parameters: {
+            type: "object",
+            properties: {
+              link: { type: "string", description: "The Telegram profile/chat link (e.g., https://web.telegram.org/k/#@username)" },
+              message: { type: "string", description: "The message content to be sent" }
+            },
+            required: ["link", "message"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
           name: "play_music",
           description: "Play a song from YouTube in the background. Use when user asks to play music.",
           parameters: {
@@ -1123,6 +1153,37 @@ PERSONALITY MODE (from Settings): ${ai_response_style || 'balanced'}
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'system_power', action: args.action })}\n\n`));
               } else if (toolCall.function.name === 'adb_connect') {
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'adb_connect', ip_address: args.ip_address || '' })}\n\n`));
+              type: args.project_type || 'html',
+                  description: args.description,
+                });
+                controller.enqueue(
+                  encoder.encode(
+                    `data: ${JSON.stringify({
+                      type: 'create_project',
+                      project_path: args.project_path,
+                      files,
+                    })}\n\n`
+                  )
+                );
+              } else if (toolCall.function.name === 'create_powerpoint') {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'create_powerpoint', file_path: args.file_path, title: args.title, slides: args.slides, theme: args.theme || 'professional' })}\n\n`));
+              } else if (toolCall.function.name === 'create_excel') {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'create_excel', file_path: args.file_path, sheet_name: args.sheet_name, headers: args.headers, data: args.data, formatting: args.formatting })}\n\n`));
+              } else if (toolCall.function.name === 'create_database') {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'create_database', file_path: args.file_path, db_type: args.db_type, tables: args.tables })}\n\n`));
+              } else if (toolCall.function.name === 'check_software') {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'check_software', software: args.software })}\n\n`));
+              } else if (toolCall.function.name === 'system_power_command') {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'system_power', action: args.action })}\n\n`));
+              } else if (toolCall.function.name === 'adb_connect') {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'adb_connect', ip_address: args.ip_address || '' })}\n\n`));
+              } else if (toolCall.function.name === 'send_whatsapp_message') {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'whatsapp_msg', phone: args.phone, message: args.message })}\n\n`));
+              } else if (toolCall.function.name === 'send_telegram_message') {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'telegram_msg', link: args.link, message: args.message })}\n\n`));
+              } else if (toolCall.function.name === 'adb_command') {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'adb_command', command: args.command })}\n\n`));
+              } else if (toolCall.function.name === 'capture_screenshot') {
               } else if (toolCall.function.name === 'adb_command') {
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'adb_command', command: args.command })}\n\n`));
               } else if (toolCall.function.name === 'capture_screenshot') {
