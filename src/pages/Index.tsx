@@ -808,6 +808,7 @@ const Index = () => {
                 return newMessages;
               });
               speak(result.message);
+              // ... run_application wala block
             } else if (parsed.type === 'run_application') {
               const result = await runCommand(parsed.command);
               const statusMsg = result.success
@@ -821,15 +822,13 @@ const Index = () => {
                 return newMessages;
               });
 
-              // --- Ye wala part loop ke andar niche add karo ---
+              // --- YAHAN DEKH: Beech mein extra '}' nahi hona chahiye ---
 
             } else if (parsed.type === 'telegram_msg') {
-              // Ye function pcBridge.ts se call hoga
               const result = await sendCommand(`telegram-msg`, { link: parsed.link, message: parsed.message });
               const statusMsg = result.success
                 ? `✅ Telegram message sent to ${parsed.link}`
                 : `❌ Failed to send Telegram: ${result.message}`;
-
               accumulatedText += `\n\n${statusMsg}`;
               setMessages(prev => {
                 const newMessages = [...prev];
@@ -844,7 +843,6 @@ const Index = () => {
               const statusMsg = result.success
                 ? `✅ WhatsApp message sent to ${parsed.phone}`
                 : `❌ Failed to send WhatsApp: ${result.message}`;
-
               accumulatedText += `\n\n${statusMsg}`;
               setMessages(prev => {
                 const newMessages = [...prev];
@@ -853,480 +851,479 @@ const Index = () => {
                 return newMessages;
               });
               speak(result.success ? "WhatsApp message sent" : "Failed to send message");
+
+            } else if (parsed.type === 'capture_screenshot') {
+              const outputPaths = JSON.parse(localStorage.getItem('alsa_output_paths') || '{}');
+              const savePath = parsed.save_path || outputPaths.screenshot || undefined;
+              const result = await captureScreenshot(savePath, parsed.delay_seconds);
+              const statusMsg = result.success
+                ? `✅ Screenshot saved: ${result.path || savePath}`
+                : `❌ ${result.message}`;
+              accumulatedText += `\n\n${statusMsg}`;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
+              speak(result.success ? 'Screenshot captured' : 'Screenshot failed');
+            } else if (parsed.type === 'close_window') {
+              const result = await closeWindow(parsed.window_name);
+              const statusMsg = result.success
+                ? `✅ Closed ${parsed.window_name}`
+                : `❌ ${result.message}`;
+              accumulatedText += `\n\n${statusMsg}`;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
+            } else if (parsed.type === 'check_software') {
+              const result = await checkInstallation(parsed.software);
+              const statusMsg = result.installed
+                ? `✅ ${parsed.software} is installed${result.version ? ` (${result.version})` : ''}`
+                : `❌ ${parsed.software} is not installed`;
+              accumulatedText += `\n\n${statusMsg}`;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
+            } else if (parsed.type === 'adb_connect') {
+              const result = await adbConnect(parsed.ip_address);
+              const statusMsg = result.success
+                ? `✅ ADB connected${parsed.ip_address ? ` to ${parsed.ip_address}` : ''}\n\`\`\`\n${result.output || ''}\n\`\`\``
+                : `❌ ADB connection failed`;
+              accumulatedText += `\n\n${statusMsg}`;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
+            } else if (parsed.type === 'adb_command') {
+              const result = await adbCommand(parsed.command);
+              const statusMsg = result.success
+                ? `✅ ADB command output:\n\`\`\`\n${result.output || 'No output'}\n\`\`\``
+                : `❌ ADB command failed`;
+              accumulatedText += `\n\n${statusMsg}`;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
+            } else if (parsed.type === 'run_project') {
+              // Ask user for confirmation before running
+              const confirmMsg = `Do you want me to run this ${parsed.project_type} project at ${parsed.project_path} on your local machine? I'll install dependencies and start the server.`;
+              accumulatedText += `\n\n${confirmMsg}`;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
+
+              // Execute project run
+              const result = await runProject(parsed.project_path, parsed.project_type);
+              const statusMsg = result.success
+                ? `✅ ${result.message}${result.output ? `\n\`\`\`\n${result.output}\n\`\`\`` : ''}`
+                : `❌ ${result.message}`;
+              accumulatedText += `\n\n${statusMsg}`;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
+              speak(result.success ? 'Project is running' : 'Failed to run project');
+            } else if (parsed.type === 'create_folder') {
+              const result = await createFolder(parsed.folder_path);
+              const statusMsg = result.success
+                ? `✅ Folder created: ${parsed.folder_path}`
+                : `❌ ${result.message}`;
+              accumulatedText += `\n\n${statusMsg}`;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
+              speak(result.success ? 'Folder created' : 'Failed to create folder');
+            } else if (parsed.type === 'create_text_file') {
+              const result = await createTextFile(parsed.file_path, parsed.content);
+              const statusMsg = result.success
+                ? `✅ File created: ${parsed.file_path}`
+                : `❌ ${result.message}`;
+              accumulatedText += `\n\n${statusMsg}`;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
+              speak(result.success ? 'File created' : 'Failed to create file');
+            } else if (parsed.type === 'open_website_with_search') {
+              openWebsiteWithSearch(parsed.platform, parsed.search_query);
+              const statusMsg = `✅ Opening ${parsed.platform} with search: "${parsed.search_query}"`;
+              accumulatedText += `\n\n${statusMsg}`;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
+              speak(`Opening ${parsed.platform} with search ${parsed.search_query}`);
+            } else if (parsed.type === 'open_custom_app') {
+              const result = await openCustomApp(parsed.app_name);
+              const statusMsg = result.success
+                ? `✅ Opened ${parsed.app_name}`
+                : `❌ ${result.message}`;
+              accumulatedText += `\n\n${statusMsg}`;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
+              speak(result.success ? `Opened ${parsed.app_name}` : 'Failed to open app');
             }
-
-          } else if (parsed.type === 'capture_screenshot') {
-            const outputPaths = JSON.parse(localStorage.getItem('alsa_output_paths') || '{}');
-            const savePath = parsed.save_path || outputPaths.screenshot || undefined;
-            const result = await captureScreenshot(savePath, parsed.delay_seconds);
-            const statusMsg = result.success
-              ? `✅ Screenshot saved: ${result.path || savePath}`
-              : `❌ ${result.message}`;
-            accumulatedText += `\n\n${statusMsg}`;
-            setMessages(prev => {
-              const newMessages = [...prev];
-              const lastMsg = newMessages[newMessages.length - 1];
-              if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-              return newMessages;
-            });
-            speak(result.success ? 'Screenshot captured' : 'Screenshot failed');
-          } else if (parsed.type === 'close_window') {
-            const result = await closeWindow(parsed.window_name);
-            const statusMsg = result.success
-              ? `✅ Closed ${parsed.window_name}`
-              : `❌ ${result.message}`;
-            accumulatedText += `\n\n${statusMsg}`;
-            setMessages(prev => {
-              const newMessages = [...prev];
-              const lastMsg = newMessages[newMessages.length - 1];
-              if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-              return newMessages;
-            });
-          } else if (parsed.type === 'check_software') {
-            const result = await checkInstallation(parsed.software);
-            const statusMsg = result.installed
-              ? `✅ ${parsed.software} is installed${result.version ? ` (${result.version})` : ''}`
-              : `❌ ${parsed.software} is not installed`;
-            accumulatedText += `\n\n${statusMsg}`;
-            setMessages(prev => {
-              const newMessages = [...prev];
-              const lastMsg = newMessages[newMessages.length - 1];
-              if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-              return newMessages;
-            });
-          } else if (parsed.type === 'adb_connect') {
-            const result = await adbConnect(parsed.ip_address);
-            const statusMsg = result.success
-              ? `✅ ADB connected${parsed.ip_address ? ` to ${parsed.ip_address}` : ''}\n\`\`\`\n${result.output || ''}\n\`\`\``
-              : `❌ ADB connection failed`;
-            accumulatedText += `\n\n${statusMsg}`;
-            setMessages(prev => {
-              const newMessages = [...prev];
-              const lastMsg = newMessages[newMessages.length - 1];
-              if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-              return newMessages;
-            });
-          } else if (parsed.type === 'adb_command') {
-            const result = await adbCommand(parsed.command);
-            const statusMsg = result.success
-              ? `✅ ADB command output:\n\`\`\`\n${result.output || 'No output'}\n\`\`\``
-              : `❌ ADB command failed`;
-            accumulatedText += `\n\n${statusMsg}`;
-            setMessages(prev => {
-              const newMessages = [...prev];
-              const lastMsg = newMessages[newMessages.length - 1];
-              if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-              return newMessages;
-            });
-          } else if (parsed.type === 'run_project') {
-            // Ask user for confirmation before running
-            const confirmMsg = `Do you want me to run this ${parsed.project_type} project at ${parsed.project_path} on your local machine? I'll install dependencies and start the server.`;
-            accumulatedText += `\n\n${confirmMsg}`;
-            setMessages(prev => {
-              const newMessages = [...prev];
-              const lastMsg = newMessages[newMessages.length - 1];
-              if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-              return newMessages;
-            });
-
-            // Execute project run
-            const result = await runProject(parsed.project_path, parsed.project_type);
-            const statusMsg = result.success
-              ? `✅ ${result.message}${result.output ? `\n\`\`\`\n${result.output}\n\`\`\`` : ''}`
-              : `❌ ${result.message}`;
-            accumulatedText += `\n\n${statusMsg}`;
-            setMessages(prev => {
-              const newMessages = [...prev];
-              const lastMsg = newMessages[newMessages.length - 1];
-              if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-              return newMessages;
-            });
-            speak(result.success ? 'Project is running' : 'Failed to run project');
-          } else if (parsed.type === 'create_folder') {
-            const result = await createFolder(parsed.folder_path);
-            const statusMsg = result.success
-              ? `✅ Folder created: ${parsed.folder_path}`
-              : `❌ ${result.message}`;
-            accumulatedText += `\n\n${statusMsg}`;
-            setMessages(prev => {
-              const newMessages = [...prev];
-              const lastMsg = newMessages[newMessages.length - 1];
-              if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-              return newMessages;
-            });
-            speak(result.success ? 'Folder created' : 'Failed to create folder');
-          } else if (parsed.type === 'create_text_file') {
-            const result = await createTextFile(parsed.file_path, parsed.content);
-            const statusMsg = result.success
-              ? `✅ File created: ${parsed.file_path}`
-              : `❌ ${result.message}`;
-            accumulatedText += `\n\n${statusMsg}`;
-            setMessages(prev => {
-              const newMessages = [...prev];
-              const lastMsg = newMessages[newMessages.length - 1];
-              if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-              return newMessages;
-            });
-            speak(result.success ? 'File created' : 'Failed to create file');
-          } else if (parsed.type === 'open_website_with_search') {
-            openWebsiteWithSearch(parsed.platform, parsed.search_query);
-            const statusMsg = `✅ Opening ${parsed.platform} with search: "${parsed.search_query}"`;
-            accumulatedText += `\n\n${statusMsg}`;
-            setMessages(prev => {
-              const newMessages = [...prev];
-              const lastMsg = newMessages[newMessages.length - 1];
-              if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-              return newMessages;
-            });
-            speak(`Opening ${parsed.platform} with search ${parsed.search_query}`);
-          } else if (parsed.type === 'open_custom_app') {
-            const result = await openCustomApp(parsed.app_name);
-            const statusMsg = result.success
-              ? `✅ Opened ${parsed.app_name}`
-              : `❌ ${result.message}`;
-            accumulatedText += `\n\n${statusMsg}`;
-            setMessages(prev => {
-              const newMessages = [...prev];
-              const lastMsg = newMessages[newMessages.length - 1];
-              if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-              return newMessages;
-            });
-            speak(result.success ? `Opened ${parsed.app_name}` : 'Failed to open app');
+          } catch (e) {
+            console.error('Parse error:', e);
           }
-        } catch (e) {
-          console.error('Parse error:', e);
         }
       }
-    }
 
       setIsTyping(false);
-    setBackupKeyActive(false);
+      setBackupKeyActive(false);
 
-    if (accumulatedText.trim()) {
-      speak(accumulatedText);
-      if (user) {
-        await saveConversation(userMessage, { role: 'assistant', content: accumulatedText });
+      if (accumulatedText.trim()) {
+        speak(accumulatedText);
+        if (user) {
+          await saveConversation(userMessage, { role: 'assistant', content: accumulatedText });
+        }
       }
+    } catch (error) {
+      console.error('Chat error:', error);
+      setIsTyping(false);
+      setBackupKeyActive(false);
+
+      const errorMessage = `❌ I'm having trouble responding right now. Please try again or contact support at support@alsa-ai.in for assistance.`;
+      setMessages(prev => [...prev, { role: 'assistant', content: errorMessage }]);
+
+      toast({
+        title: "AI Response Error",
+        description: "Something went wrong. Contact support@alsa-ai.in if the issue persists.",
+        variant: "destructive"
+      });
     }
-  } catch (error) {
-    console.error('Chat error:', error);
-    setIsTyping(false);
-    setBackupKeyActive(false);
+  };
 
-    const errorMessage = `❌ I'm having trouble responding right now. Please try again or contact support at support@alsa-ai.in for assistance.`;
-    setMessages(prev => [...prev, { role: 'assistant', content: errorMessage }]);
+  const hasMessages = messages.length > 0;
 
-    toast({
-      title: "AI Response Error",
-      description: "Something went wrong. Contact support@alsa-ai.in if the issue persists.",
-      variant: "destructive"
-    });
-  }
-};
-
-const hasMessages = messages.length > 0;
-
-// Mobile UI
-if (isMobile) {
-  return (
-    <div className="flex flex-col h-screen w-screen bg-[#0d0d0d] text-white overflow-hidden">
-      {/* Mobile Top Bar */}
-      <div className="flex items-center justify-between p-3 border-b border-white/5 bg-black/40 backdrop-blur-xl">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setShowSidebar(true)}
-          className="text-white/60"
-        >
-          <Menu className="w-5 h-5" />
-        </Button>
-        <span className="text-sm font-bold tracking-wider text-blue-400">ALSA</span>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setShowRightPanel(true)}
-          className="text-white/60"
-        >
-          <Settings className="w-5 h-5" />
-        </Button>
-      </div>
-
-      {/* Chat Area */}
-      <ScrollArea className="flex-1">
-        <div className="p-4 space-y-4">
-          {!hasMessages && (
-            <div className="flex flex-col items-center justify-center h-[60vh]">
-              <h1 className="text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20">
-                ALSA CORE
-              </h1>
-              <p className="text-blue-500/50 font-mono text-[8px] uppercase tracking-[0.3em] mt-2">
-                Neural Link Active
-              </p>
-            </div>
-          )}
-          {messages.map((m, i) => (
-            <ChatMessage key={i} role={m.role} content={m.content} />
-          ))}
-          {isTyping && (
-            <div className="flex items-center gap-2 ml-4">
-              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></span>
-            </div>
-          )}
-          <div ref={messagesEndRef} className="h-4" />
+  // Mobile UI
+  if (isMobile) {
+    return (
+      <div className="flex flex-col h-screen w-screen bg-[#0d0d0d] text-white overflow-hidden">
+        {/* Mobile Top Bar */}
+        <div className="flex items-center justify-between p-3 border-b border-white/5 bg-black/40 backdrop-blur-xl">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowSidebar(true)}
+            className="text-white/60"
+          >
+            <Menu className="w-5 h-5" />
+          </Button>
+          <span className="text-sm font-bold tracking-wider text-blue-400">ALSA</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowRightPanel(true)}
+            className="text-white/60"
+          >
+            <Settings className="w-5 h-5" />
+          </Button>
         </div>
-      </ScrollArea>
 
-      {/* Mobile Input */}
-      <div className="p-3 border-t border-white/5 bg-black/60 backdrop-blur-xl">
-        {uploadedFiles.length > 0 && (
-          <div className="flex gap-2 mb-2 flex-wrap">
-            {uploadedFiles.map((f, i) => (
-              <span key={i} className="text-[10px] bg-white/10 px-2 py-1 rounded-full flex items-center gap-1">
-                {f.name.slice(0, 15)}...
-                <X className="w-3 h-3 cursor-pointer" onClick={() => setUploadedFiles(prev => prev.filter((_, idx) => idx !== i))} />
-              </span>
+        {/* Chat Area */}
+        <ScrollArea className="flex-1">
+          <div className="p-4 space-y-4">
+            {!hasMessages && (
+              <div className="flex flex-col items-center justify-center h-[60vh]">
+                <h1 className="text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20">
+                  ALSA CORE
+                </h1>
+                <p className="text-blue-500/50 font-mono text-[8px] uppercase tracking-[0.3em] mt-2">
+                  Neural Link Active
+                </p>
+              </div>
+            )}
+            {messages.map((m, i) => (
+              <ChatMessage key={i} role={m.role} content={m.content} />
             ))}
+            {isTyping && (
+              <div className="flex items-center gap-2 ml-4">
+                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></span>
+              </div>
+            )}
+            <div ref={messagesEndRef} className="h-4" />
+          </div>
+        </ScrollArea>
+
+        {/* Mobile Input */}
+        <div className="p-3 border-t border-white/5 bg-black/60 backdrop-blur-xl">
+          {uploadedFiles.length > 0 && (
+            <div className="flex gap-2 mb-2 flex-wrap">
+              {uploadedFiles.map((f, i) => (
+                <span key={i} className="text-[10px] bg-white/10 px-2 py-1 rounded-full flex items-center gap-1">
+                  {f.name.slice(0, 15)}...
+                  <X className="w-3 h-3 cursor-pointer" onClick={() => setUploadedFiles(prev => prev.filter((_, idx) => idx !== i))} />
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowFileUpload(true)}
+              className="text-white/40"
+            >
+              <Paperclip className="w-4 h-4" />
+            </Button>
+            <Input
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+              placeholder="Message ALSA..."
+              className="flex-1 bg-white/5 border-white/10 text-white text-sm"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleVoice}
+              className={isListening ? 'text-red-400' : 'text-white/40'}
+            >
+              <Mic className="w-4 h-4" />
+            </Button>
+            <Button
+              size="icon"
+              onClick={() => handleSubmit()}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Mobile Sidebar Overlay */}
+        {showSidebar && (
+          <div className="fixed inset-0 z-50 bg-black/80" onClick={() => setShowSidebar(false)}>
+            <div className="w-72 h-full" onClick={e => e.stopPropagation()}>
+              <Sidebar
+                bridgeConnected={bridgeConnected}
+                onNewChat={handleNewConversation}
+                onOpenMemory={() => setShowMemoryManager(true)}
+                currentConversationId={currentConversationId}
+              />
+            </div>
           </div>
         )}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowFileUpload(true)}
-            className="text-white/40"
-          >
-            <Paperclip className="w-4 h-4" />
-          </Button>
-          <Input
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
-            placeholder="Message ALSA..."
-            className="flex-1 bg-white/5 border-white/10 text-white text-sm"
-          />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleVoice}
-            className={isListening ? 'text-red-400' : 'text-white/40'}
-          >
-            <Mic className="w-4 h-4" />
-          </Button>
-          <Button
-            size="icon"
-            onClick={() => handleSubmit()}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <Send className="w-4 h-4" />
-          </Button>
+
+        {/* Mobile Right Panel Overlay */}
+        {showRightPanel && (
+          <div className="fixed inset-0 z-50 bg-black/80" onClick={() => setShowRightPanel(false)}>
+            <div className="w-72 h-full ml-auto" onClick={e => e.stopPropagation()}>
+              <RightPanel
+                user={user}
+                bridgeConnected={bridgeConnected}
+                isListening={isListening}
+                isSpeaking={isSpeaking}
+                toggleVoice={toggleVoice}
+                onOpenMemory={() => setShowMemoryManager(true)}
+                backupKeyActive={backupKeyActive}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* File Upload Dialog */}
+        <Dialog open={showFileUpload} onOpenChange={setShowFileUpload}>
+          <DialogContent className="bg-[#0a0a0a] border-white/10 text-white">
+            <DialogHeader>
+              <DialogTitle>Upload Files</DialogTitle>
+            </DialogHeader>
+            <FileUpload onFilesSelected={handleFilesSelected} maxFiles={10} />
+          </DialogContent>
+        </Dialog>
+
+        {/* Memory Manager */}
+        <Dialog open={showMemoryManager} onOpenChange={setShowMemoryManager}>
+          <DialogContent className="bg-[#0a0a0a] border-white/10 text-white max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-xs uppercase tracking-[0.3em] text-blue-500 font-bold">Neural Data Bank</DialogTitle>
+            </DialogHeader>
+            <MemoryManager />
+          </DialogContent>
+        </Dialog>
+
+        {isListening && (
+          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50">
+            <TranscriptionFeedback transcript={transcript} isListening={isListening} />
+          </div>
+        )}
+
+        <MusicPlayer song={currentSong} onClose={() => setCurrentSong(null)} />
+        <GameLauncher game={currentGame as any} onClose={() => setCurrentGame(null)} />
+      </div>
+    );
+  }
+  // ================= DESKTOP UI =================
+  return (
+    <div className="flex h-screen w-screen bg-[#0d0d0d] text-white overflow-hidden">
+      {/* ========== SIDEBAR / LEFT PANEL ========= */}
+      <Sidebar
+        bridgeConnected={bridgeConnected}
+        onNewChat={handleNewConversation}
+        onOpenMemory={() => setShowMemoryManager(true)}
+        onToggleBridge={toggleBridgeConnection}
+        currentConversationId={currentConversationId}
+      />
+
+      {/* ========== CENTER CHAT AREA ========= */}
+      <div className="flex-[1_1_0%] min-w-0 relative flex flex-col overflow-hidden">
+        {/* Background Gradient */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(17,24,39,1)_0%,rgba(0,0,0,1)_100%)]" />
+
+        <div className="relative z-10 flex-1 flex flex-col overflow-hidden">
+          {/* EMPTY STATE */}
+          {!messages.length ? (
+            <div className="flex-1 flex flex-col items-center justify-center px-6">
+              <h1 className="text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20">
+                ALSA CORE
+              </h1>
+              <p className="mt-3 text-blue-500/50 font-mono text-[10px] tracking-[0.5em] uppercase">
+                From Chat To Execution Version1
+              </p>
+
+              <div className="mt-14 w-full max-w-2xl">
+                <div className="flex items-center bg-black/50 border border-white/10 rounded-2xl px-6 py-4 backdrop-blur-xl">
+                  <Input
+                    ref={inputRef}
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+                    placeholder="Enter Command..."
+                    className="bg-transparent border-none text-white text-xl flex-1 focus-visible:ring-0"
+                  />
+                  <Send
+                    className="w-6 h-6 cursor-pointer hover:text-blue-400 transition-colors"
+                    onClick={() => handleSubmit()}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* CHAT MESSAGES */}
+              <ScrollArea className="flex-1 px-6">
+                <div className="max-w-5xl mx-auto py-12 space-y-10">
+                  {messages.map((m, i) => (
+                    <ChatMessage key={i} role={m.role} content={m.content} />
+                  ))}
+
+                  {isTyping && (
+                    <div className="flex gap-2 ml-12">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" />
+                      <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                      <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              </ScrollArea>
+
+              {/* INPUT BAR (DURING CHAT) */}
+              <div className="p-6 bg-gradient-to-t from-black via-black/80 to-transparent">
+                <div className="max-w-5xl mx-auto flex items-center bg-[#1a1a1a]/80 border border-white/10 rounded-2xl px-5 py-3 backdrop-blur-xl">
+                  <Plus
+                    className="w-5 h-5 text-white/30 hover:text-white cursor-pointer"
+                    onClick={() => setShowFileUpload(true)}
+                  />
+                  <Input
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+                    placeholder="Message ALSA..."
+                    className="bg-transparent border-none flex-1 px-4 text-sm focus-visible:ring-0"
+                  />
+                  <Send
+                    className="w-5 h-5 text-black bg-white rounded-full p-1 cursor-pointer hover:scale-110 transition"
+                    onClick={() => handleSubmit()}
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Mobile Sidebar Overlay */}
-      {showSidebar && (
-        <div className="fixed inset-0 z-50 bg-black/80" onClick={() => setShowSidebar(false)}>
-          <div className="w-72 h-full" onClick={e => e.stopPropagation()}>
-            <Sidebar
-              bridgeConnected={bridgeConnected}
-              onNewChat={handleNewConversation}
-              onOpenMemory={() => setShowMemoryManager(true)}
-              currentConversationId={currentConversationId}
-            />
-          </div>
-        </div>
-      )}
+      {/* ========== RIGHT PANEL ========= */}
+      <div className={`shrink-0 border-l border-white/5 bg-black/40 backdrop-blur-md transition-all duration-300 ${rightPanelCollapsed ? 'w-[50px]' : 'w-[260px]'}`}>
+        <RightPanel
+          user={user}
+          bridgeConnected={bridgeConnected}
+          isListening={isListening}
+          isSpeaking={isSpeaking}
+          toggleVoice={toggleVoice}
+          onOpenMemory={() => setShowMemoryManager(true)}
+          backupKeyActive={backupKeyActive}
+          isCollapsed={rightPanelCollapsed}
+          onToggleCollapse={() => setRightPanelCollapsed(!rightPanelCollapsed)}
+        />
+      </div>
 
-      {/* Mobile Right Panel Overlay */}
-      {showRightPanel && (
-        <div className="fixed inset-0 z-50 bg-black/80" onClick={() => setShowRightPanel(false)}>
-          <div className="w-72 h-full ml-auto" onClick={e => e.stopPropagation()}>
-            <RightPanel
-              user={user}
-              bridgeConnected={bridgeConnected}
-              isListening={isListening}
-              isSpeaking={isSpeaking}
-              toggleVoice={toggleVoice}
-              onOpenMemory={() => setShowMemoryManager(true)}
-              backupKeyActive={backupKeyActive}
-            />
-          </div>
-        </div>
-      )}
+      {/* ========== ALL MODALS & OVERLAYS ========= */}
 
-      {/* File Upload Dialog */}
-      <Dialog open={showFileUpload} onOpenChange={setShowFileUpload}>
-        <DialogContent className="bg-[#0a0a0a] border-white/10 text-white">
-          <DialogHeader>
-            <DialogTitle>Upload Files</DialogTitle>
-          </DialogHeader>
-          <FileUpload onFilesSelected={handleFilesSelected} maxFiles={10} />
-        </DialogContent>
-      </Dialog>
-
-      {/* Memory Manager */}
+      {/* Memory Manager Modal */}
       <Dialog open={showMemoryManager} onOpenChange={setShowMemoryManager}>
         <DialogContent className="bg-[#0a0a0a] border-white/10 text-white max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xs uppercase tracking-[0.3em] text-blue-500 font-bold">Neural Data Bank</DialogTitle>
+            <DialogTitle className="text-xs tracking-[0.3em] uppercase text-blue-500">
+              Neural Data Bank
+            </DialogTitle>
           </DialogHeader>
           <MemoryManager />
         </DialogContent>
       </Dialog>
 
+      {/* File Upload Modal */}
+      <Dialog open={showFileUpload} onOpenChange={setShowFileUpload}>
+        <DialogContent className="bg-[#0a0a0a] border-white/10 text-white">
+          <FileUpload onFilesSelected={handleFilesSelected} maxFiles={10} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Players & Tools */}
+      <MusicPlayer song={currentSong} onClose={() => setCurrentSong(null)} />
+      <GameLauncher game={currentGame as any} onClose={() => setCurrentGame(null)} />
+
+      {/* Reminder Notification System */}
+      <ReminderNotification userId={user?.id || null} />
+
+      {/* Voice Overlay */}
       {isListening && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50">
+        <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-50">
           <TranscriptionFeedback transcript={transcript} isListening={isListening} />
         </div>
       )}
-
-      <MusicPlayer song={currentSong} onClose={() => setCurrentSong(null)} />
-      <GameLauncher game={currentGame as any} onClose={() => setCurrentGame(null)} />
     </div>
   );
-}
-// ================= DESKTOP UI =================
-return (
-  <div className="flex h-screen w-screen bg-[#0d0d0d] text-white overflow-hidden">
-    {/* ========== SIDEBAR / LEFT PANEL ========= */}
-    <Sidebar
-      bridgeConnected={bridgeConnected}
-      onNewChat={handleNewConversation}
-      onOpenMemory={() => setShowMemoryManager(true)}
-      onToggleBridge={toggleBridgeConnection}
-      currentConversationId={currentConversationId}
-    />
-
-    {/* ========== CENTER CHAT AREA ========= */}
-    <div className="flex-[1_1_0%] min-w-0 relative flex flex-col overflow-hidden">
-      {/* Background Gradient */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(17,24,39,1)_0%,rgba(0,0,0,1)_100%)]" />
-
-      <div className="relative z-10 flex-1 flex flex-col overflow-hidden">
-        {/* EMPTY STATE */}
-        {!messages.length ? (
-          <div className="flex-1 flex flex-col items-center justify-center px-6">
-            <h1 className="text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20">
-              ALSA CORE
-            </h1>
-            <p className="mt-3 text-blue-500/50 font-mono text-[10px] tracking-[0.5em] uppercase">
-              From Chat To Execution Version1
-            </p>
-
-            <div className="mt-14 w-full max-w-2xl">
-              <div className="flex items-center bg-black/50 border border-white/10 rounded-2xl px-6 py-4 backdrop-blur-xl">
-                <Input
-                  ref={inputRef}
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
-                  placeholder="Enter Command..."
-                  className="bg-transparent border-none text-white text-xl flex-1 focus-visible:ring-0"
-                />
-                <Send
-                  className="w-6 h-6 cursor-pointer hover:text-blue-400 transition-colors"
-                  onClick={() => handleSubmit()}
-                />
-              </div>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* CHAT MESSAGES */}
-            <ScrollArea className="flex-1 px-6">
-              <div className="max-w-5xl mx-auto py-12 space-y-10">
-                {messages.map((m, i) => (
-                  <ChatMessage key={i} role={m.role} content={m.content} />
-                ))}
-
-                {isTyping && (
-                  <div className="flex gap-2 ml-12">
-                    <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" />
-                    <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                    <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-            </ScrollArea>
-
-            {/* INPUT BAR (DURING CHAT) */}
-            <div className="p-6 bg-gradient-to-t from-black via-black/80 to-transparent">
-              <div className="max-w-5xl mx-auto flex items-center bg-[#1a1a1a]/80 border border-white/10 rounded-2xl px-5 py-3 backdrop-blur-xl">
-                <Plus
-                  className="w-5 h-5 text-white/30 hover:text-white cursor-pointer"
-                  onClick={() => setShowFileUpload(true)}
-                />
-                <Input
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
-                  placeholder="Message ALSA..."
-                  className="bg-transparent border-none flex-1 px-4 text-sm focus-visible:ring-0"
-                />
-                <Send
-                  className="w-5 h-5 text-black bg-white rounded-full p-1 cursor-pointer hover:scale-110 transition"
-                  onClick={() => handleSubmit()}
-                />
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-
-    {/* ========== RIGHT PANEL ========= */}
-    <div className={`shrink-0 border-l border-white/5 bg-black/40 backdrop-blur-md transition-all duration-300 ${rightPanelCollapsed ? 'w-[50px]' : 'w-[260px]'}`}>
-      <RightPanel
-        user={user}
-        bridgeConnected={bridgeConnected}
-        isListening={isListening}
-        isSpeaking={isSpeaking}
-        toggleVoice={toggleVoice}
-        onOpenMemory={() => setShowMemoryManager(true)}
-        backupKeyActive={backupKeyActive}
-        isCollapsed={rightPanelCollapsed}
-        onToggleCollapse={() => setRightPanelCollapsed(!rightPanelCollapsed)}
-      />
-    </div>
-
-    {/* ========== ALL MODALS & OVERLAYS ========= */}
-
-    {/* Memory Manager Modal */}
-    <Dialog open={showMemoryManager} onOpenChange={setShowMemoryManager}>
-      <DialogContent className="bg-[#0a0a0a] border-white/10 text-white max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-xs tracking-[0.3em] uppercase text-blue-500">
-            Neural Data Bank
-          </DialogTitle>
-        </DialogHeader>
-        <MemoryManager />
-      </DialogContent>
-    </Dialog>
-
-    {/* File Upload Modal */}
-    <Dialog open={showFileUpload} onOpenChange={setShowFileUpload}>
-      <DialogContent className="bg-[#0a0a0a] border-white/10 text-white">
-        <FileUpload onFilesSelected={handleFilesSelected} maxFiles={10} />
-      </DialogContent>
-    </Dialog>
-
-    {/* Players & Tools */}
-    <MusicPlayer song={currentSong} onClose={() => setCurrentSong(null)} />
-    <GameLauncher game={currentGame as any} onClose={() => setCurrentGame(null)} />
-
-    {/* Reminder Notification System */}
-    <ReminderNotification userId={user?.id || null} />
-
-    {/* Voice Overlay */}
-    {isListening && (
-      <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-50">
-        <TranscriptionFeedback transcript={transcript} isListening={isListening} />
-      </div>
-    )}
-  </div>
-);
 
 };
 
