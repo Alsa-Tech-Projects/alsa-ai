@@ -17,6 +17,7 @@ interface Profile {
   bio: string | null;
 }
 
+// pure code logic
 const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
