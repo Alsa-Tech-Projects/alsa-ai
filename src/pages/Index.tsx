@@ -580,135 +580,55 @@ const Index = () => {
         return;
       }
     }
-
-    // Call AI with streaming via edge function
+// 3. AI STREAMING CALL
     try {
       setIsTyping(true);
-      const memory = getMemory();
-      const telegramContacts = JSON.parse(localStorage.getItem('telegramContacts') || '[]');
-      const whatsappContacts = JSON.parse(localStorage.getItem('whatsappContacts') || '[]');
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
 
-      // API endpoint
-      const apiEndpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+      if (!token) {
+        toast({ title: "Auth Error", description: "Please login again.", variant: "destructive" });
+        return;
+      }
 
-      const response = await fetch(apiEndpoint, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
-          messages: [...messages, userMessage].map(m => ({
-            role: m.role,
-            content: m.content,
-            files: m.files // Include file attachments for multimodal analysis
-          })),
-          memory,
-          telegramContacts: telegramContacts, // <--- Ye zaruri hai
-          whatsappContacts: whatsappContacts, // <--- Ye zaruri hai
-          conversationContext: getAIContext(), // Add conversation memory context
+          messages: [...messages, userMessage].map(m => ({ role: m.role, content: m.content })),
+          memory: getMemory(),
           ai_response_style: localStorage.getItem('alsa_ai_response_style') || 'balanced'
         })
       });
 
-      if (!response.ok) {
-        const errorStatus = response.status;
+      if (!response.ok) throw new Error('API Error');
 
-        // Try backup API key if available (for 429, 402, 500 errors)
-        if ([429, 402, 500, 503].includes(errorStatus)) {
-          const savedKeys = localStorage.getItem('alsa_backup_api_keys');
-          if (savedKeys) {
-            const keys = JSON.parse(savedKeys);
-            const geminiKey = keys.find((k: any) =>
-              k.name.toLowerCase().includes('gemini') ||
-              k.name.toLowerCase().includes('google')
-            );
-
-            if (geminiKey) {
-              setBackupKeyActive(true);
-              toast({
-                title: 'Using Backup API Key',
-                description: `Primary API unavailable (${errorStatus}). Using your backup Gemini key.`
-              });
-
-              // Call Gemini API directly with backup key
-              const backupResponse = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey.key}`,
-                {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    contents: [...messages, userMessage].map(m => ({
-                      role: m.role === 'assistant' ? 'model' : 'user',
-                      parts: [{ text: m.content }]
-                    })),
-                    generationConfig: { temperature: 0.7 }
-                  })
-                }
-              );
-
-              if (backupResponse.ok) {
-                const backupData = await backupResponse.json();
-                const backupText = backupData.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from backup API';
-
-                setMessages(prev => [...prev, { role: 'assistant', content: backupText }]);
-                speak(backupText);
-                setIsTyping(false);
-                setBackupKeyActive(false);
-
-                if (user) {
-                  await saveConversation(userMessage, { role: 'assistant', content: backupText });
-                }
-                return;
-              }
-            }
-          }
-        }
-
-        throw new Error(`API error: ${errorStatus}`);
-      }
-
-      if (!response.body) {
-        throw new Error('No response body');
-      }
-
-      const reader = response.body.getReader();
+      const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      let buffer = '';
       let accumulatedText = '';
 
       setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
-      while (true) {
+      while (reader) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
 
         for (let line of lines) {
-          line = line.trim();
-          if (!line || line.startsWith(':')) continue;
           if (!line.startsWith('data: ')) continue;
-
           const data = line.slice(6);
-          if (data === '[DONE]') {
-            setIsTyping(false);
-            break;
-          }
+          if (data === '[DONE]') break;
 
           try {
             const parsed = JSON.parse(data);
-            if (parsed.type === 'content' && parsed.delta) {
+            if (parsed.type === 'content') {
               accumulatedText += parsed.delta;
               setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') {
-                  lastMsg.content = accumulatedText;
-                }
-                return newMessages;
+                const newMsgs = [...prev];
+                newMsgs[newMsgs.length - 1].content = accumulatedText;
+                return newMsgs;
               });
             } else if (parsed.type === 'play_music') {
               setCurrentSong(parsed.song);
