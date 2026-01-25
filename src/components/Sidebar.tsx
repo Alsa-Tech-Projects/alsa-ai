@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-    Wifi, WifiOff, MessageSquare, BarChart3, Lightbulb,
-    Database, User, ChevronDown, ChevronRight,
-    Edit, Share2, Trash2, Settings, MoreVertical, Crown, Sparkles, Zap
+import { 
+  Wifi, WifiOff, MessageSquare, BarChart3, Lightbulb, 
+  Database, User as UserIcon, ChevronDown, ChevronRight, 
+  Edit, Share2, Trash2, Settings, MoreVertical, Crown, Sparkles, Zap 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
