@@ -97,7 +97,7 @@ const Profile = () => {
     
     toast({ 
       title: "IMAGE_LINKED", 
-      description: "Neural link established successfully.",
+      description: "Your Image Was Successfully Upload",
     });
 
   } catch (error: any) {
@@ -151,7 +151,7 @@ const Profile = () => {
         
         <div className="flex justify-between items-center mb-8">
           <Button variant="ghost" onClick={() => navigate('/')} className="hover:bg-cyan-500/10 text-cyan-400">
-            <ArrowLeft className="w-4 h-4 mr-2" /> DISCONNECT
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back
           </Button>
           <Button onClick={handleLogout} variant="destructive" className="bg-red-900/20 border border-red-500/50 hover:bg-red-600">
             <LogOut className="w-4 h-4 mr-2" /> LOGOUT
@@ -160,8 +160,8 @@ const Profile = () => {
 
         <Card className="bg-black/40 border-cyan-500/30 backdrop-blur-xl shadow-[0_0_20px_rgba(6,182,212,0.15)]">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold tracking-widest text-cyan-400">USER_PROFILE_v2.0</CardTitle>
-            <CardDescription className="text-cyan-700">Digital Identity Verification</CardDescription>
+            <CardTitle className="text-2xl font-bold tracking-widest text-cyan-400">Alsa Ai User Profile</CardTitle>
+            <CardDescription className="text-cyan-700">Your Profiles Picture Or About Yourself</CardDescription>
           </CardHeader>
           
           <CardContent className="space-y-8">
@@ -184,17 +184,17 @@ const Profile = () => {
                 {uploading && <div className="absolute inset-0 flex items-center justify-center bg-black/80"><Loader2 className="animate-spin text-cyan-400" /></div>}
               </div>
               <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
-              <p className="text-xs text-cyan-600 uppercase tracking-tighter">Tap to re-upload neural-link image</p>
+              <p className="text-xs text-cyan-600 uppercase tracking-tighter">Tap To Upload or Re-upload Image</p>
             </div>
 
             <div className="grid gap-6">
               <div className="space-y-2">
-                <Label className="text-cyan-500 text-xs uppercase tracking-widest">Access Key (Email)</Label>
+                <Label className="text-cyan-500 text-xs uppercase tracking-widest">Your email (This was not changed)</Label>
                 <Input value={user?.email || ''} disabled className="bg-cyan-950/20 border-cyan-900 text-cyan-100" />
               </div>
 
               <div className="space-y-2">
-                <Label className="text-cyan-500 text-xs uppercase tracking-widest">Codename (Display Name)</Label>
+                <Label className="text-cyan-500 text-xs uppercase tracking-widest">Display User Name</Label>
                 <Input 
                   placeholder="Enter Alias..." 
                   value={displayName} 
@@ -204,7 +204,7 @@ const Profile = () => {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-cyan-500 text-xs uppercase tracking-widest">Bio-Data</Label>
+                <Label className="text-cyan-500 text-xs uppercase tracking-widest">Bio (Something About Yourself)</Label>
                 <Textarea 
                   placeholder="System credentials, skills, or status..." 
                   value={bio} 
