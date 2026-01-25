@@ -68,33 +68,44 @@ const Profile = () => {
 
   // --- 1. Gallery Upload Logic ---
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      setUploading(true);
-      if (!event.target.files || event.target.files.length === 0) return;
+  try {
+    if (!event.target.files || event.target.files.length === 0) return;
+    const file = event.target.files[0];
 
-      const file = event.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${user.id}-${Math.random()}.${fileExt}`;
+    // --- STEP 1: Instant Local Preview (Yaha magic hai) ---
+    const localUrl = URL.createObjectURL(file);
+    setAvatarUrl(localUrl); // Upload hone se pehle hi image dikh jayegi!
 
-      // Upload to Supabase Storage (Bucket name 'avatars' hona chahiye)
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file);
+    setUploading(true);
+    
+    // --- STEP 2: Supabase Upload ---
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${user.id}-${Math.random()}.${fileExt}`;
 
-      if (uploadError) throw uploadError;
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file);
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
+    if (uploadError) throw uploadError;
 
-      setAvatarUrl(publicUrl);
-      toast({ title: "Success", description: "Avatar uploaded to the cloud." });
-    } catch (error: any) {
-      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
-    } finally {
-      setUploading(false);
-    }
-  };
+    const { data: { publicUrl } } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+
+    // Final URL set kar rahe hain jo DB mein jayega
+    setAvatarUrl(publicUrl);
+    
+    toast({ 
+      title: "IMAGE_LINKED", 
+      description: "Neural link established successfully.",
+    });
+
+  } catch (error: any) {
+    toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+  } finally {
+    setUploading(false);
+  }
+};
 
   // --- 2. Logout Logic ---
   const handleLogout = async () => {
