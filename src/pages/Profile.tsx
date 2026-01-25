@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Upload, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, Upload, User as UserIcon, LogOut, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -20,8 +20,11 @@ interface Profile {
 const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [displayName, setDisplayName] = useState('');
@@ -36,27 +39,18 @@ const Profile = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast({
-          title: "Authentication Required",
-          description: "Please sign in to view your profile.",
-          variant: "destructive"
-        });
         navigate('/auth');
         return;
       }
-
       setUser(user);
 
-      // Try to fetch existing profile
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
         .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-        throw error;
-      }
+      if (error && error.code !== 'PGRST116') throw error;
 
       if (data) {
         setProfile(data);
@@ -65,147 +59,155 @@ const Profile = () => {
         setAvatarUrl(data.avatar_url || '');
       }
     } catch (error) {
-      console.error('Error loading profile:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load profile.",
-        variant: "destructive"
-      });
+      console.error('Error:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  // --- 1. Gallery Upload Logic ---
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploading(true);
+      if (!event.target.files || event.target.files.length === 0) return;
+
+      const file = event.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}-${Math.random()}.${fileExt}`;
+
+      // Upload to Supabase Storage (Bucket name 'avatars' hona chahiye)
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      setAvatarUrl(publicUrl);
+      toast({ title: "Success", description: "Avatar uploaded to the cloud." });
+    } catch (error: any) {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // --- 2. Logout Logic ---
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast({ title: "Logged Out", description: "See you in the future, agent." });
+    navigate('/auth');
+  };
+
   const saveProfile = async () => {
     if (!user) return;
-
     setSaving(true);
     try {
       const profileData = {
         user_id: user.id,
-        display_name: displayName || null,
-        avatar_url: avatarUrl || null,
-        bio: bio || null
+        display_name: displayName,
+        avatar_url: avatarUrl,
+        bio: bio
       };
 
-      if (profile) {
-        // Update existing profile
-        const { error } = await supabase
-          .from('profiles')
-          .update(profileData)
-          .eq('id', profile.id);
+      const { error } = profile 
+        ? await supabase.from('profiles').update(profileData).eq('id', profile.id)
+        : await supabase.from('profiles').insert([profileData]);
 
-        if (error) throw error;
-      } else {
-        // Create new profile
-        const { error } = await supabase
-          .from('profiles')
-          .insert([profileData]);
-
-        if (error) throw error;
-      }
-
-      toast({
-        title: "Success",
-        description: "Profile updated successfully.",
-      });
-
+      if (error) throw error;
+      toast({ title: "System Updated", description: "Your neural profile is synchronized." });
       loadProfile();
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save profile.",
-        variant: "destructive"
-      });
+    } catch (error: any) {
+      toast({ title: "Sync Error", description: error.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center">
-        <p className="text-muted-foreground">Loading profile...</p>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      <div className="container max-w-2xl mx-auto p-6">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/')}
-          className="mb-6"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Chat
-        </Button>
+    <div className="min-h-screen bg-[#020202] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-black to-black text-white p-6">
+      <div className="container max-w-2xl mx-auto">
+        
+        <div className="flex justify-between items-center mb-8">
+          <Button variant="ghost" onClick={() => navigate('/')} className="hover:bg-cyan-500/10 text-cyan-400">
+            <ArrowLeft className="w-4 h-4 mr-2" /> DISCONNECT
+          </Button>
+          <Button onClick={handleLogout} variant="destructive" className="bg-red-900/20 border border-red-500/50 hover:bg-red-600">
+            <LogOut className="w-4 h-4 mr-2" /> LOGOUT
+          </Button>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>User Profile</CardTitle>
-            <CardDescription>Manage your profile information</CardDescription>
+        <Card className="bg-black/40 border-cyan-500/30 backdrop-blur-xl shadow-[0_0_20px_rgba(6,182,212,0.15)]">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold tracking-widest text-cyan-400">USER_PROFILE_v2.0</CardTitle>
+            <CardDescription className="text-cyan-700">Digital Identity Verification</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center gap-6">
-              <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20">
+          
+          <CardContent className="space-y-8">
+            {/* Profile Picture Upload Section */}
+            <div className="flex flex-col items-center gap-4">
+              <div 
+                className="relative group w-32 h-32 rounded-full cursor-pointer overflow-hidden border-2 border-dashed border-cyan-500/50 hover:border-cyan-400 transition-all"
+                onClick={() => fileInputRef.current?.click()}
+              >
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+                  <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover group-hover:opacity-50 transition-opacity" />
                 ) : (
-                  <UserIcon className="w-12 h-12 text-primary" />
+                  <div className="w-full h-full flex items-center justify-center bg-cyan-500/5">
+                    <UserIcon className="w-12 h-12 text-cyan-500/50" />
+                  </div>
                 )}
-              </div>
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="avatar">Avatar URL</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="avatar"
-                    placeholder="https://example.com/avatar.jpg"
-                    value={avatarUrl}
-                    onChange={(e) => setAvatarUrl(e.target.value)}
-                  />
-                  <Button variant="outline" size="icon">
-                    <Upload className="w-4 h-4" />
-                  </Button>
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/60 transition-all">
+                  <Upload className="w-6 h-6 text-cyan-400" />
                 </div>
+                {uploading && <div className="absolute inset-0 flex items-center justify-center bg-black/80"><Loader2 className="animate-spin text-cyan-400" /></div>}
+              </div>
+              <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
+              <p className="text-xs text-cyan-600 uppercase tracking-tighter">Tap to re-upload neural-link image</p>
+            </div>
+
+            <div className="grid gap-6">
+              <div className="space-y-2">
+                <Label className="text-cyan-500 text-xs uppercase tracking-widest">Access Key (Email)</Label>
+                <Input value={user?.email || ''} disabled className="bg-cyan-950/20 border-cyan-900 text-cyan-100" />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-cyan-500 text-xs uppercase tracking-widest">Codename (Display Name)</Label>
+                <Input 
+                  placeholder="Enter Alias..." 
+                  value={displayName} 
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="bg-black/50 border-cyan-500/30 focus:border-cyan-400 transition-colors"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-cyan-500 text-xs uppercase tracking-widest">Bio-Data</Label>
+                <Textarea 
+                  placeholder="System credentials, skills, or status..." 
+                  value={bio} 
+                  onChange={(e) => setBio(e.target.value)}
+                  className="bg-black/50 border-cyan-500/30 focus:border-cyan-400 min-h-[100px]"
+                />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                value={user?.email || ''}
-                disabled
-                className="bg-muted"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="displayName">Display Name</Label>
-              <Input
-                id="displayName"
-                placeholder="Your name"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="bio">Bio</Label>
-              <Textarea
-                id="bio"
-                placeholder="Tell us about yourself..."
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                rows={4}
-              />
-            </div>
-
-            <Button onClick={saveProfile} disabled={saving} className="w-full">
-              {saving ? 'Saving...' : 'Save Profile'}
+            <Button 
+              onClick={saveProfile} 
+              disabled={saving} 
+              className="w-full bg-cyan-600 hover:bg-cyan-500 text-black font-bold tracking-widest shadow-[0_0_15px_rgba(6,182,212,0.4)] transition-all"
+            >
+              {saving ? 'SYNCHRONIZING...' : 'UPDATE SYSTEM'}
             </Button>
           </CardContent>
         </Card>
