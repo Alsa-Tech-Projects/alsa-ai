@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Moon, Sun, FolderOpen, Key, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, FolderOpen, Key, Plus, Trash2, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -49,7 +49,7 @@ const Settings = () => {
     ai_response_style: 'balanced',
     voice_enabled: true,
     voice_name: 'default',
-    voice_gender: 'female' as 'male' | 'female' | 'auto', // Default to female hinglish
+    voice_gender: 'female' as 'male' | 'female' | 'auto',
     theme: 'dark'
   });
 
@@ -69,9 +69,9 @@ const Settings = () => {
   const [newSiteName, setNewSiteName] = useState('');
   const [newSiteUrl, setNewSiteUrl] = useState('');
 
+  // Messaging contacts
   const [whatsappContacts, setWhatsappContacts] = useState<Contact[]>([]);
   const [telegramContacts, setTelegramContacts] = useState<Contact[]>([]);
-  // Naye input ke liye
   const [newWpName, setNewWpName] = useState('');
   const [newWpNum, setNewWpNum] = useState('');
   const [newTgName, setNewTgName] = useState('');
@@ -81,42 +81,6 @@ const Settings = () => {
   const [customApps, setCustomApps] = useState<CustomApp[]>([]);
   const [newAppName, setNewAppName] = useState('');
   const [newAppPath, setNewAppPath] = useState('');
-
-  // useEffect(() => {
-  //   loadPreferences();
-  //   loadLocalSettings();
-  // }, []);
-
-  // const loadLocalSettings = () => {
-  //   // Load output paths from localStorage
-  //   const savedPaths = localStorage.getItem('alsa_output_paths');
-  //   if (savedPaths) {
-  //     try {
-  //       setOutputPaths(JSON.parse(savedPaths));
-  //     } catch (e) {
-  //       console.error('Error loading output paths:', e);
-  //     }
-  //   }
-
-  //   // Load custom sites from localStorage
-  //   const savedSites = localStorage.getItem('alsa_user_sites');
-  //   if (savedSites) {
-  //     try {
-  //       setCustomSites(JSON.parse(savedSites));
-  //     } catch (e) {
-  //       console.error('Error loading custom sites:', e);
-  //     }
-  //   }
-
-  //   // Load custom apps from localStorage
-  //   const savedApps = localStorage.getItem('alsa_custom_apps');
-  //   if (savedApps) {
-  //     try {
-  //       setCustomApps(JSON.parse(savedApps));
-  //     } catch (e) {
-  //       console.error('Error loading custom apps:', e);
-  //     }
-  //   }
 
   useEffect(() => {
     loadPreferences();
@@ -141,8 +105,6 @@ const Settings = () => {
     if (savedApps) {
       try { setCustomApps(JSON.parse(savedApps)); } catch (e) { console.error('Error:', e); }
     }
-
-    // --- NAYA MESSAGING AUTOMATION DATA YAHAN SE ---
 
     // 4. Load WhatsApp Contacts
     const savedWp = localStorage.getItem('alsa_whatsapp_contacts');
@@ -214,7 +176,6 @@ const Settings = () => {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
-        // Only save DB-compatible fields (voice_gender is localStorage only)
         const { error } = await supabase
           .from('user_preferences')
           .upsert(
@@ -231,14 +192,13 @@ const Settings = () => {
         if (error) throw error;
       }
 
-      // Save local settings (including voice_gender which isn't in DB)
+      // Save local settings
       localStorage.setItem('alsa_output_paths', JSON.stringify(outputPaths));
       localStorage.setItem('alsa_user_sites', JSON.stringify(customSites));
       localStorage.setItem('alsa_custom_apps', JSON.stringify(customApps));
       localStorage.setItem('alsa_ai_response_style', preferences.ai_response_style);
       localStorage.setItem('alsa_voice_gender', preferences.voice_gender);
       localStorage.setItem('alsa_voice_enabled', String(preferences.voice_enabled));
-      // savePreferences function ke andar jahan localStorage.setItem ho rahe hain:
       localStorage.setItem('alsa_whatsapp_contacts', JSON.stringify(whatsappContacts));
       localStorage.setItem('alsa_telegram_contacts', JSON.stringify(telegramContacts));
 
@@ -293,7 +253,6 @@ const Settings = () => {
       return;
     }
 
-    // Ensure URL has protocol
     let url = newSiteUrl.trim();
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = 'https://' + url;
@@ -355,6 +314,36 @@ const Settings = () => {
       title: "App Removed",
       description: "Custom app has been removed"
     });
+  };
+
+  const addWhatsappContact = () => {
+    if (!newWpName.trim() || !newWpNum.trim()) {
+      toast({ title: "Error", description: "Enter name and phone number", variant: "destructive" });
+      return;
+    }
+    setWhatsappContacts([...whatsappContacts, { 
+      id: Date.now().toString(), 
+      name: newWpName.trim(), 
+      value: newWpNum.trim() 
+    }]);
+    setNewWpName('');
+    setNewWpNum('');
+    toast({ title: "WhatsApp Contact Added", description: `${newWpName} saved!` });
+  };
+
+  const addTelegramContact = () => {
+    if (!newTgName.trim() || !newTgLink.trim()) {
+      toast({ title: "Error", description: "Enter name and Telegram link/username", variant: "destructive" });
+      return;
+    }
+    setTelegramContacts([...telegramContacts, { 
+      id: Date.now().toString(), 
+      name: newTgName.trim(), 
+      value: newTgLink.trim() 
+    }]);
+    setNewTgName('');
+    setNewTgLink('');
+    toast({ title: "Telegram Contact Added", description: `${newTgName} saved!` });
   };
 
   if (loading) {
@@ -507,6 +496,126 @@ const Settings = () => {
               </CardContent>
             </Card>
 
+            {/* Messaging Automation - MOST IMPORTANT */}
+            <Card className="bg-card border-border border-2 border-primary/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-primary" />
+                  Messaging Automation (WhatsApp & Telegram)
+                </CardTitle>
+                <CardDescription>
+                  Save contacts for AI automation. Say "Send message to [Name] on Telegram: [Your message]"
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+
+                {/* WhatsApp Section */}
+                <div className="space-y-4">
+                  <Label className="text-primary font-bold text-lg">📱 WhatsApp Contacts</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Add contacts with their phone numbers (with country code like 91xxxxxxxxxx)
+                  </p>
+                  
+                  {whatsappContacts.length > 0 && (
+                    <div className="space-y-2">
+                      {whatsappContacts.map((c) => (
+                        <div key={c.id} className="flex gap-2 items-center p-3 bg-secondary/30 rounded-lg">
+                          <div className="flex-1">
+                            <p className="font-medium">{c.name}</p>
+                            <p className="text-xs text-muted-foreground">{c.value}</p>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => setWhatsappContacts(whatsappContacts.filter(i => i.id !== c.id))}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <div className="flex gap-2 bg-secondary/20 p-3 rounded-lg">
+                    <Input 
+                      placeholder="Name (e.g., Rahul)" 
+                      value={newWpName} 
+                      onChange={e => setNewWpName(e.target.value)} 
+                      className="flex-1"
+                    />
+                    <Input 
+                      placeholder="Phone (e.g., 919876543210)" 
+                      value={newWpNum} 
+                      onChange={e => setNewWpNum(e.target.value)}
+                      className="flex-1" 
+                    />
+                    <Button onClick={addWhatsappContact} size="icon">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="border-t border-border my-4" />
+
+                {/* Telegram Section */}
+                <div className="space-y-4">
+                  <Label className="text-primary font-bold text-lg">✈️ Telegram Contacts</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Add contacts with their Telegram web link (e.g., https://web.telegram.org/k/#@username)
+                  </p>
+                  
+                  {telegramContacts.length > 0 && (
+                    <div className="space-y-2">
+                      {telegramContacts.map((c) => (
+                        <div key={c.id} className="flex gap-2 items-center p-3 bg-secondary/30 rounded-lg">
+                          <div className="flex-1">
+                            <p className="font-medium">{c.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{c.value}</p>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => setTelegramContacts(telegramContacts.filter(i => i.id !== c.id))}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <div className="flex gap-2 bg-secondary/20 p-3 rounded-lg">
+                    <Input 
+                      placeholder="Name (e.g., Rahul)" 
+                      value={newTgName} 
+                      onChange={e => setNewTgName(e.target.value)}
+                      className="flex-1" 
+                    />
+                    <Input 
+                      placeholder="https://web.telegram.org/k/#@username" 
+                      value={newTgLink} 
+                      onChange={e => setNewTgLink(e.target.value)}
+                      className="flex-[2]" 
+                    />
+                    <Button onClick={addTelegramContact} size="icon">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Usage Tips */}
+                <div className="bg-primary/10 p-4 rounded-lg space-y-2">
+                  <p className="font-medium text-sm">💡 How to use:</p>
+                  <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                    <li>Say: "Send message to Rahul on Telegram: I'll be late today"</li>
+                    <li>Say: "WhatsApp Rahul ko bhejo: Meeting 5 baje hai"</li>
+                    <li>Messages can be in any language - Hindi, English, etc.</li>
+                    <li>PC Bridge must be running for this to work!</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Output Paths */}
             <Card className="bg-card border-border">
               <CardHeader>
@@ -558,36 +667,6 @@ const Settings = () => {
                       className="mt-1"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="app-path">Application/Letter Path</Label>
-                    <Input
-                      id="app-path"
-                      value={outputPaths.application}
-                      onChange={(e) => setOutputPaths({ ...outputPaths, application: e.target.value })}
-                      placeholder="C:\Users\...\Applications"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="assignment-path">Assignment Path</Label>
-                    <Input
-                      id="assignment-path"
-                      value={outputPaths.assignment}
-                      onChange={(e) => setOutputPaths({ ...outputPaths, assignment: e.target.value })}
-                      placeholder="C:\Users\...\Assignments"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="db-path">Database Path</Label>
-                    <Input
-                      id="db-path"
-                      value={outputPaths.database}
-                      onChange={(e) => setOutputPaths({ ...outputPaths, database: e.target.value })}
-                      placeholder="C:\Users\...\Databases"
-                      className="mt-1"
-                    />
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -597,7 +676,7 @@ const Settings = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Key className="w-5 h-5" />
-                  Custom Sites & Apps
+                  Custom Sites
                 </CardTitle>
                 <CardDescription>
                   Add your own website shortcuts. Say "open [site name]" to open them quickly.
@@ -605,16 +684,13 @@ const Settings = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {/* Existing Sites */}
                   {customSites.length > 0 && (
                     <div className="space-y-2">
                       {customSites.map((site) => (
                         <div key={site.id} className="flex items-center gap-2 p-3 bg-secondary/30 rounded-lg">
                           <div className="flex-1">
                             <p className="font-medium text-sm capitalize">{site.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {site.url}
-                            </p>
+                            <p className="text-xs text-muted-foreground truncate">{site.url}</p>
                           </div>
                           <Button
                             variant="ghost"
@@ -629,17 +705,6 @@ const Settings = () => {
                     </div>
                   )}
 
-                  {/* Tips */}
-                  <div className="text-xs text-muted-foreground bg-secondary/20 rounded-lg p-3 space-y-1">
-                    <p className="font-medium">How to use:</p>
-                    <ul className="list-disc list-inside space-y-0.5">
-                      <li>Say "open [site name]" or "[site name] kholo" to open</li>
-                      <li>Names are case-insensitive (e.g., "mysite" works)</li>
-                      <li>Works with any URL including internal tools</li>
-                    </ul>
-                  </div>
-
-                  {/* Add New Site */}
                   <div className="space-y-2 pt-2 border-t border-border">
                     <Label>Add New Site</Label>
                     <div className="flex gap-2">
@@ -698,14 +763,6 @@ const Settings = () => {
                     </div>
                   )}
 
-                  <div className="text-xs text-muted-foreground bg-secondary/20 rounded-lg p-3 space-y-1">
-                    <p className="font-medium">Examples:</p>
-                    <ul className="list-disc list-inside space-y-0.5">
-                      <li>Name: "antigravity", Path: C:\Program Files\Antigravity\antigravity.exe</li>
-                      <li>Name: "vscode", Path: C:\Users\...\AppData\Local\Programs\Microsoft VS Code\Code.exe</li>
-                    </ul>
-                  </div>
-
                   <div className="space-y-2 pt-2 border-t border-border">
                     <Label>Add New App</Label>
                     <div className="flex gap-2">
@@ -727,64 +784,6 @@ const Settings = () => {
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Messaging Automation (WhatsApp & Telegram)</CardTitle>
-                <CardDescription>Save contacts for AI automation</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-
-                {/* WhatsApp Section */}
-                <div className="space-y-4">
-                  <Label className="text-primary font-bold">WhatsApp Contacts (Name & Number)</Label>
-                  {whatsappContacts.map((c) => (
-                    <div key={c.id} className="flex gap-2 items-center">
-                      <Input value={`${c.name} - ${c.value}`} readOnly className="flex-1" />
-                      <Button variant="ghost" size="icon" onClick={() => setWhatsappContacts(whatsappContacts.filter(i => i.id !== c.id))}>
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
-                  <div className="flex gap-2 bg-secondary/20 p-2 rounded-md">
-                    <Input placeholder="Eisa" value={newWpName} onChange={e => setNewWpName(e.target.value)} />
-                    <Input placeholder="91..." value={newWpNum} onChange={e => setNewWpNum(e.target.value)} />
-                    <Button onClick={() => {
-                      if (newWpName && newWpNum) {
-                        setWhatsappContacts([...whatsappContacts, { id: Date.now().toString(), name: newWpName, value: newWpNum }]);
-                        setNewWpName(''); setNewWpNum('');
-                      }
-                    }}><Plus /></Button>
-                  </div>
-                </div>
-
-                <div className="border-t border-border my-4" /> {/* Separator Line */}
-
-                {/* Telegram Section */}
-                <div className="space-y-4">
-                  <Label className="text-primary font-bold">Telegram Contacts (Name & Link/Username)</Label>
-                  {telegramContacts.map((c) => (
-                    <div key={c.id} className="flex gap-2 items-center">
-                      <Input value={`${c.name} - ${c.value}`} readOnly className="flex-1" />
-                      <Button variant="ghost" size="icon" onClick={() => setTelegramContacts(telegramContacts.filter(i => i.id !== c.id))}>
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
-                  <div className="flex gap-2 bg-secondary/20 p-2 rounded-md">
-                    <Input placeholder="Eisa" value={newTgName} onChange={e => setNewTgName(e.target.value)} />
-                    <Input placeholder="https://web.telegram.org/k/#@..." value={newTgLink} onChange={e => setNewTgLink(e.target.value)} />
-                    <Button onClick={() => {
-                      if (newTgName && newTgLink) {
-                        setTelegramContacts([...telegramContacts, { id: Date.now().toString(), name: newTgName, value: newTgLink }]);
-                        setNewTgName(''); setNewTgLink('');
-                      }
-                    }}><Plus /></Button>
-                  </div>
-                </div>
-
               </CardContent>
             </Card>
 
