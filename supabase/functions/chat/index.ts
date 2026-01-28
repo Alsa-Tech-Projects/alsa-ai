@@ -58,9 +58,30 @@ serve(async (req) => {
       memory = {},
       conversationContext = "",
       ai_response_style = "balanced",
-      whatsappContacts = {},
-      telegramContacts = {}
+      whatsappContacts = [],
+      telegramContacts = []
     } = body;
+    
+    // Convert contact arrays to name-based lookup objects for easier AI access
+    // Input format: [{id, name, value}] → Output format: {name: value}
+    const wpContactsMap: Record<string, string> = {};
+    const tgContactsMap: Record<string, string> = {};
+    
+    if (Array.isArray(whatsappContacts)) {
+      whatsappContacts.forEach((c: any) => {
+        if (c.name && c.value) {
+          wpContactsMap[c.name.toLowerCase()] = c.value;
+        }
+      });
+    }
+    
+    if (Array.isArray(telegramContacts)) {
+      telegramContacts.forEach((c: any) => {
+        if (c.name && c.value) {
+          tgContactsMap[c.name.toLowerCase()] = c.value;
+        }
+      });
+    }
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 
     const recentMessages = messages.slice(-5);
@@ -140,9 +161,11 @@ ${memory ? `You have access to user's saved memories: ${JSON.stringify(memory)}.
 CONVERSATION CONTEXT:
 ${conversationContext || 'No previous context available.'}
 
-    CONTACTS:
-${telegramContacts ? `Telegram Contacts: ${JSON.stringify(telegramContacts)}` : 'No Telegram contacts saved.'}
-${whatsappContacts ? `WhatsApp Contacts: ${JSON.stringify(whatsappContacts)}` : 'No WhatsApp contacts saved.'}
+    CONTACTS (Name → Phone/Link mapping):
+${Object.keys(tgContactsMap).length > 0 ? `Telegram Contacts: ${JSON.stringify(tgContactsMap)}` : 'No Telegram contacts saved.'}
+${Object.keys(wpContactsMap).length > 0 ? `WhatsApp Contacts: ${JSON.stringify(wpContactsMap)}` : 'No WhatsApp contacts saved.'}
+
+IMPORTANT: When user says "send message to [Name] on Telegram/WhatsApp", look up the name (case-insensitive) in the contacts above to get their link/phone. If found, use that value. If not found, ask user for the link/number.
 
 PERSONALITY MODE: ${ai_response_style || 'balanced'}
     - caring: supportive + empathetic with extra warmth 🤗
@@ -336,22 +359,9 @@ PERSONALITY MODE: ${ai_response_style || 'balanced'}
                   type: "object",
                   properties: {
                     name: { type: "string" },
-                    columns: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        properties: {
-                          name: { type: "string" },
-                          type: { type: "string" }
-                        }
-                      }
-                    },
-                    sample_data: {
-                      type: "array",
-                      items: { type: "string" } // Items add karna zaroori hai
-                    }
-                  },
-                  required: ["name", "columns"]
+                    columns: { type: "array", items: { type: "object" } },
+                    sample_data: { type: "array" }
+                  }
                 }
               }
             },
@@ -548,7 +558,7 @@ PERSONALITY MODE: ${ai_response_style || 'balanced'}
     // === STREAMING LOGIC ===
     console.log("GEMINI_API_KEY present:", !!GEMINI_API_KEY);
     console.log("Messages count:", messages.length);
-
+    
     if (!GEMINI_API_KEY) {
       console.error("GEMINI_API_KEY is missing!");
       return new Response(JSON.stringify({ error: "GEMINI_API_KEY is not configured" }), {
@@ -558,7 +568,7 @@ PERSONALITY MODE: ${ai_response_style || 'balanced'}
     }
 
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${GEMINI_API_KEY}&alt=sse`;
-
+    
     const response = await fetch(geminiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -573,9 +583,9 @@ PERSONALITY MODE: ${ai_response_style || 'balanced'}
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Gemini API error:", response.status, errorText);
-      return new Response(JSON.stringify({
-        error: `Gemini API error: ${response.status}`,
-        details: errorText
+      return new Response(JSON.stringify({ 
+        error: `Gemini API error: ${response.status}`, 
+        details: errorText 
       }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -657,13 +667,13 @@ PERSONALITY MODE: ${ai_response_style || 'balanced'}
 
               // 4. WhatsApp (Frontend handle karega)
               else if (call.name === 'send_whatsapp_message') {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'send_whatsapp_message', ...args })}\n\n`));
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'whatsapp_msg', phone: args.phone, message: args.message })}\n\n`));
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n📱 WhatsApp message sending to ${args.phone}...` })}\n\n`));
               }
 
               // 5. Telegram (Frontend handle karega)
               else if (call.name === 'send_telegram_message') {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'send_telegram_message', ...args })}\n\n`));
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'telegram_msg', link: args.link, message: args.message })}\n\n`));
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n✈️ Telegram message sending...` })}\n\n`));
               }
 
