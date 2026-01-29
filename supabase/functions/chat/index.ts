@@ -143,6 +143,12 @@ MESSAGING INSTRUCTIONS:
       - If user mentions a contact name, check telegramContacts for their link
         - If not found, ask for the Telegram profile / chat link
 
+    3. When user wants to SCHEDULE a message for later (mentions time like "at 6pm", "tomorrow", "in 2 hours"):
+    - Use schedule_telegram_message or schedule_whatsapp_message tool
+      - Look up contact name in the contacts to get phone/link
+      - Parse the time and convert to ISO format
+      - Example: "send telegram to Rahul at 6pm: hello" → schedule_telegram_message with scheduled_time
+
 IMPORTANT INSTRUCTIONS:
     1. When users request system commands(shutdown, restart, sleep), execute them immediately
     2. For file / folder creation, use appropriate tools
@@ -347,7 +353,7 @@ PERSONALITY MODE: ${ai_response_style || 'balanced'}
         type: "function",
         function: {
           name: "create_database",
-          description: "Create a database with tables.",
+          description: "Create a database with tables. Sample data should be JSON string.",
           parameters: {
             type: "object",
             properties: {
@@ -358,10 +364,11 @@ PERSONALITY MODE: ${ai_response_style || 'balanced'}
                 items: {
                   type: "object",
                   properties: {
-                    name: { type: "string" },
-                    columns: { type: "array", items: { type: "object" } },
-                    sample_data: { type: "array" }
-                  }
+                    name: { type: "string", description: "Table name" },
+                    columns: { type: "string", description: "JSON string of columns array" },
+                    sample_data: { type: "string", description: "JSON string of sample data array" }
+                  },
+                  required: ["name"]
                 }
               }
             },
@@ -552,6 +559,40 @@ PERSONALITY MODE: ${ai_response_style || 'balanced'}
             required: ["app_name"]
           }
         }
+      },
+      {
+        type: "function",
+        function: {
+          name: "schedule_telegram_message",
+          description: "Schedule a Telegram message to be sent at a specific time. Use this when user wants to send a message later or at a specific time.",
+          parameters: {
+            type: "object",
+            properties: {
+              contact_name: { type: "string", description: "Name of the contact from saved contacts" },
+              link: { type: "string", description: "Telegram link/username of the contact" },
+              message: { type: "string", description: "The message content to be sent" },
+              scheduled_time: { type: "string", description: "ISO timestamp for when to send (e.g., 2025-01-29T18:00:00)" }
+            },
+            required: ["message", "scheduled_time"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "schedule_whatsapp_message",
+          description: "Schedule a WhatsApp message to be sent at a specific time. Use this when user wants to send a message later or at a specific time.",
+          parameters: {
+            type: "object",
+            properties: {
+              contact_name: { type: "string", description: "Name of the contact from saved contacts" },
+              phone: { type: "string", description: "Phone number with country code" },
+              message: { type: "string", description: "The message content to be sent" },
+              scheduled_time: { type: "string", description: "ISO timestamp for when to send (e.g., 2025-01-29T18:00:00)" }
+            },
+            required: ["message", "scheduled_time"]
+          }
+        }
       }
     ];
 
@@ -689,7 +730,31 @@ PERSONALITY MODE: ${ai_response_style || 'balanced'}
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n🤖 ADB Command sent: ${args.command}` })}\n\n`));
               }
 
-              // 8. MASTER ELSE: Baaki saare tools (Music, Screenshot, Games etc.)
+              // 8. Scheduled Telegram Message (Frontend handle karega)
+              else if (call.name === 'schedule_telegram_message') {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+                  type: 'schedule_telegram_msg', 
+                  contact_name: args.contact_name || '',
+                  link: args.link || '',
+                  message: args.message,
+                  scheduled_time: args.scheduled_time
+                })}\n\n`));
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n📅 Telegram message scheduled for ${args.scheduled_time}` })}\n\n`));
+              }
+
+              // 9. Scheduled WhatsApp Message (Frontend handle karega)
+              else if (call.name === 'schedule_whatsapp_message') {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+                  type: 'schedule_whatsapp_msg', 
+                  contact_name: args.contact_name || '',
+                  phone: args.phone || '',
+                  message: args.message,
+                  scheduled_time: args.scheduled_time
+                })}\n\n`));
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n📅 WhatsApp message scheduled for ${args.scheduled_time}` })}\n\n`));
+              }
+
+              // 10. MASTER ELSE: Baaki saare tools (Music, Screenshot, Games etc.)
               else {
                 // Jo tools upar listed nahi hain, wo seedhe frontend ko pass ho jayenge
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: call.name, ...args })}\n\n`));
