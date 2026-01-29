@@ -793,60 +793,6 @@ export const adbCommand = async (command: string): Promise<{ success: boolean; m
   }
 };
 
-export const captureScreenshot = async (
-  savePath?: string,
-  delaySeconds?: number
-): Promise<{ success: boolean; message: string; filename?: string; path?: string }> => {
-  try {
-    // Wait for delay if specified
-    if (delaySeconds && delaySeconds > 0) {
-      console.log(`Waiting ${delaySeconds} seconds before screenshot...`);
-      await new Promise(resolve => setTimeout(resolve, delaySeconds * 1000));
-    }
-
-    // Create screen blink effect
-    const blinkOverlay = document.createElement('div');
-    blinkOverlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: white;
-      z-index: 999999;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.1s ease-in-out;
-    `;
-    document.body.appendChild(blinkOverlay);
-
-    // Trigger blink
-    requestAnimationFrame(() => {
-      blinkOverlay.style.opacity = '1';
-      setTimeout(() => {
-        blinkOverlay.style.opacity = '0';
-        setTimeout(() => {
-          document.body.removeChild(blinkOverlay);
-        }, 100);
-      }, 100);
-    });
-
-    // Determine save path
-    let finalSavePath = savePath;
-    if (!finalSavePath) {
-      const storedPaths = localStorage.getItem('alsa_output_paths');
-      if (storedPaths) {
-        try {
-          const parsed = JSON.parse(storedPaths);
-          finalSavePath = parsed.screenshot;
-        } catch { }
-      }
-    }
-    if (!finalSavePath) {
-      finalSavePath = 'C:\\Users\\Mohd Eisa\\Pictures\\Screenshots';
-    }
-
-   
 // Screen recording functions
 let recordingMediaRecorder: MediaRecorder | null = null;
 let recordingChunks: Blob[] = [];
