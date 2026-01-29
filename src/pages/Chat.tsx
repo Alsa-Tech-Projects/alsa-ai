@@ -7,11 +7,12 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
-import { checkBridgeConnection, executeSystemCommand, scanSystem, SystemScanResult, captureScreenshot, startScreenRecording, stopScreenRecording, parseNaturalLanguage, WEBSITES, createProject, createPowerPoint, createExcel, createDatabase, executePythonFile, executeCmdCommand, runCommand, checkInstallation, sendCommand, adbConnect, adbCommand, closeWindow, openFolder, runProject, createFolder, createTextFile, openWebsiteWithSearch, openCustomApp, sendTelegramMsg, sendWhatsAppMsg } from '@/utils/pcBridge';
+import { checkBridgeConnection, executeSystemCommand, scanSystem, SystemScanResult, startScreenRecording, stopScreenRecording, parseNaturalLanguage, WEBSITES, createProject, createPowerPoint, createExcel, createDatabase, executePythonFile, executeCmdCommand, runCommand, checkInstallation, sendCommand, adbConnect, adbCommand, closeWindow, openFolder, runProject, createFolder, createTextFile, openWebsiteWithSearch, openCustomApp, sendTelegramMsg, sendWhatsAppMsg } from '@/utils/pcBridge';
 import ChatMessage from '@/components/ChatMessage';
 import MemoryManager from '@/components/MemoryManager';
 import TranscriptionFeedback from '@/components/TranscriptionFeedback';
 import ReminderNotification from '@/components/ReminderNotification';
+import ScheduledMessageChecker from '@/components/ScheduledMessageChecker';
 import { getMemory, addMemory, parseMemoryCommand, getTimeBasedGreeting } from '@/utils/memoryManager';
 import { parseAndLearn, getAIContext, trackInteraction, addConversationSummary } from '@/utils/conversationMemory';
 import { parseReminderFromText, createReminder } from '@/utils/reminderManager';
@@ -64,7 +65,6 @@ const Chat = () => {
   const [backupKeyActive, setBackupKeyActive] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSavedPath, setRecordingSavedPath] = useState<string | null>(null);
-  // const [screenshotPending, setScreenshotPending] = useState(false);
 
   // Subscription hook for free tier restrictions
   const subscription = useSubscription();
@@ -143,24 +143,11 @@ const Chat = () => {
     resetTranscript();
     setInputText('');
     setUploadedFiles([]);
-    navigate('/Chat');
+    navigate('/chat');
     speak('Starting a new conversation');
     toast({ title: 'New Chat', description: 'Ready for a new conversation' });
   }, [resetTranscript, speak, toast, navigate]);
-
-  // // Screenshot handler
-  // const handleScreenshot = useCallback(async () => {
-  //   const result = await captureScreenshot();
-  //   toast({
-  //     title: result.success ? 'Screenshot Captured' : 'Screenshot Failed',
-  //     description: result.message,
-  //     variant: result.success ? 'default' : 'destructive'
-  //   });
-  //   if (result.success) {
-  //     speak('Screenshot captured successfully');
-  //   }
-  // }, [toast, speak]);
-
+  
   // Screen recording handler - DISABLED FOR FREE TIER USERS
   const handleRecording = useCallback(async () => {
     if (subscription.isFree) {
@@ -229,7 +216,7 @@ const Chat = () => {
     return () => window.removeEventListener('recording-saved', handleRecordingSaved as EventListener);
   }, [toast]);
 
-  // Keyboard shortcuts: Alt+V for voice, Ctrl+Shift+O for new chat
+// Keyboard shortcuts: Alt+V for voice, Ctrl+Shift+O for new chat
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Alt+V for voice toggle
@@ -245,23 +232,16 @@ const Chat = () => {
         handleNewConversation();
         return;
       }
-
-      //   // Ctrl+Shift+S for screenshot
-      //   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') {
-      //     e.preventDefault();
-      //     return;
-      //   }
-    };
+    }; 
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleVoice, handleNewConversation]);
 
-  // Auth state management - REDIRECT GUEST USERS
+   // Auth state management - REDIRECT GUEST USERS
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
-        // Agar session nahi hai, matlab user guest hai -> Redirect to Home
         navigate('/Chat');
       } else {
         setUser(session.user);
@@ -270,7 +250,6 @@ const Chat = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
-        // Logout hone par ya session khatam hone par -> Redirect
         setUser(null);
         navigate('/Chat');
       } else if (session) {
@@ -280,7 +259,6 @@ const Chat = () => {
 
     return () => subscription.unsubscribe();
   }, [navigate]); // navigate dependency add karna zaroori hai
-
   // Load conversation from URL param
   useEffect(() => {
     const loadConversation = async () => {
@@ -973,6 +951,45 @@ const Chat = () => {
                 if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
                 return newMessages;
               });
+            } else if (parsed.type === 'schedule_telegram_msg' || parsed.type === 'schedule_whatsapp_msg') {
+              // Handle scheduled messages
+              const platform = parsed.type === 'schedule_telegram_msg' ? 'telegram' : 'whatsapp';
+              const contactName = parsed.contact_name || '';
+              const contactValue = platform === 'telegram' ? parsed.link : parsed.phone;
+              const messageContent = parsed.message;
+              const scheduledTime = parsed.scheduled_time;
+
+              if (user && contactValue && messageContent && scheduledTime) {
+                try {
+                  const { createScheduledMessage } = await import('@/utils/scheduledMessageManager');
+                  const result = await createScheduledMessage(
+                    user.id,
+                    platform,
+                    contactName,
+                    contactValue,
+                    messageContent,
+                    new Date(scheduledTime)
+                  );
+
+                  const statusMsg = result.success
+                    ? `✅ ${platform === 'telegram' ? 'Telegram' : 'WhatsApp'} message scheduled for ${new Date(scheduledTime).toLocaleString()}`
+                    : `❌ Failed to schedule: ${result.error}`;
+                  accumulatedText += `\n\n${statusMsg}`;
+                } catch (e) {
+                  accumulatedText += `\n\n❌ Error scheduling message`;
+                }
+              } else if (!user) {
+                accumulatedText += `\n\n⚠️ Please login to schedule messages`;
+              } else {
+                accumulatedText += `\n\n⚠️ Missing contact or time for scheduling`;
+              }
+
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
             }
           } catch (parseError) {
             // Ignore JSON parse errors for malformed chunks
@@ -1037,7 +1054,7 @@ const Chat = () => {
             {!hasMessages && (
               <div className="flex flex-col items-center justify-center h-[60vh]">
                 <h1 className="text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20">
-                  ALSA AI
+                  ALSA CORE
                 </h1>
                 <p className="text-blue-500/50 font-mono text-[8px] uppercase tracking-[0.3em] mt-2">
                   Neural Link Active
@@ -1188,10 +1205,10 @@ const Chat = () => {
           {!messages.length ? (
             <div className="flex-1 flex flex-col items-center justify-center px-6">
               <h1 className="text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20">
-                ALSA AI
+                ALSA CORE
               </h1>
               <p className="mt-3 text-blue-500/50 font-mono text-[10px] tracking-[0.5em] uppercase">
-                From Chat To Execution Version 1.0
+                From Chat To Execution Version1
               </p>
 
               <div className="mt-14 w-full max-w-2xl">
@@ -1298,6 +1315,9 @@ const Chat = () => {
 
       {/* Reminder Notification System */}
       <ReminderNotification userId={user?.id || null} />
+
+      {/* Scheduled Message Checker */}
+      <ScheduledMessageChecker userId={user?.id || null} />
 
       {/* Voice Overlay */}
       {isListening && (
