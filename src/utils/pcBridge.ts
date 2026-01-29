@@ -331,15 +331,6 @@ export const parseNaturalLanguage = (input: string): { action: string; target: s
     }
   }
 
-  // Check for screenshot
-  if (MULTILANG_PATTERNS.screenshot.some(p => p.test(lowerInput))) {
-    const delayMatch = lowerInput.match(/(\d+)\s*(?:sec|second|seconds|सेकंड)/i);
-    return {
-      action: 'screenshot',
-      target: '',
-      params: { delay: delayMatch ? parseInt(delayMatch[1]) : 0 }
-    };
-  }
 
   // Check for screen recording
   if (MULTILANG_PATTERNS.recording.some(p => p.test(lowerInput))) {
@@ -495,9 +486,6 @@ export const executeSystemCommand = async (action: string): Promise<{ success: b
       case 'close_app':
       case 'close_window':
         return await closeWindow(parsed.target);
-
-      case 'screenshot':
-        return await captureScreenshot(undefined, parsed.params.delay);
 
       case 'start_recording':
         return await startScreenRecording(parsed.params.duration);
@@ -858,36 +846,7 @@ export const captureScreenshot = async (
       finalSavePath = 'C:\\Users\\Mohd Eisa\\Pictures\\Screenshots';
     }
 
-    const response = await fetch(`${BRIDGE_URL}/capture_screenshot`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify({
-        save_path: finalSavePath
-      })
-    });
-    const data = await response.json();
-
-    if (data.error) {
-      return {
-        success: false,
-        message: `Screenshot failed: ${data.error}`
-      };
-    }
-
-    return {
-      success: data.success ?? true,
-      message: data.message || 'Screenshot captured',
-      filename: data.filename,
-      path: data.path || savePath
-    };
-  } catch (error: any) {
-    return {
-      success: false,
-      message: error.message || 'Cannot connect to PC Bridge for screenshot'
-    };
-  }
-};
-
+   
 // Screen recording functions
 let recordingMediaRecorder: MediaRecorder | null = null;
 let recordingChunks: Blob[] = [];
