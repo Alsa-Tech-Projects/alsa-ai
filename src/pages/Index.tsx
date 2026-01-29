@@ -232,6 +232,7 @@ const Index = () => {
         handleNewConversation();
         return;
       }
+    };
 
 
 
