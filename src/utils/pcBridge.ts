@@ -496,6 +496,9 @@ export const executeSystemCommand = async (action: string): Promise<{ success: b
       case 'close_window':
         return await closeWindow(parsed.target);
 
+      case 'screenshot':
+        return await captureScreenshot(undefined, parsed.params.delay);
+
       case 'start_recording':
         return await startScreenRecording(parsed.params.duration);
 
@@ -620,24 +623,48 @@ export const createFolder = async (folderPath: string): Promise<{ success: boole
   }
 };
 
-// whatsapp massage automation
-export const sendWhatsAppMsg = async (phone: string, message: string) => {
-  const response = await fetch(`${BRIDGE_URL}/whatsapp-msg`, {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({ phone, message })
-  });
-  return await response.json();
+// WhatsApp message automation
+export const sendWhatsAppMsg = async (phone: string, message: string): Promise<{ success: boolean; message?: string; error?: string }> => {
+  try {
+    console.log('Sending WhatsApp message to:', phone);
+    const response = await fetch(`${BRIDGE_URL}/whatsapp-msg`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ phone, message })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: response.statusText }));
+      return { success: false, error: errorData.error || errorData.message || 'Failed to send WhatsApp message' };
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    console.error('WhatsApp message error:', error);
+    return { success: false, error: error.message || 'Cannot connect to PC Bridge for WhatsApp' };
+  }
 };
 
-// telegram automation massage
-export const sendTelegramMsg = async (link: string, message: string) => {
-  const response = await fetch(`${BRIDGE_URL}/telegram-msg`, {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({ link, message })
-  });
-  return await response.json();
+// Telegram message automation
+export const sendTelegramMsg = async (link: string, message: string): Promise<{ success: boolean; message?: string; error?: string }> => {
+  try {
+    console.log('Sending Telegram message to:', link);
+    const response = await fetch(`${BRIDGE_URL}/telegram-msg`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ link, message })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: response.statusText }));
+      return { success: false, error: errorData.error || errorData.message || 'Failed to send Telegram message' };
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    console.error('Telegram message error:', error);
+    return { success: false, error: error.message || 'Cannot connect to PC Bridge for Telegram' };
+  }
 };
 
 // Create a text file with content at any path
@@ -778,88 +805,88 @@ export const adbCommand = async (command: string): Promise<{ success: boolean; m
   }
 };
 
-// export const captureScreenshot = async (
-//   savePath?: string,
-//   delaySeconds?: number
-// ): Promise<{ success: boolean; message: string; filename?: string; path?: string }> => {
-//   try {
-//     // Wait for delay if specified
-//     if (delaySeconds && delaySeconds > 0) {
-//       console.log(`Waiting ${delaySeconds} seconds before screenshot...`);
-//       await new Promise(resolve => setTimeout(resolve, delaySeconds * 1000));
-//     }
+export const captureScreenshot = async (
+  savePath?: string,
+  delaySeconds?: number
+): Promise<{ success: boolean; message: string; filename?: string; path?: string }> => {
+  try {
+    // Wait for delay if specified
+    if (delaySeconds && delaySeconds > 0) {
+      console.log(`Waiting ${delaySeconds} seconds before screenshot...`);
+      await new Promise(resolve => setTimeout(resolve, delaySeconds * 1000));
+    }
 
-//     // Create screen blink effect
-//     const blinkOverlay = document.createElement('div');
-//     blinkOverlay.style.cssText = `
-//       position: fixed;
-//       top: 0;
-//       left: 0;
-//       width: 100vw;
-//       height: 100vh;
-//       background: white;
-//       z-index: 999999;
-//       pointer-events: none;
-//       opacity: 0;
-//       transition: opacity 0.1s ease-in-out;
-//     `;
-//     document.body.appendChild(blinkOverlay);
+    // Create screen blink effect
+    const blinkOverlay = document.createElement('div');
+    blinkOverlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: white;
+      z-index: 999999;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.1s ease-in-out;
+    `;
+    document.body.appendChild(blinkOverlay);
 
-//     // Trigger blink
-//     requestAnimationFrame(() => {
-//       blinkOverlay.style.opacity = '1';
-//       setTimeout(() => {
-//         blinkOverlay.style.opacity = '0';
-//         setTimeout(() => {
-//           document.body.removeChild(blinkOverlay);
-//         }, 100);
-//       }, 100);
-//     });
+    // Trigger blink
+    requestAnimationFrame(() => {
+      blinkOverlay.style.opacity = '1';
+      setTimeout(() => {
+        blinkOverlay.style.opacity = '0';
+        setTimeout(() => {
+          document.body.removeChild(blinkOverlay);
+        }, 100);
+      }, 100);
+    });
 
-//     // Determine save path
-//     let finalSavePath = savePath;
-//     if (!finalSavePath) {
-//       const storedPaths = localStorage.getItem('alsa_output_paths');
-//       if (storedPaths) {
-//         try {
-//           const parsed = JSON.parse(storedPaths);
-//           finalSavePath = parsed.screenshot;
-//         } catch { }
-//       }
-//     }
-//     if (!finalSavePath) {
-//       finalSavePath = 'C:\\Users\\Mohd Eisa\\Pictures\\Screenshots';
-//     }
+    // Determine save path
+    let finalSavePath = savePath;
+    if (!finalSavePath) {
+      const storedPaths = localStorage.getItem('alsa_output_paths');
+      if (storedPaths) {
+        try {
+          const parsed = JSON.parse(storedPaths);
+          finalSavePath = parsed.screenshot;
+        } catch { }
+      }
+    }
+    if (!finalSavePath) {
+      finalSavePath = 'C:\\Users\\Mohd Eisa\\Pictures\\Screenshots';
+    }
 
-//     const response = await fetch(`${BRIDGE_URL}/capture_screenshot`, {
-//       method: 'POST',
-//       headers: getHeaders(),
-//       body: JSON.stringify({
-//         save_path: finalSavePath
-//       })
-//     });
-//     const data = await response.json();
+    const response = await fetch(`${BRIDGE_URL}/capture_screenshot`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        save_path: finalSavePath
+      })
+    });
+    const data = await response.json();
 
-//     if (data.error) {
-//       return {
-//         success: false,
-//         message: `Screenshot failed: ${data.error}`
-//       };
-//     }
+    if (data.error) {
+      return {
+        success: false,
+        message: `Screenshot failed: ${data.error}`
+      };
+    }
 
-//     return {
-//       success: data.success ?? true,
-//       message: data.message || 'Screenshot captured',
-//       filename: data.filename,
-//       path: data.path || savePath
-//     };
-//   } catch (error: any) {
-//     return {
-//       success: false,
-//       message: error.message || 'Cannot connect to PC Bridge for screenshot'
-//     };
-//   }
-// };
+    return {
+      success: data.success ?? true,
+      message: data.message || 'Screenshot captured',
+      filename: data.filename,
+      path: data.path || savePath
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || 'Cannot connect to PC Bridge for screenshot'
+    };
+  }
+};
 
 // Screen recording functions
 let recordingMediaRecorder: MediaRecorder | null = null;
