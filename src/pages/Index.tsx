@@ -12,6 +12,7 @@ import ChatMessage from '@/components/ChatMessage';
 import MemoryManager from '@/components/MemoryManager';
 import TranscriptionFeedback from '@/components/TranscriptionFeedback';
 import ReminderNotification from '@/components/ReminderNotification';
+import ScheduledMessageChecker from '@/components/ScheduledMessageChecker';
 import { getMemory, addMemory, parseMemoryCommand, getTimeBasedGreeting } from '@/utils/memoryManager';
 import { parseAndLearn, getAIContext, trackInteraction, addConversationSummary } from '@/utils/conversationMemory';
 import { parseReminderFromText, createReminder } from '@/utils/reminderManager';
@@ -965,6 +966,45 @@ const Index = () => {
                 if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
                 return newMessages;
               });
+            } else if (parsed.type === 'schedule_telegram_msg' || parsed.type === 'schedule_whatsapp_msg') {
+              // Handle scheduled messages
+              const platform = parsed.type === 'schedule_telegram_msg' ? 'telegram' : 'whatsapp';
+              const contactName = parsed.contact_name || '';
+              const contactValue = platform === 'telegram' ? parsed.link : parsed.phone;
+              const messageContent = parsed.message;
+              const scheduledTime = parsed.scheduled_time;
+
+              if (user && contactValue && messageContent && scheduledTime) {
+                try {
+                  const { createScheduledMessage } = await import('@/utils/scheduledMessageManager');
+                  const result = await createScheduledMessage(
+                    user.id,
+                    platform,
+                    contactName,
+                    contactValue,
+                    messageContent,
+                    new Date(scheduledTime)
+                  );
+
+                  const statusMsg = result.success
+                    ? `✅ ${platform === 'telegram' ? 'Telegram' : 'WhatsApp'} message scheduled for ${new Date(scheduledTime).toLocaleString()}`
+                    : `❌ Failed to schedule: ${result.error}`;
+                  accumulatedText += `\n\n${statusMsg}`;
+                } catch (e) {
+                  accumulatedText += `\n\n❌ Error scheduling message`;
+                }
+              } else if (!user) {
+                accumulatedText += `\n\n⚠️ Please login to schedule messages`;
+              } else {
+                accumulatedText += `\n\n⚠️ Missing contact or time for scheduling`;
+              }
+
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
             }
           } catch (parseError) {
             // Ignore JSON parse errors for malformed chunks
@@ -1290,6 +1330,9 @@ const Index = () => {
 
       {/* Reminder Notification System */}
       <ReminderNotification userId={user?.id || null} />
+
+      {/* Scheduled Message Checker */}
+      <ScheduledMessageChecker userId={user?.id || null} />
 
       {/* Voice Overlay */}
       {isListening && (
