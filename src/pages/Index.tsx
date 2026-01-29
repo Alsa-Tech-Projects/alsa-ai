@@ -7,7 +7,7 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
-import { checkBridgeConnection, executeSystemCommand, scanSystem, SystemScanResult, captureScreenshot, startScreenRecording, stopScreenRecording, parseNaturalLanguage, WEBSITES, createProject, createPowerPoint, createExcel, createDatabase, executePythonFile, executeCmdCommand, runCommand, checkInstallation, sendCommand, adbConnect, adbCommand, closeWindow, openFolder, runProject, createFolder, createTextFile, openWebsiteWithSearch, openCustomApp, sendTelegramMsg, sendWhatsAppMsg } from '@/utils/pcBridge';
+import { checkBridgeConnection, executeSystemCommand, scanSystem, SystemScanResult, startScreenRecording, stopScreenRecording, parseNaturalLanguage, WEBSITES, createProject, createPowerPoint, createExcel, createDatabase, executePythonFile, executeCmdCommand, runCommand, checkInstallation, sendCommand, adbConnect, adbCommand, closeWindow, openFolder, runProject, createFolder, createTextFile, openWebsiteWithSearch, openCustomApp, sendTelegramMsg, sendWhatsAppMsg } from '@/utils/pcBridge';
 import ChatMessage from '@/components/ChatMessage';
 import MemoryManager from '@/components/MemoryManager';
 import TranscriptionFeedback from '@/components/TranscriptionFeedback';
@@ -65,7 +65,6 @@ const Index = () => {
   const [backupKeyActive, setBackupKeyActive] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSavedPath, setRecordingSavedPath] = useState<string | null>(null);
-  const [screenshotPending, setScreenshotPending] = useState(false);
 
   // Subscription hook for free tier restrictions
   const subscription = useSubscription();
@@ -144,24 +143,11 @@ const Index = () => {
     resetTranscript();
     setInputText('');
     setUploadedFiles([]);
-    navigate('/');
+    navigate('/chat');
     speak('Starting a new conversation');
     toast({ title: 'New Chat', description: 'Ready for a new conversation' });
   }, [resetTranscript, speak, toast, navigate]);
-
-  // Screenshot handler
-  const handleScreenshot = useCallback(async () => {
-    const result = await captureScreenshot();
-    toast({
-      title: result.success ? 'Screenshot Captured' : 'Screenshot Failed',
-      description: result.message,
-      variant: result.success ? 'default' : 'destructive'
-    });
-    if (result.success) {
-      speak('Screenshot captured successfully');
-    }
-  }, [toast, speak]);
-
+  
   // Screen recording handler - DISABLED FOR FREE TIER USERS
   const handleRecording = useCallback(async () => {
     if (subscription.isFree) {
@@ -247,17 +233,11 @@ const Index = () => {
         return;
       }
 
-      // Ctrl+Shift+S for screenshot
-      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        handleScreenshot();
-        return;
-      }
-    };
+
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleVoice, handleNewConversation, handleScreenshot]);
+  }, [toggleVoice, handleNewConversation]);
 
   // Auth state management - ALLOW GUEST USERS (no redirect)
   useEffect(() => {
