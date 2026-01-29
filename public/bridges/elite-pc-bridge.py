@@ -11,7 +11,15 @@ from flask_cors import CORS
 import winapps
 
 app = Flask(__name__)
-CORS(app, origins=['*'])
+CORS(app, origins=[
+    'https://www.alsa-ai.in', 
+    'https://alsa-ai.in',
+    'http://localhost:5173',
+    'http://localhost:8080',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:8080',
+    '*'  # Allow all origins for development
+])
 
 # Allowed base directories for file operations
 ALLOWED_BASE_DIRS = [
@@ -970,6 +978,109 @@ def create_database():
     except Exception as e:
         print(f"Error creating database: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+# ====== MESSAGING AUTOMATION ======
+
+@app.route('/telegram-msg', methods=['POST'])
+def send_telegram_message():
+    """Open Telegram Web and send a message"""
+    try:
+        import webbrowser
+        import pyautogui
+        import time
+        
+        data = request.get_json()
+        link = data.get('link', '')  # Telegram link like https://web.telegram.org/k/#@username
+        message = data.get('message', '')
+        
+        if not link or not message:
+            return jsonify({'success': False, 'error': 'Link and message are required'}), 400
+        
+        # If user provided just username, convert to full URL
+        if not link.startswith('http'):
+            if link.startswith('@'):
+                link = f'https://web.telegram.org/k/#{link}'
+            else:
+                link = f'https://web.telegram.org/k/#@{link}'
+        
+        print(f"Opening Telegram: {link}")
+        webbrowser.open(link)
+        
+        # Wait for page to load
+        time.sleep(5)
+        
+        # Type the message
+        pyautogui.typewrite(message, interval=0.02) if message.isascii() else pyautogui.write(message)
+        
+        # Small delay then press Enter to send
+        time.sleep(0.5)
+        pyautogui.press('enter')
+        
+        return jsonify({
+            'success': True,
+            'message': f'Telegram message sent via {link}'
+        })
+        
+    except ImportError:
+        return jsonify({
+            'success': False, 
+            'error': 'pyautogui not installed. Run: pip install pyautogui'
+        }), 500
+    except Exception as e:
+        print(f"Telegram error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/whatsapp-msg', methods=['POST'])
+def send_whatsapp_message():
+    """Open WhatsApp Web and send a message"""
+    try:
+        import webbrowser
+        import urllib.parse
+        import pyautogui
+        import time
+        
+        data = request.get_json()
+        phone = data.get('phone', '')  # Phone number with country code
+        message = data.get('message', '')
+        
+        if not phone or not message:
+            return jsonify({'success': False, 'error': 'Phone and message are required'}), 400
+        
+        # Clean phone number - remove spaces, dashes, etc.
+        phone_clean = ''.join(filter(str.isdigit, phone))
+        if not phone_clean.startswith('91') and len(phone_clean) == 10:
+            phone_clean = '91' + phone_clean  # Default to India country code
+        
+        # Encode message for URL
+        encoded_message = urllib.parse.quote(message)
+        
+        # WhatsApp Web URL with pre-filled message
+        whatsapp_url = f'https://web.whatsapp.com/send?phone={phone_clean}&text={encoded_message}'
+        
+        print(f"Opening WhatsApp: {whatsapp_url}")
+        webbrowser.open(whatsapp_url)
+        
+        # Wait for page to load and for user to scan QR if needed
+        time.sleep(8)
+        
+        # Press Enter to send the message
+        pyautogui.press('enter')
+        
+        return jsonify({
+            'success': True,
+            'message': f'WhatsApp message prepared for {phone_clean}'
+        })
+        
+    except ImportError:
+        return jsonify({
+            'success': False, 
+            'error': 'pyautogui not installed. Run: pip install pyautogui'
+        }), 500
+    except Exception as e:
+        print(f"WhatsApp error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 # Global music player process reference
 current_music_process = None
