@@ -18,6 +18,46 @@ const Landing = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Live countdown timer state
+  const [countdown, setCountdown] = useState({ days: 7, hours: 23, minutes: 59, seconds: 59 });
+  
+  // Countdown timer effect - counts down from 7 days
+  useEffect(() => {
+    // Set offer end date to 7 days from now (stored in localStorage to persist)
+    const storedEndDate = localStorage.getItem('alsa_offer_end_date');
+    let endDate: Date;
+    
+    if (storedEndDate) {
+      endDate = new Date(storedEndDate);
+    } else {
+      endDate = new Date();
+      endDate.setDate(endDate.getDate() + 7);
+      localStorage.setItem('alsa_offer_end_date', endDate.toISOString());
+    }
+    
+    const updateCountdown = () => {
+      const now = new Date();
+      const diff = endDate.getTime() - now.getTime();
+      
+      if (diff <= 0) {
+        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        return;
+      }
+      
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      setCountdown({ days, hours, minutes, seconds });
+    };
+    
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -221,30 +261,129 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* HERO BANNER - Full Width Limited Time Offer */}
+      <section id="demo" className="py-12 px-6">
+        <div className="container mx-auto">
+          <div className="relative w-full overflow-hidden rounded-3xl bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 p-1 shadow-2xl shadow-orange-500/30">
+            <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+              {/* Animated glow effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-500/20 via-transparent to-pink-500/20 animate-pulse"></div>
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 via-yellow-500 to-pink-500"></div>
+              
+              <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8 p-8 md:p-12">
+                {/* Left Content */}
+                <div className="flex-1 text-center lg:text-left">
+                  <div className="inline-flex items-center gap-2 bg-orange-500/20 text-orange-300 px-4 py-2 rounded-full mb-6 animate-bounce">
+                    <span className="animate-pulse">🔥</span>
+                    <span className="font-bold text-sm uppercase tracking-wide">Limited Time Offer</span>
+                    <span className="animate-pulse">🔥</span>
+                  </div>
+                  
+                  <h2 className="text-4xl md:text-5xl lg:text-6xl font-black mb-4 leading-tight">
+                    <span className="bg-gradient-to-r from-orange-400 via-yellow-400 to-orange-400 bg-clip-text text-transparent">
+                      25% OFF
+                    </span>
+                    <br />
+                    <span className="text-white text-2xl md:text-3xl lg:text-4xl">
+                      All Premium Plans!
+                    </span>
+                  </h2>
+                  
+                  <p className="text-white/70 text-lg md:text-xl mb-6 max-w-lg">
+                    Get full access to AI-powered PC automation, coding assistance & Android control. 
+                    <span className="text-orange-400 font-semibold"> Offer expires soon!</span>
+                  </p>
+                  
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                    <Button
+                      size="lg"
+                      onClick={() => navigate('/pricing')}
+                      className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white text-lg px-10 py-7 font-bold rounded-2xl shadow-2xl shadow-orange-500/40 hover:scale-105 transition-all"
+                    >
+                      <Crown className="mr-2 w-5 h-5" />
+                      Claim 25% Discount
+                      <ArrowRight className="ml-2 w-5 h-5" />
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      onClick={() => navigate('/auth')}
+                      className="border-2 border-white/30 text-white hover:bg-white/10 text-lg px-8 py-7 font-semibold rounded-2xl backdrop-blur-xl"
+                    >
+                      Start ₹1 Trial
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Right Content - Stats & Timer */}
+                <div className="flex-shrink-0 text-center">
+                  <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
+                    <p className="text-white/60 text-sm uppercase tracking-wider mb-2">Offer Ends In</p>
+                    <div className="flex items-center gap-2 justify-center mb-4">
+                      <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-lg px-3 py-2">
+                        <span className="text-2xl md:text-3xl font-black text-white">{String(countdown.days).padStart(2, '0')}</span>
+                        <p className="text-[10px] text-white/80 uppercase">Days</p>
+                      </div>
+                      <span className="text-2xl font-bold text-orange-400">:</span>
+                      <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-lg px-3 py-2">
+                        <span className="text-2xl md:text-3xl font-black text-white">{String(countdown.hours).padStart(2, '0')}</span>
+                        <p className="text-[10px] text-white/80 uppercase">Hours</p>
+                      </div>
+                      <span className="text-2xl font-bold text-orange-400">:</span>
+                      <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-lg px-3 py-2">
+                        <span className="text-2xl md:text-3xl font-black text-white">{String(countdown.minutes).padStart(2, '0')}</span>
+                        <p className="text-[10px] text-white/80 uppercase">Mins</p>
+                      </div>
+                      <span className="text-2xl font-bold text-orange-400">:</span>
+                      <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-lg px-3 py-2">
+                        <span className="text-2xl md:text-3xl font-black text-white">{String(countdown.seconds).padStart(2, '0')}</span>
+                        <p className="text-[10px] text-white/80 uppercase">Secs</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2 text-left">
+                      <div className="flex items-center gap-2 text-white/80 text-sm">
+                        <Check className="w-4 h-4 text-green-400" />
+                        <span>Full PC Automation Access</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-white/80 text-sm">
+                        <Check className="w-4 h-4 text-green-400" />
+                        <span>Priority AI Support</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-white/80 text-sm">
+                        <Check className="w-4 h-4 text-green-400" />
+                        <span>All Future Updates Free</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Demo Video Section */}
-      <section id="demo" className="py-20 px-6">
+      <section className="py-16 px-6">
         <div className="container mx-auto max-w-5xl">
-          <div className="text-center mb-12">
+          <div className="text-center mb-10">
             <Badge className="mb-4 bg-purple-500/20 text-purple-300 border-purple-500/30">
               <Play className="w-4 h-4 mr-2 inline" /> See ALSA in Action
             </Badge>
-            <h2 className="text-4xl font-bold mb-4">Watch the Demo</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Watch the Demo</h2>
             <p className="text-white/60 max-w-xl mx-auto">
               See how ALSA AI automates your workflow in real-time
             </p>
           </div>
 
-          <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-white/10 shadow-2xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-purple-600/10"></div>
+          <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-white/10 shadow-xl">
             <video
-              className="w-full aspect-video relative z-10"
+              className="w-full aspect-video"
               controls
-              autoPlay
               muted
               loop
               playsInline
               poster="/videos/demo-video.mp4"
-              preload="auto"
+              preload="metadata"
             >
               <source src="/videos/demo-video.mp4" type="video/mp4" />
               Your browser does not support the video tag.
