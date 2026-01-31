@@ -67,9 +67,38 @@ const Landing = () => {
   ];
 
   const pricingPlans = [
-    { name: '3-Day Trial', price: '₹1', features: ['Basic AI Chat', 'HTML/CSS Coding'], cta: 'Start Trial', gradient: 'from-amber-500 to-orange-500', icon: <Zap className="w-5 h-5" /> },
-    { name: 'Alsa Pro', price: '₹720', originalPrice: '₹800', features: ['Full-Stack Coding', 'OS Commands'], highlight: true, gradient: 'from-blue-500 to-cyan-500', icon: <Sparkles className="w-5 h-5" /> },
-    { name: 'Alsa Elite', price: '₹1200', originalPrice: '₹1,500', features: ['ADB Control', 'Database Management'], gradient: 'from-purple-500 to-pink-500', icon: <Crown className="w-5 h-5" /> },
+    {
+      name: '3-Day Trial',
+      price: '₹1',
+      period: '',
+      features: ['Screenshots & Recording', 'HTML/CSS/JS Coding', 'Basic AI Chat', 'Limited Features'],
+      cta: 'Start Trial',
+      highlight: false,
+      gradient: 'from-amber-500 to-orange-500',
+      icon: <Zap className="w-5 h-5" />,
+    },
+    {
+      name: 'Alsa Pro',
+      price: '₹720',
+      originalPrice: '₹800',
+      period: '/month',
+      features: ['Full-Stack Coding', 'OS Shell Commands', 'Project Generation', 'Document Creation', 'Priority Support'],
+      cta: 'Get Pro',
+      highlight: true,
+      gradient: 'from-blue-500 to-cyan-500',
+      icon: <Sparkles className="w-5 h-5" />,
+    },
+    {
+      name: 'Alsa Elite',
+      price: '₹1200',
+      originalPrice: '₹1,500',
+      period: '/month',
+      features: ['Everything in Pro', 'ADB Android Control', 'Excel Automation', 'Database Management', '24/7 Support'],
+      cta: 'Get Elite',
+      highlight: false,
+      gradient: 'from-purple-500 to-pink-500',
+      icon: <Crown className="w-5 h-5" />,
+    },
   ];
 
   if (loading) {
