@@ -150,7 +150,13 @@ const Landing = () => {
                 <p className="text-white/60 mb-8 max-w-md">Get full access to AI-powered PC automation. <span className="text-orange-400 font-semibold">Offer expires soon!</span></p>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button size="lg" className="bg-orange-500 hover:bg-orange-400 font-bold">Claim 25% Discount</Button>
-                  <Button variant="outline" className="border-white/20">Start ₹1 Trial</Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/pricing')}
+                    className="border-white/20 bg-white/5 text-white hover:bg-white hover:text-[#0A1A2F] transition-all duration-300 font-semibold"
+                  >
+                    Start ₹1 Trial
+                  </Button>
                 </div>
               </div>
 
