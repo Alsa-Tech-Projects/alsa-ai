@@ -241,29 +241,68 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Pricing - Full Content Restored */}
-      <section id="pricing" className="py-24 px-4">
-        <div className="container mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-16">Choose Your Plan</h2>
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+      {/* Pricing Section */}
+      <section id="pricing" className="py-24 px-6">
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-purple-500/20 text-purple-300 border-purple-500/30">
+              <Crown className="w-4 h-4 mr-2 inline" /> Simple Pricing
+            </Badge>
+            <h2 className="text-4xl font-bold mb-4">Choose Your Plan</h2>
+            <p className="text-white/60 max-w-xl mx-auto text-lg">
+              Start with a ₹1 trial and upgrade anytime
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {pricingPlans.map((plan, i) => (
-              <Card key={i} className={`bg-white/5 border-white/5 relative ${plan.highlight ? 'ring-2 ring-blue-500 md:scale-105' : ''}`}>
-                <CardHeader>
-                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                  <div className="mt-4 flex flex-col">
-                    {plan.originalPrice && <span className="text-sm text-white/30 line-through">{plan.originalPrice}</span>}
-                    <span className="text-4xl font-black">{plan.price}<span className="text-sm text-white/40">{plan.period}</span></span>
+              <Card
+                key={i}
+                className={`relative bg-slate-900/50 border-white/5 backdrop-blur-xl overflow-hidden ${plan.highlight ? 'ring-2 ring-blue-500 scale-105 shadow-2xl shadow-blue-500/20' : ''}`}
+              >
+                {plan.highlight && (
+                  <div className="absolute top-0 right-0 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs font-bold px-4 py-1.5 rounded-bl-xl">
+                    MOST POPULAR
+                  </div>
+                )}
+                <CardHeader className="text-center pb-2">
+                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-r ${plan.gradient} flex items-center justify-center text-white mx-auto mb-4 shadow-lg`}>
+                    {plan.icon}
+                  </div>
+                  <CardTitle className="text-white text-2xl font-bold">{plan.name}</CardTitle>
+                  <div className="mt-4">
+                    {plan.originalPrice && (
+                      <span className="text-lg text-white/40 line-through mr-2">{plan.originalPrice}</span>
+                    )}
+                    <span className="text-4xl font-black text-white">{plan.price}</span>
+                    <span className="text-white/50 ml-1">{plan.period}</span>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <ul className="text-left space-y-4 mb-8 text-sm text-white/60">
-                    {plan.features.map((feat, idx) => <li key={idx} className="flex items-center gap-2"><Check className="w-4 h-4 text-green-400" /> {feat}</li>)}
+                <CardContent className="pt-6">
+                  <ul className="space-y-4 mb-8">
+                    {plan.features.map((feature, j) => (
+                      <li key={j} className="flex items-center gap-3 text-white/80">
+                        <div className={`w-5 h-5 rounded-full bg-gradient-to-r ${plan.gradient} flex items-center justify-center`}>
+                          <Check className="w-3 h-3 text-white" />
+                        </div>
+                        {feature}
+                      </li>
+                    ))}
                   </ul>
-                  <Button className={`w-full py-6 bg-gradient-to-r ${plan.gradient} font-bold`}>{plan.cta}</Button>
+                  <Button
+                    className={`w-full py-6 font-bold text-base bg-gradient-to-r ${plan.gradient} hover:opacity-90 shadow-lg`}
+                    onClick={() => navigate('/pricing')}
+                  >
+                    {plan.cta}
+                  </Button>
                 </CardContent>
               </Card>
             ))}
           </div>
+
+          {/* <p className="text-center text-white/40 mt-10">
+            💡 Use promo code <span className="text-blue-400 font-mono font-bold">BISMILLAH</span> for 99% off or <span className="text-purple-400 font-mono font-bold">WELCOMEFROMALSAAI</span> for 80% off!
+          </p> */}
         </div>
       </section>
 
