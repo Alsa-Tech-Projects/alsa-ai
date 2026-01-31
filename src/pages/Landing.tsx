@@ -28,7 +28,6 @@ const Landing = () => {
       endDate.setDate(endDate.getDate() + 7);
       localStorage.setItem('alsa_offer_end_date', endDate.toISOString());
     }
-
     const updateCountdown = () => {
       const now = new Date();
       const diff = endDate.getTime() - now.getTime();
@@ -58,180 +57,231 @@ const Landing = () => {
   }, [navigate]);
 
   const features = [
-    { icon: Bot, title: 'AI Conversation', desc: 'Natural language chat with emotional intelligence', color: 'from-blue-500 to-cyan-500' },
-    { icon: Cpu, title: 'PC Control', desc: 'Control your computer with voice commands', color: 'from-purple-500 to-pink-500' },
-    { icon: Code, title: 'Full-Stack Coding', desc: 'Generate complete projects instantly', color: 'from-emerald-500 to-teal-500' },
-    { icon: Smartphone, title: 'Android Control', desc: 'Control your phone via ADB effortlessly', color: 'from-orange-500 to-red-500' },
-    { icon: Shield, title: 'Secure Bridge', desc: 'Encrypted local execution tunnel', color: 'from-indigo-500 to-purple-500' },
-    { icon: Zap, title: 'Real-time', desc: 'Instant responses with streaming AI', color: 'from-yellow-500 to-orange-500' },
+    { icon: Bot, title: 'AI Conversation', desc: 'Natural language chat with emotional intelligence and context awareness', color: 'from-blue-500 to-cyan-500' },
+    { icon: Cpu, title: 'PC Control', desc: 'Control your computer with voice commands - shutdown, restart, open apps', color: 'from-purple-500 to-pink-500' },
+    { icon: Code, title: 'Full-Stack Coding', desc: 'Generate complete React, Node.js, Python projects instantly', color: 'from-emerald-500 to-teal-500' },
+    { icon: Smartphone, title: 'Android Control', desc: 'Control your phone via ADB - install apps, take screenshots', color: 'from-orange-500 to-red-500' },
+    { icon: Shield, title: 'Secure Bridge', desc: 'Encrypted local execution tunnel for safe PC automation', color: 'from-indigo-500 to-purple-500' },
+    { icon: Zap, title: 'Real-time', desc: 'Instant responses and actions with streaming AI', color: 'from-yellow-500 to-orange-500' },
   ];
 
   const pricingPlans = [
-    {
-      name: '3-Day Trial',
-      price: '₹1',
-      period: '',
-      features: ['Screenshots & Recording', 'HTML/CSS/JS Coding', 'Basic AI Chat', 'Limited Features'],
-      cta: 'Start Trial',
-      highlight: false,
-      gradient: 'from-amber-500 to-orange-500',
-      icon: <Zap className="w-5 h-5" />,
-    },
-    {
-      name: 'Alsa Pro',
-      price: '₹720',
-      originalPrice: '₹800',
-      period: '/month',
-      features: ['Full-Stack Coding', 'OS Shell Commands', 'Project Generation', 'Document Creation', 'Priority Support'],
-      cta: 'Get Pro',
-      highlight: true,
-      gradient: 'from-blue-500 to-cyan-500',
-      icon: <Sparkles className="w-5 h-5" />,
-    },
-    {
-      name: 'Alsa Elite',
-      price: '₹1200',
-      originalPrice: '₹1,500',
-      period: '/month',
-      features: ['Everything in Pro', 'ADB Android Control', 'Excel Automation', 'Database Management', '24/7 Support'],
-      cta: 'Get Elite',
-      highlight: false,
-      gradient: 'from-purple-500 to-pink-500',
-      icon: <Crown className="w-5 h-5" />,
-    },
+    { name: '3-Day Trial', price: '₹1', period: '', features: ['Screenshots & Recording', 'HTML/CSS/JS Coding', 'Basic AI Chat', 'Limited Features'], cta: 'Start Trial', highlight: false, gradient: 'from-amber-500 to-orange-500', icon: <Zap className="w-5 h-5" /> },
+    { name: 'Alsa Pro', price: '₹720', originalPrice: '₹800', period: '/month', features: ['Full-Stack Coding', 'OS Shell Commands', 'Project Generation', 'Document Creation', 'Priority Support'], cta: 'Get Pro', highlight: true, gradient: 'from-blue-500 to-cyan-500', icon: <Sparkles className="w-5 h-5" /> },
+    { name: 'Alsa Elite', price: '₹1200', originalPrice: '₹1,500', period: '/month', features: ['Everything in Pro', 'ADB Android Control', 'Excel Automation', 'Database Management', '24/7 Support'], cta: 'Get Elite', highlight: false, gradient: 'from-purple-500 to-pink-500', icon: <Crown className="w-5 h-5" /> },
   ];
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0A1A2F] flex items-center justify-center">
-        <img src={alsaLogo} alt="ALSA AI" className="w-20 h-20 animate-pulse" />
+        <img src={alsaLogo} alt="ALSA AI" className="w-20 h-20 animate-pulse rounded-2xl" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0A1A2F] text-white overflow-x-hidden font-sans">
+    <div className="min-h-screen bg-[#0A1A2F] text-white overflow-x-hidden">
       <Helmet>
-        <title>ALSA AI - Best AI Assistant for PC Automation</title>
+        <title>ALSA AI - Best AI Assistant for PC Automation, Voice Control & Coding</title>
       </Helmet>
 
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0A1A2F]/80 backdrop-blur-md border-b border-white/5">
+      {/* Navigation - Responsive Fix */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0A1A2F]/90 backdrop-blur-xl border-b border-white/5">
         <div className="container mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src={alsaLogo} alt="ALSA AI" className="w-8 h-8 md:w-10 md:h-10 rounded-lg" />
+          <div className="flex items-center gap-2 md:gap-3">
+            <img src={alsaLogo} alt="ALSA AI" className="w-9 h-9 md:w-11 md:h-11 rounded-xl" />
             <div className="flex flex-col">
-              <span className="font-bold text-lg md:text-xl tracking-tight leading-none">ALSA AI</span>
-              <span className="text-[8px] md:text-[10px] text-white/40 uppercase tracking-widest">Smart Assistant</span>
+              <span className="font-black text-base md:text-xl tracking-tight bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent leading-tight">ALSA AI</span>
+              <p className="hidden xs:block text-[8px] md:text-[10px] text-white/40 font-medium tracking-wide">AI Lifestyle & Smart Assistant</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 md:gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/auth')} className="text-white/70 text-xs md:text-sm">Login</Button>
-            <Button size="sm" onClick={() => navigate('/auth')} className="bg-blue-600 hover:bg-blue-500 text-xs md:text-sm px-3 md:px-5">
-              Get Started
-            </Button>
+          <div className="hidden lg:flex items-center gap-6">
+            <a href="#features" className="text-xs font-medium text-white/60 hover:text-white transition-colors">Features</a>
+            <a href="#demo" className="text-xs font-medium text-white/60 hover:text-white transition-colors">Demo</a>
+            <a href="#pricing" className="text-xs font-medium text-white/60 hover:text-white transition-colors">Pricing</a>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/auth')} className="text-white/70 hover:text-white text-xs px-2 md:px-4">Login</Button>
+            <Button size="sm" onClick={() => navigate('/auth')} className="bg-gradient-to-r from-blue-600 to-purple-600 text-[10px] md:text-sm px-3 py-1">Get Started</Button>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="pt-28 md:pt-40 pb-16 px-4">
-        <div className="container mx-auto text-center">
-          <Badge className="mb-6 bg-blue-500/10 text-blue-400 border-blue-500/20 px-3 py-1 text-[10px] md:text-xs">
-            #1 AGENTIC OS FOR PC & ANDROID
+      {/* Hero - Text Fix */}
+      <section className="pt-28 md:pt-40 pb-20 px-4 text-center">
+        <div className="container mx-auto">
+          <Badge className="mb-6 bg-blue-600/10 text-blue-300 border-blue-500/20 px-4 py-1.5 text-[10px] md:text-sm">
+            <Zap className="w-3 h-3 md:w-4 md:h-4 mr-2 inline" /> The First Agentic OS for Your PC & Android
           </Badge>
-          <h1 className="text-4xl md:text-7xl font-black mb-6 leading-[1.1] tracking-tight">
+          <h1 className="text-4xl md:text-7xl font-black mb-6 leading-[1.1] tracking-tight px-2">
             Your AI That Actually <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
-              Gets Things Done
-            </span>
+            <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Gets Things Done</span>
           </h1>
-          <p className="text-base md:text-xl text-white/60 max-w-2xl mx-auto mb-10 font-light px-4">
-            Automate PC tasks, control hardware, and code projects with an AI that acts. Built for power users.
+          <p className="text-base md:text-xl text-white/60 max-w-3xl mx-auto mb-10 leading-relaxed font-light px-4">
+            Automate software development, control hardware, and manage data with an AI that doesn't just talk—it <span className="text-white font-medium">acts</span>.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button size="lg" className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 rounded-xl px-8 py-6 text-lg font-bold">
-              Start Trial for ₹1 <ArrowRight className="ml-2 w-5 h-5" />
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center px-4 mb-12">
+            <Button size="lg" onClick={() => navigate('/auth')} className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-7 rounded-2xl text-lg font-bold">
+              Start Free Trial for ₹1 <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
-            <Button variant="outline" size="lg" className="w-full sm:w-auto border-white/10 bg-white/5 rounded-xl px-8 py-6 text-lg">
-              <Play className="mr-2 w-4 h-4 fill-current" /> Watch Demo
+            <Button variant="outline" size="lg" onClick={() => document.getElementById('demo')?.scrollIntoView({behavior:'smooth'})} className="w-full sm:w-auto border-purple-500/30 bg-purple-500/5 px-8 py-7 rounded-2xl text-lg font-bold">
+              <Play className="mr-2 w-5 h-5" /> Watch Demo
             </Button>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10 text-white/50 text-xs md:text-base">
+            <div className="flex items-center gap-2"><Users className="w-4 h-4" /> <span className="font-semibold">10K+ Users</span></div>
+            <div className="flex items-center gap-2"><Star className="w-4 h-4 text-yellow-500 fill-yellow-500" /> <span className="font-semibold">4.9/5 Rating</span></div>
+            <div className="flex items-center gap-2"><Globe className="w-4 h-4" /> <span className="font-semibold">50+ Countries</span></div>
           </div>
         </div>
       </section>
 
-      {/* Offer Banner (Timer Fix) */}
-      <section className="py-8 px-4">
+      {/* Offer Banner - Timer & Mobile Fix */}
+      <section id="demo" className="py-12 px-4">
         <div className="container mx-auto">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-orange-600 to-pink-700 p-[1px]">
-            <div className="bg-[#0D1F35] rounded-[23px] p-6 md:p-10 flex flex-col lg:flex-row items-center justify-between gap-8">
-              <div className="text-center lg:text-left">
-                <span className="inline-block bg-orange-500/20 text-orange-400 text-xs font-bold px-3 py-1 rounded-full mb-4">LIMITED OFFER</span>
-                <h2 className="text-3xl md:text-5xl font-black mb-2 italic">25% OFF ALL PLANS</h2>
-                <p className="text-white/60">Unlock full PC automation today.</p>
+          <div className="rounded-3xl bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 p-[1px] shadow-2xl">
+            <div className="bg-[#0A1A2F] rounded-[23px] overflow-hidden p-6 md:p-12 flex flex-col lg:flex-row items-center justify-between gap-10">
+              <div className="text-center lg:text-left flex-1">
+                <div className="inline-flex items-center gap-2 bg-orange-500/20 text-orange-300 px-4 py-2 rounded-full mb-6">
+                  <span className="animate-pulse">🔥</span> <span className="font-bold text-xs uppercase">Limited Time Offer</span>
+                </div>
+                <h2 className="text-3xl md:text-5xl font-black mb-4">25% OFF <br className="md:hidden" /><span className="text-white/70 text-xl md:text-3xl">All Premium Plans!</span></h2>
+                <p className="text-white/60 mb-8 max-w-md">Get full access to AI-powered PC automation. <span className="text-orange-400 font-semibold">Offer expires soon!</span></p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                   <Button size="lg" className="bg-orange-500 hover:bg-orange-400 font-bold">Claim 25% Discount</Button>
+                   <Button variant="outline" className="border-white/20">Start ₹1 Trial</Button>
+                </div>
               </div>
               
-              {/* Responsive Timer Boxes */}
-              <div className="flex items-center gap-2 md:gap-4">
-                {[
-                  { label: 'Days', val: countdown.days },
-                  { label: 'Hrs', val: countdown.hours },
-                  { label: 'Min', val: countdown.minutes },
-                  { label: 'Sec', val: countdown.seconds }
-                ].map((item, idx) => (
-                  <div key={idx} className="flex flex-col items-center">
-                    <div className="bg-white/5 border border-white/10 rounded-xl w-14 h-14 md:w-20 md:h-20 flex items-center justify-center">
-                      <span className="text-xl md:text-3xl font-black">{String(item.val).padStart(2, '0')}</span>
+              {/* Responsive Timer */}
+              <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 w-full lg:w-auto">
+                <p className="text-center text-white/40 text-xs uppercase mb-4 tracking-widest">Offer Ends In</p>
+                <div className="flex items-center justify-center gap-2 md:gap-3">
+                  {[
+                    { l: 'Days', v: countdown.days },
+                    { l: 'Hrs', v: countdown.hours },
+                    { l: 'Mins', v: countdown.minutes },
+                    { l: 'Secs', v: countdown.seconds }
+                  ].map((t, i) => (
+                    <div key={i} className="flex flex-col items-center">
+                      <div className="bg-gradient-to-br from-orange-500 to-red-600 w-12 h-12 md:w-16 md:h-16 rounded-xl flex items-center justify-center font-black text-xl md:text-2xl shadow-lg">{String(t.v).padStart(2, '0')}</div>
+                      <span className="text-[8px] md:text-[10px] mt-2 text-white/50 font-bold uppercase">{t.l}</span>
                     </div>
-                    <span className="text-[10px] md:text-xs mt-2 uppercase text-white/40 tracking-widest">{item.label}</span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Video Section (Border Fix) */}
+      {/* Demo Video - Border Fix */}
       <section className="py-16 px-4">
-        <div className="container mx-auto max-w-4xl text-center">
-          <h3 className="text-2xl font-bold mb-8">See ALSA in Action</h3>
-          <div className="relative rounded-2xl md:rounded-[2rem] p-1 bg-gradient-to-b from-white/10 to-transparent shadow-2xl">
-            <div className="rounded-[1.5rem] md:rounded-[1.8rem] overflow-hidden bg-black aspect-video">
-              <video className="w-full h-full object-cover" controls playsInline poster="/placeholder-poster.jpg">
-                <source src="/videos/demo-video.mp4" type="video/mp4" />
-              </video>
+        <div className="container mx-auto max-w-5xl">
+          <div className="text-center mb-10">
+            <Badge className="mb-4 bg-purple-500/20 text-purple-300 border-purple-500/30">See ALSA in Action</Badge>
+            <h2 className="text-3xl md:text-4xl font-bold">Watch the Demo</h2>
+          </div>
+          <div className="relative rounded-2xl md:rounded-3xl overflow-hidden border-4 border-white/5 shadow-2xl aspect-video bg-black">
+             <video className="w-full h-full" controls muted loop playsInline>
+               <source src="/videos/demo-video.mp4" type="video/mp4" />
+             </video>
+          </div>
+        </div>
+      </section>
+
+      {/* Features - Full Content Restored */}
+      <section id="features" className="py-20 px-4">
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything You Need</h2>
+            <p className="text-white/60">From AI chat to full PC automation</p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {features.map((f, i) => (
+              <Card key={i} className="bg-white/5 border-white/5 hover:border-white/20 transition-all backdrop-blur-sm">
+                <CardHeader>
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${f.color} flex items-center justify-center mb-4`}><f.icon className="w-6 h-6 text-white" /></div>
+                  <CardTitle className="text-white">{f.title}</CardTitle>
+                  <CardDescription className="text-white/50">{f.desc}</CardDescription>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Capabilities Section - Full Content Restored */}
+      <section className="py-20 px-4 bg-blue-900/10">
+        <div className="container mx-auto grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <Badge className="mb-6 bg-emerald-500/20 text-emerald-300">PC Bridge Features</Badge>
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">Control Your PC <span className="text-blue-400">Like Never Before</span></h2>
+            <div className="grid gap-4">
+               {[
+                 { i: Monitor, t: 'Take screenshots & record screen' },
+                 { i: Terminal, t: 'Execute OS shell commands' },
+                 { i: Code, t: 'Generate complete coding projects' },
+                 { i: Smartphone, t: 'Control Android via ADB' },
+                 { i: Database, t: 'Database automation' }
+               ].map((item, idx) => (
+                 <div key={idx} className="flex items-center gap-4 p-4 bg-white/5 rounded-xl">
+                   <item.i className="w-5 h-5 text-blue-400" /> <span className="text-sm md:text-base">{item.t}</span>
+                 </div>
+               ))}
+            </div>
+          </div>
+          <div className="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
+            <img src={aiPcControl} alt="Control" className="w-full h-auto" />
+            <div className="absolute bottom-0 p-6 bg-gradient-to-t from-black to-transparent w-full">
+               <p className="text-xs font-mono text-green-400">$ alsa "create a react portfolio"</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto grid md:grid-cols-3 gap-6 max-w-6xl">
-          {pricingPlans.map((plan, i) => (
-            <Card key={i} className={`bg-white/5 border-white/5 backdrop-blur-sm ${plan.highlight ? 'ring-2 ring-blue-500 scale-100 md:scale-105' : ''}`}>
-              <CardHeader className="text-center">
-                <CardTitle className="text-xl">{plan.name}</CardTitle>
-                <div className="text-3xl font-black mt-2">{plan.price}</div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 mb-6 text-sm text-white/60">
-                  {plan.features.map((f, j) => (
-                    <li key={j} className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-blue-400" /> {f}
-                    </li>
-                  ))}
-                </ul>
-                <Button className={`w-full bg-gradient-to-r ${plan.gradient}`}>Get Started</Button>
-              </CardContent>
-            </Card>
-          ))}
+      {/* Pricing - Full Content Restored */}
+      <section id="pricing" className="py-24 px-4">
+        <div className="container mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold mb-16">Choose Your Plan</h2>
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {pricingPlans.map((plan, i) => (
+              <Card key={i} className={`bg-white/5 border-white/5 relative ${plan.highlight ? 'ring-2 ring-blue-500 md:scale-105' : ''}`}>
+                <CardHeader>
+                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                  <div className="mt-4 flex flex-col">
+                    {plan.originalPrice && <span className="text-sm text-white/30 line-through">{plan.originalPrice}</span>}
+                    <span className="text-4xl font-black">{plan.price}<span className="text-sm text-white/40">{plan.period}</span></span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                   <ul className="text-left space-y-4 mb-8 text-sm text-white/60">
+                     {plan.features.map((feat, idx) => <li key={idx} className="flex items-center gap-2"><Check className="w-4 h-4 text-green-400"/> {feat}</li>)}
+                   </ul>
+                   <Button className={`w-full py-6 bg-gradient-to-r ${plan.gradient} font-bold`}>{plan.cta}</Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </section>
 
-      <footer className="py-10 border-t border-white/5 text-center text-white/20 text-xs">
-        © 2026 ALSA AI. Created by Mohd Eisa
+      {/* Footer */}
+      <footer className="py-16 px-4 border-t border-white/5 bg-black/40">
+        <div className="container mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <img src={alsaLogo} className="w-8 h-8 rounded-lg" />
+              <span className="font-bold">ALSA AI</span>
+            </div>
+            <p className="text-[10px] md:text-xs text-white/40">AI Lifestyle & Smart Assistant by Alsa Tech Team</p>
+          </div>
+          <div><h4 className="font-bold mb-4 text-sm">Product</h4><ul className="text-xs space-y-2 text-white/40"><li>Features</li><li>Pricing</li></ul></div>
+          <div><h4 className="font-bold mb-4 text-sm">Legal</h4><ul className="text-xs space-y-2 text-white/40"><li>Privacy</li><li>Terms</li></ul></div>
+          <div><h4 className="font-bold mb-4 text-sm">Social</h4><ul className="text-xs space-y-2 text-white/40"><li>Instagram</li><li>Twitter</li></ul></div>
+        </div>
+        <div className="text-center mt-12 text-[10px] text-white/20">© 2026 ALSA AI. All rights reserved.</div>
       </footer>
     </div>
   );
