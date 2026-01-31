@@ -277,7 +277,13 @@ const Landing = () => {
             </div>
             <p className="text-[10px] md:text-xs text-white/40">AI Lifestyle & Smart Assistant by Alsa Tech Team</p>
           </div>
-          <div><h4 className="font-bold mb-4 text-sm">Product</h4><ul className="text-xs space-y-2 text-white/40"><li>Features</li><li>Pricing</li></ul></div>
+          <div>
+            <h4 className="font-bold mb-4 text-sm">Products</h4>
+            <ul className="text-xs space-y-2 text-white/40">
+             <li><a href='#features'>Features</a></li>
+             <li><a href='#pricing'>Pricing</a></li>
+            </ul>
+          </div>
           <div><h4 className="font-bold mb-4 text-sm">Legal</h4><ul className="text-xs space-y-2 text-white/40"><li>Privacy</li><li>Terms</li></ul></div>
           <div><h4 className="font-bold mb-4 text-sm">Social</h4><ul className="text-xs space-y-2 text-white/40"><li>Instagram</li><li>Twitter</li></ul></div>
         </div>
