@@ -326,21 +326,52 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-16 px-4 border-t border-white/5 bg-black/40">
-        <div className="container mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <img src={alsaLogo} className="w-8 h-8 rounded-lg" />
-              <span className="font-bold">ALSA AI</span>
+            {/* Footer */}
+      <footer className="py-16 px-6 border-t border-white/5 bg-slate-950/80">
+        <div className="container mx-auto">
+          <div className="grid md:grid-cols-4 gap-12">
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <img src={alsaLogo} alt="ALSA AI" className="w-10 h-10 rounded-xl ring-1 ring-white/10" />
+                <div>
+                  <span className="font-bold text-lg">ALSA AI</span>
+                  <p className="text-xs text-white/40">by Mohd Eisa</p>
+                </div>
+              </div>
+              <p className="text-white/40 text-sm leading-relaxed">
+                AI Lifestyle & Smart Assistant - Your intelligent companion for PC automation and productivity.
+              </p>
             </div>
-            <p className="text-[10px] md:text-xs text-white/40">AI Lifestyle & Smart Assistant by Alsa AI Tech</p>
+            <div>
+              <h4 className="font-bold mb-6 text-white">Product</h4>
+              <ul className="space-y-3 text-white/50 text-sm">
+                <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
+                <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
+                <li><a href="/auth" className="hover:text-white transition-colors">Get Started</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold mb-6 text-white">Support</h4>
+              <ul className="space-y-3 text-white/50 text-sm">
+                <li><a href="/contact" className="hover:text-white transition-colors">Contact Us</a></li>
+                <li><a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="/terms" className="hover:text-white transition-colors">Terms of Service</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold mb-6 text-white">Connect</h4>
+              <ul className="space-y-3 text-white/50 text-sm">
+                <li><a href="https://www.instagram.com/alsa_ai_assistant/" target="_blank" className="hover:text-white transition-colors">Instagram</a></li>
+                <li><a href="https://x.com/AlsaAiAssistant" target="_blank" className="hover:text-white transition-colors">Twitter (X)</a></li>
+                <li><a href="https://www.linkedin.com/in/alsaai" target="_blank" className="hover:text-white transition-colors">LinkedIn</a></li>
+                <li><a href="https://www.reddit.com/r/join_alsa_ai/" target="_blank" className="hover:text-white transition-colors">Reddit</a></li>
+              </ul>
+            </div>
           </div>
-          <div><h4 className="font-bold mb-4 text-sm">Product</h4><ul className="text-xs space-y-2 text-white/40"><li>Features</li><li>Pricing</li></ul></div>
-          <div><h4 className="font-bold mb-4 text-sm">Legal</h4><ul className="text-xs space-y-2 text-white/40"><li>Privacy</li><li>Terms</li></ul></div>
-          <div><h4 className="font-bold mb-4 text-sm">Social</h4><ul className="text-xs space-y-2 text-white/40"><li>Instagram</li><li>Twitter</li></ul></div>
+          <div className="mt-16 pt-8 border-t border-white/5 text-center text-white/40 text-sm">
+            <p>© 2026 ALSA AI. All rights reserved. Created with ❤️ by Alsa Tech Team.</p>
+          </div>
         </div>
-        <div className="text-center mt-12 text-[10px] text-white/20">© 2026 ALSA AI. All rights reserved.</div>
       </footer>
     </div>
   );
