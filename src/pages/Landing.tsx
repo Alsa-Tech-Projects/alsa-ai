@@ -202,11 +202,14 @@ const Landing = () => {
                 <h2 className="text-3xl md:text-5xl font-black mb-4">25% OFF <br className="md:hidden" /><span className="text-white/70 text-xl md:text-3xl">All Premium Plans!</span></h2>
                 <p className="text-white/60 mb-8 max-w-md">Get full access to AI-powered PC automation. <span className="text-orange-400 font-semibold">Offer expires soon!</span></p>
                 <div className="flex flex-col sm:flex-row gap-3">
-                   <Button size="lg" className="bg-orange-500 hover:bg-orange-400 font-bold">Claim 25% Discount</Button>
+                   <Button size="lg" className="bg-orange-500 hover:bg-orange-400 font-bold"
+                     onClick={() => navigate('/pricing')}
+                     >
+                     Claim 25% Discount</Button>
                   <Button 
                     variant="outline"
-
                     className="border-white/20 bg-white/5 text-white hover:bg-white hover:text-[#0A1A2F] transition-all duration-300 font-semibold"
+                    onClick={() => navigate('/auth')}
                     >
                     Start ₹1 Trial
                   </Button>
