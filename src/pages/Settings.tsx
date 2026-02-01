@@ -5,18 +5,14 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-<<<<<<< HEAD
-import { ArrowLeft, Moon, Sun, FolderOpen, Key, Plus, Trash2 } from 'lucide-react';
-=======
-import { ArrowLeft, Moon, Sun, FolderOpen, Key, Plus, Trash2, MessageSquare } from 'lucide-react';
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
+import { ArrowLeft, Moon, Sun, FolderOpen, Key, Plus, Trash2, MessageSquare, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
 
 interface OutputPaths {
-  screenshot: string;
   recording: string;
   ppt: string;
   excel: string;
@@ -53,17 +49,12 @@ const Settings = () => {
     ai_response_style: 'balanced',
     voice_enabled: true,
     voice_name: 'default',
-<<<<<<< HEAD
-    voice_gender: 'female' as 'male' | 'female' | 'auto', // Default to female hinglish
-=======
     voice_gender: 'female' as 'male' | 'female' | 'auto',
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
     theme: 'dark'
   });
 
   // Output paths state
   const [outputPaths, setOutputPaths] = useState<OutputPaths>({
-    screenshot: 'C:\\Users\\Mohd Eisa\\Pictures\\Screenshots',
     recording: 'C:\\Users\\Mohd Eisa\\Videos\\Recordings',
     ppt: 'C:\\Users\\Mohd Eisa\\Documents\\Presentations',
     excel: 'C:\\Users\\Mohd Eisa\\Documents\\Spreadsheets',
@@ -77,15 +68,9 @@ const Settings = () => {
   const [newSiteName, setNewSiteName] = useState('');
   const [newSiteUrl, setNewSiteUrl] = useState('');
 
-<<<<<<< HEAD
-  const [whatsappContacts, setWhatsappContacts] = useState<Contact[]>([]);
-  const [telegramContacts, setTelegramContacts] = useState<Contact[]>([]);
-  // Naye input ke liye
-=======
   // Messaging contacts
   const [whatsappContacts, setWhatsappContacts] = useState<Contact[]>([]);
   const [telegramContacts, setTelegramContacts] = useState<Contact[]>([]);
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
   const [newWpName, setNewWpName] = useState('');
   const [newWpNum, setNewWpNum] = useState('');
   const [newTgName, setNewTgName] = useState('');
@@ -96,45 +81,14 @@ const Settings = () => {
   const [newAppName, setNewAppName] = useState('');
   const [newAppPath, setNewAppPath] = useState('');
 
-<<<<<<< HEAD
-  // useEffect(() => {
-  //   loadPreferences();
-  //   loadLocalSettings();
-  // }, []);
+  // Email settings state
+  const [emailSettings, setEmailSettings] = useState({
+    senderName: 'Mohd Eisa',
+    senderEmail: '',
+    defaultTemplate: 'professional' as 'professional' | 'casual' | 'minimal' | 'newsletter',
+    signature: ''
+  });
 
-  // const loadLocalSettings = () => {
-  //   // Load output paths from localStorage
-  //   const savedPaths = localStorage.getItem('alsa_output_paths');
-  //   if (savedPaths) {
-  //     try {
-  //       setOutputPaths(JSON.parse(savedPaths));
-  //     } catch (e) {
-  //       console.error('Error loading output paths:', e);
-  //     }
-  //   }
-
-  //   // Load custom sites from localStorage
-  //   const savedSites = localStorage.getItem('alsa_user_sites');
-  //   if (savedSites) {
-  //     try {
-  //       setCustomSites(JSON.parse(savedSites));
-  //     } catch (e) {
-  //       console.error('Error loading custom sites:', e);
-  //     }
-  //   }
-
-  //   // Load custom apps from localStorage
-  //   const savedApps = localStorage.getItem('alsa_custom_apps');
-  //   if (savedApps) {
-  //     try {
-  //       setCustomApps(JSON.parse(savedApps));
-  //     } catch (e) {
-  //       console.error('Error loading custom apps:', e);
-  //     }
-  //   }
-
-=======
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
   useEffect(() => {
     loadPreferences();
     loadLocalSettings();
@@ -159,11 +113,6 @@ const Settings = () => {
       try { setCustomApps(JSON.parse(savedApps)); } catch (e) { console.error('Error:', e); }
     }
 
-<<<<<<< HEAD
-    // --- NAYA MESSAGING AUTOMATION DATA YAHAN SE ---
-
-=======
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
     // 4. Load WhatsApp Contacts
     const savedWp = localStorage.getItem('alsa_whatsapp_contacts');
     if (savedWp) {
@@ -188,6 +137,16 @@ const Settings = () => {
     const savedGender = localStorage.getItem('alsa_voice_gender') as 'male' | 'female' | 'auto';
     if (savedGender) {
       setPreferences(prev => ({ ...prev, voice_gender: savedGender }));
+    }
+
+    // 6. Load Email Settings
+    const savedEmailSettings = localStorage.getItem('alsa_email_settings');
+    if (savedEmailSettings) {
+      try {
+        setEmailSettings(JSON.parse(savedEmailSettings));
+      } catch (e) {
+        console.error('Error loading email settings:', e);
+      }
     }
   };
 
@@ -234,10 +193,6 @@ const Settings = () => {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
-<<<<<<< HEAD
-        // Only save DB-compatible fields (voice_gender is localStorage only)
-=======
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
         const { error } = await supabase
           .from('user_preferences')
           .upsert(
@@ -254,23 +209,16 @@ const Settings = () => {
         if (error) throw error;
       }
 
-<<<<<<< HEAD
-      // Save local settings (including voice_gender which isn't in DB)
-=======
       // Save local settings
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
       localStorage.setItem('alsa_output_paths', JSON.stringify(outputPaths));
       localStorage.setItem('alsa_user_sites', JSON.stringify(customSites));
       localStorage.setItem('alsa_custom_apps', JSON.stringify(customApps));
       localStorage.setItem('alsa_ai_response_style', preferences.ai_response_style);
       localStorage.setItem('alsa_voice_gender', preferences.voice_gender);
       localStorage.setItem('alsa_voice_enabled', String(preferences.voice_enabled));
-<<<<<<< HEAD
-      // savePreferences function ke andar jahan localStorage.setItem ho rahe hain:
-=======
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
       localStorage.setItem('alsa_whatsapp_contacts', JSON.stringify(whatsappContacts));
       localStorage.setItem('alsa_telegram_contacts', JSON.stringify(telegramContacts));
+      localStorage.setItem('alsa_email_settings', JSON.stringify(emailSettings));
 
       // Apply theme immediately
       applyTheme(preferences.theme);
@@ -323,10 +271,6 @@ const Settings = () => {
       return;
     }
 
-<<<<<<< HEAD
-    // Ensure URL has protocol
-=======
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
     let url = newSiteUrl.trim();
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = 'https://' + url;
@@ -390,8 +334,6 @@ const Settings = () => {
     });
   };
 
-<<<<<<< HEAD
-=======
   const addWhatsappContact = () => {
     if (!newWpName.trim() || !newWpNum.trim()) {
       toast({ title: "Error", description: "Enter name and phone number", variant: "destructive" });
@@ -422,7 +364,6 @@ const Settings = () => {
     toast({ title: "Telegram Contact Added", description: `${newTgName} saved!` });
   };
 
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -573,8 +514,6 @@ const Settings = () => {
               </CardContent>
             </Card>
 
-<<<<<<< HEAD
-=======
             {/* Messaging Automation - MOST IMPORTANT */}
             <Card className="bg-card border-border border-2 border-primary/30">
               <CardHeader>
@@ -695,7 +634,86 @@ const Settings = () => {
               </CardContent>
             </Card>
 
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
+            {/* Email Settings */}
+            <Card className="bg-card border-border border-2 border-blue-500/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-blue-500" />
+                  Email Settings
+                </CardTitle>
+                <CardDescription>
+                  Configure how your AI-sent emails appear. Say "send email to someone@example.com: your message"
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="sender-name">Sender Name</Label>
+                    <Input
+                      id="sender-name"
+                      value={emailSettings.senderName}
+                      onChange={(e) => setEmailSettings({ ...emailSettings, senderName: e.target.value })}
+                      placeholder="Your Name"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="sender-email">Sender Email (Optional)</Label>
+                    <Input
+                      id="sender-email"
+                      type="email"
+                      value={emailSettings.senderEmail}
+                      onChange={(e) => setEmailSettings({ ...emailSettings, senderEmail: e.target.value })}
+                      placeholder="your@email.com"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="default-template">Default Email Template</Label>
+                  <Select
+                    value={emailSettings.defaultTemplate}
+                    onValueChange={(value: 'professional' | 'casual' | 'minimal' | 'newsletter') => 
+                      setEmailSettings({ ...emailSettings, defaultTemplate: value })
+                    }
+                  >
+                    <SelectTrigger id="default-template" className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="professional">Professional - Corporate style with gradient header</SelectItem>
+                      <SelectItem value="casual">Casual - Friendly and warm design</SelectItem>
+                      <SelectItem value="minimal">Minimal - Clean and simple</SelectItem>
+                      <SelectItem value="newsletter">Newsletter - Dark tech-style design</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="email-signature">Email Signature (Optional)</Label>
+                  <Textarea
+                    id="email-signature"
+                    value={emailSettings.signature}
+                    onChange={(e) => setEmailSettings({ ...emailSettings, signature: e.target.value })}
+                    placeholder="Add a custom signature to your emails..."
+                    className="mt-1 min-h-20"
+                  />
+                </div>
+
+                {/* Usage Tips */}
+                <div className="bg-blue-500/10 p-4 rounded-lg space-y-2">
+                  <p className="font-medium text-sm">📧 How to send emails:</p>
+                  <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                    <li>Say: "Send email to john@example.com: Hello, this is my message"</li>
+                    <li>Say: "Send professional email to client@company.com with subject Meeting Request"</li>
+                    <li>Say: "Email boss@work.com a casual message saying I'll be working remotely"</li>
+                    <li>Templates: professional, casual, minimal, newsletter</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Output Paths */}
             <Card className="bg-card border-border">
               <CardHeader>
@@ -707,16 +725,6 @@ const Settings = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="ss-path">Screenshot Path</Label>
-                    <Input
-                      id="ss-path"
-                      value={outputPaths.screenshot}
-                      onChange={(e) => setOutputPaths({ ...outputPaths, screenshot: e.target.value })}
-                      placeholder="C:\Users\...\Screenshots"
-                      className="mt-1"
-                    />
-                  </div>
                   <div>
                     <Label htmlFor="rec-path">Screen Recording Path</Label>
                     <Input
@@ -747,39 +755,6 @@ const Settings = () => {
                       className="mt-1"
                     />
                   </div>
-<<<<<<< HEAD
-                  <div>
-                    <Label htmlFor="app-path">Application/Letter Path</Label>
-                    <Input
-                      id="app-path"
-                      value={outputPaths.application}
-                      onChange={(e) => setOutputPaths({ ...outputPaths, application: e.target.value })}
-                      placeholder="C:\Users\...\Applications"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="assignment-path">Assignment Path</Label>
-                    <Input
-                      id="assignment-path"
-                      value={outputPaths.assignment}
-                      onChange={(e) => setOutputPaths({ ...outputPaths, assignment: e.target.value })}
-                      placeholder="C:\Users\...\Assignments"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="db-path">Database Path</Label>
-                    <Input
-                      id="db-path"
-                      value={outputPaths.database}
-                      onChange={(e) => setOutputPaths({ ...outputPaths, database: e.target.value })}
-                      placeholder="C:\Users\...\Databases"
-                      className="mt-1"
-                    />
-                  </div>
-=======
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
                 </div>
               </CardContent>
             </Card>
@@ -789,11 +764,7 @@ const Settings = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Key className="w-5 h-5" />
-<<<<<<< HEAD
-                  Custom Sites & Apps
-=======
                   Custom Sites
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
                 </CardTitle>
                 <CardDescription>
                   Add your own website shortcuts. Say "open [site name]" to open them quickly.
@@ -801,23 +772,13 @@ const Settings = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-<<<<<<< HEAD
-                  {/* Existing Sites */}
-=======
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
                   {customSites.length > 0 && (
                     <div className="space-y-2">
                       {customSites.map((site) => (
                         <div key={site.id} className="flex items-center gap-2 p-3 bg-secondary/30 rounded-lg">
                           <div className="flex-1">
                             <p className="font-medium text-sm capitalize">{site.name}</p>
-<<<<<<< HEAD
-                            <p className="text-xs text-muted-foreground truncate">
-                              {site.url}
-                            </p>
-=======
                             <p className="text-xs text-muted-foreground truncate">{site.url}</p>
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
                           </div>
                           <Button
                             variant="ghost"
@@ -832,20 +793,6 @@ const Settings = () => {
                     </div>
                   )}
 
-<<<<<<< HEAD
-                  {/* Tips */}
-                  <div className="text-xs text-muted-foreground bg-secondary/20 rounded-lg p-3 space-y-1">
-                    <p className="font-medium">How to use:</p>
-                    <ul className="list-disc list-inside space-y-0.5">
-                      <li>Say "open [site name]" or "[site name] kholo" to open</li>
-                      <li>Names are case-insensitive (e.g., "mysite" works)</li>
-                      <li>Works with any URL including internal tools</li>
-                    </ul>
-                  </div>
-
-                  {/* Add New Site */}
-=======
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
                   <div className="space-y-2 pt-2 border-t border-border">
                     <Label>Add New Site</Label>
                     <div className="flex gap-2">
@@ -904,17 +851,6 @@ const Settings = () => {
                     </div>
                   )}
 
-<<<<<<< HEAD
-                  <div className="text-xs text-muted-foreground bg-secondary/20 rounded-lg p-3 space-y-1">
-                    <p className="font-medium">Examples:</p>
-                    <ul className="list-disc list-inside space-y-0.5">
-                      <li>Name: "antigravity", Path: C:\Program Files\Antigravity\antigravity.exe</li>
-                      <li>Name: "vscode", Path: C:\Users\...\AppData\Local\Programs\Microsoft VS Code\Code.exe</li>
-                    </ul>
-                  </div>
-
-=======
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
                   <div className="space-y-2 pt-2 border-t border-border">
                     <Label>Add New App</Label>
                     <div className="flex gap-2">
@@ -939,67 +875,6 @@ const Settings = () => {
               </CardContent>
             </Card>
 
-<<<<<<< HEAD
-            <Card>
-              <CardHeader>
-                <CardTitle>Messaging Automation (WhatsApp & Telegram)</CardTitle>
-                <CardDescription>Save contacts for AI automation</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-
-                {/* WhatsApp Section */}
-                <div className="space-y-4">
-                  <Label className="text-primary font-bold">WhatsApp Contacts (Name & Number)</Label>
-                  {whatsappContacts.map((c) => (
-                    <div key={c.id} className="flex gap-2 items-center">
-                      <Input value={`${c.name} - ${c.value}`} readOnly className="flex-1" />
-                      <Button variant="ghost" size="icon" onClick={() => setWhatsappContacts(whatsappContacts.filter(i => i.id !== c.id))}>
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
-                  <div className="flex gap-2 bg-secondary/20 p-2 rounded-md">
-                    <Input placeholder="Eisa" value={newWpName} onChange={e => setNewWpName(e.target.value)} />
-                    <Input placeholder="91..." value={newWpNum} onChange={e => setNewWpNum(e.target.value)} />
-                    <Button onClick={() => {
-                      if (newWpName && newWpNum) {
-                        setWhatsappContacts([...whatsappContacts, { id: Date.now().toString(), name: newWpName, value: newWpNum }]);
-                        setNewWpName(''); setNewWpNum('');
-                      }
-                    }}><Plus /></Button>
-                  </div>
-                </div>
-
-                <div className="border-t border-border my-4" /> {/* Separator Line */}
-
-                {/* Telegram Section */}
-                <div className="space-y-4">
-                  <Label className="text-primary font-bold">Telegram Contacts (Name & Link/Username)</Label>
-                  {telegramContacts.map((c) => (
-                    <div key={c.id} className="flex gap-2 items-center">
-                      <Input value={`${c.name} - ${c.value}`} readOnly className="flex-1" />
-                      <Button variant="ghost" size="icon" onClick={() => setTelegramContacts(telegramContacts.filter(i => i.id !== c.id))}>
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
-                  <div className="flex gap-2 bg-secondary/20 p-2 rounded-md">
-                    <Input placeholder="Eisa" value={newTgName} onChange={e => setNewTgName(e.target.value)} />
-                    <Input placeholder="https://web.telegram.org/k/#@..." value={newTgLink} onChange={e => setNewTgLink(e.target.value)} />
-                    <Button onClick={() => {
-                      if (newTgName && newTgLink) {
-                        setTelegramContacts([...telegramContacts, { id: Date.now().toString(), name: newTgName, value: newTgLink }]);
-                        setNewTgName(''); setNewTgLink('');
-                      }
-                    }}><Plus /></Button>
-                  </div>
-                </div>
-
-              </CardContent>
-            </Card>
-
-=======
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
             {/* Save Button */}
             <div className="flex justify-end gap-4 pb-6">
               <Button variant="outline" onClick={() => navigate('/')}>
