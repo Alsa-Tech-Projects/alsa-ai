@@ -13,12 +13,7 @@ import winapps
 app = Flask(__name__)
 CORS(app, origins=[
     'https://www.alsa-ai.in', 
-    'https://alsa-ai.in',
-    'http://localhost:5173',
-    'http://localhost:8080',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:8080',
-    '*'  # Allow all origins for development
+    'https://alsa-ai.in'
 ])
 
 # Allowed base directories for file operations
@@ -60,26 +55,6 @@ def is_path_allowed(file_path):
         return False
     except Exception:
         return False
-
-
-def validate_ip_address(ip):
-    """Validate IP address format"""
-    pattern = re.compile(r'^(\d{1,3}\.){3}\d{1,3}(:\d+)?$')
-    return bool(pattern.match(ip))
-
-
-def validate_adb_command(command):
-    """Validate ADB command is safe"""
-    allowed_prefixes = [
-        'shell', 'install', 'uninstall', 'push', 'pull',
-        'devices', 'connect', 'disconnect', 'reboot',
-        'logcat', 'bugreport', 'forward', 'reverse'
-    ]
-    cmd_parts = command.strip().split()
-    if not cmd_parts:
-        return False
-    return cmd_parts[0] in allowed_prefixes
-
 
 @app.route('/status', methods=['GET'])
 def status():
@@ -460,87 +435,6 @@ def check_installation():
             'message': f'{software} is not installed'
         })
 
-
-@app.route('/adb_connect', methods=['POST'])
-def adb_connect():
-    """Connect to Android device via ADB"""
-    try:
-        data = request.get_json()
-        ip_address = data.get('ip_address', '')
-        
-        if ip_address:
-            # Validate IP address format
-            if not validate_ip_address(ip_address):
-                return jsonify({'error': 'Invalid IP address format'}), 400
-            
-            # Wireless ADB connection using list args
-            result = subprocess.run(
-                ['adb', 'connect', ip_address],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-        else:
-            # USB connection - list devices
-            result = subprocess.run(
-                ['adb', 'devices'],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-        
-        return jsonify({
-            'success': result.returncode == 0,
-            'output': result.stdout,
-            'message': 'ADB connection attempted'
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/adb_command', methods=['POST'])
-def adb_command():
-    """Execute ADB command on connected device"""
-    try:
-        data = request.get_json()
-        command = data.get('command', '')
-        
-        if not command:
-            return jsonify({'error': 'No command provided'}), 400
-        
-        # Validate ADB command
-        if not validate_adb_command(command):
-            return jsonify({
-                'error': 'ADB command not allowed',
-                'message': 'Only whitelisted ADB commands are permitted'
-            }), 403
-        
-        # Sanitize and split command
-        command_sanitized = sanitize_input(command)
-        cmd_parts = ['adb'] + command_sanitized.split()
-        
-        # Execute ADB command using list (no shell injection)
-        result = subprocess.run(
-            cmd_parts,
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
-        
-        return jsonify({
-            'success': result.returncode == 0,
-            'stdout': result.stdout,
-            'stderr': result.stderr,
-            'message': f'Executed: adb {command_sanitized}'
-        })
-        
-    except subprocess.TimeoutExpired:
-        return jsonify({'error': 'Command timeout (30s limit)'}), 500
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
 @app.route('/capture_screenshot', methods=['POST'])
 def capture_screenshot():
     """Capture a screenshot of the entire screen"""
@@ -878,210 +772,6 @@ def create_excel():
         print(f"Error creating Excel: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-
-@app.route('/create_database', methods=['POST'])
-def create_database():
-    """Create a SQLite or Access database with tables"""
-    try:
-        import sqlite3
-        
-        data = request.get_json()
-        file_path = sanitize_input(data.get('file_path', ''))
-        db_type = data.get('db_type', 'sqlite')
-        tables = data.get('tables', [])
-        
-        if not file_path:
-            return jsonify({'error': 'No file path provided'}), 400
-        
-        if not is_path_allowed(file_path):
-            return jsonify({'error': 'Path not allowed'}), 403
-        
-        # Handle SQLite
-        if db_type == 'sqlite':
-            if not file_path.lower().endswith('.db'):
-                file_path += '.db'
-            
-            # Ensure directory exists
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            
-            conn = sqlite3.connect(file_path)
-            cursor = conn.cursor()
-            
-            tables_created = []
-            for table in tables:
-                table_name = table.get('name', 'table1')
-                columns = table.get('columns', [])
-                sample_data = table.get('sample_data', [])
-                
-                # Build CREATE TABLE statement
-                col_defs = []
-                col_names = []
-                for col in columns:
-                    col_name = col.get('name', 'col')
-                    col_type = col.get('type', 'TEXT')
-                    is_pk = col.get('primary_key', False)
-                    col_def = f"{col_name} {col_type}"
-                    if is_pk:
-                        col_def += " PRIMARY KEY"
-                        if col_type == 'INTEGER':
-                            col_def += " AUTOINCREMENT"
-                    col_defs.append(col_def)
-                    col_names.append(col_name)
-                
-                create_sql = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(col_defs)})"
-                cursor.execute(create_sql)
-                
-                # Insert sample data
-                if sample_data:
-                    placeholders = ', '.join(['?' for _ in col_names])
-                    insert_sql = f"INSERT INTO {table_name} ({', '.join(col_names)}) VALUES ({placeholders})"
-                    for row in sample_data:
-                        cursor.execute(insert_sql, row)
-                
-                tables_created.append(table_name)
-            
-            conn.commit()
-            conn.close()
-            
-            return jsonify({
-                'success': True,
-                'message': f'SQLite database created: {file_path}',
-                'file_path': file_path,
-                'tables': tables_created
-            })
-        
-        # Handle Access (requires pyodbc or pypyodbc)
-        elif db_type == 'access':
-            try:
-                import pyodbc
-                
-                if not file_path.lower().endswith('.accdb'):
-                    file_path += '.accdb'
-                
-                # Create Access database
-                conn_str = f'Driver={{Microsoft Access Driver (*.mdb, *.accdb)}};DBQ={file_path};'
-                
-                # Need to create the file first using a template or COM
-                return jsonify({
-                    'error': 'Access database creation requires Microsoft Access installed',
-                    'alternative': 'Use SQLite instead (db_type: "sqlite") for a portable database'
-                }), 400
-                
-            except ImportError:
-                return jsonify({
-                    'error': 'pyodbc not installed for Access support',
-                    'alternative': 'Use SQLite instead (db_type: "sqlite") for a portable database'
-                }), 400
-        
-        return jsonify({'error': 'Invalid database type'}), 400
-        
-    except Exception as e:
-        print(f"Error creating database: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-# ====== MESSAGING AUTOMATION ======
-
-@app.route('/telegram-msg', methods=['POST'])
-def send_telegram_message():
-    """Open Telegram Web and send a message"""
-    try:
-        import webbrowser
-        import pyautogui
-        import time
-        
-        data = request.get_json()
-        link = data.get('link', '')  # Telegram link like https://web.telegram.org/k/#@username
-        message = data.get('message', '')
-        
-        if not link or not message:
-            return jsonify({'success': False, 'error': 'Link and message are required'}), 400
-        
-        # If user provided just username, convert to full URL
-        if not link.startswith('http'):
-            if link.startswith('@'):
-                link = f'https://web.telegram.org/k/#{link}'
-            else:
-                link = f'https://web.telegram.org/k/#@{link}'
-        
-        print(f"Opening Telegram: {link}")
-        webbrowser.open(link)
-        
-        # Wait for page to load
-        time.sleep(5)
-        
-        # Type the message
-        pyautogui.typewrite(message, interval=0.02) if message.isascii() else pyautogui.write(message)
-        
-        # Small delay then press Enter to send
-        time.sleep(0.5)
-        pyautogui.press('enter')
-        
-        return jsonify({
-            'success': True,
-            'message': f'Telegram message sent via {link}'
-        })
-        
-    except ImportError:
-        return jsonify({
-            'success': False, 
-            'error': 'pyautogui not installed. Run: pip install pyautogui'
-        }), 500
-    except Exception as e:
-        print(f"Telegram error: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-@app.route('/whatsapp-msg', methods=['POST'])
-def send_whatsapp_message():
-    """Open WhatsApp Web and send a message"""
-    try:
-        import webbrowser
-        import urllib.parse
-        import pyautogui
-        import time
-        
-        data = request.get_json()
-        phone = data.get('phone', '')  # Phone number with country code
-        message = data.get('message', '')
-        
-        if not phone or not message:
-            return jsonify({'success': False, 'error': 'Phone and message are required'}), 400
-        
-        # Clean phone number - remove spaces, dashes, etc.
-        phone_clean = ''.join(filter(str.isdigit, phone))
-        if not phone_clean.startswith('91') and len(phone_clean) == 10:
-            phone_clean = '91' + phone_clean  # Default to India country code
-        
-        # Encode message for URL
-        encoded_message = urllib.parse.quote(message)
-        
-        # WhatsApp Web URL with pre-filled message
-        whatsapp_url = f'https://web.whatsapp.com/send?phone={phone_clean}&text={encoded_message}'
-        
-        print(f"Opening WhatsApp: {whatsapp_url}")
-        webbrowser.open(whatsapp_url)
-        
-        # Wait for page to load and for user to scan QR if needed
-        time.sleep(8)
-        
-        # Press Enter to send the message
-        pyautogui.press('enter')
-        
-        return jsonify({
-            'success': True,
-            'message': f'WhatsApp message prepared for {phone_clean}'
-        })
-        
-    except ImportError:
-        return jsonify({
-            'success': False, 
-            'error': 'pyautogui not installed. Run: pip install pyautogui'
-        }), 500
-    except Exception as e:
-        print(f"WhatsApp error: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
 # Global music player process reference
 current_music_process = None
 
@@ -1187,7 +877,7 @@ def stop_song():
 
 if __name__ == '__main__':
     print("=" * 50)
-    print("ALSA AI Elite PC Control Bridge Started")
+    print("ALSA Ai Pro PC Control Bridge Started")
     print("Bridge is running on http://localhost:5001")
-    print("You can now control your PC through ALSA AI!\nFeatures: Project creation, PPT, Excel, Database, Screenshots, ADB, Music & Massage Automation etc..")
+    print("You can now control your PC through ALSA AI!\nFeatures: Project creation, PPT, Excel, Screenshots, Music")
     app.run(host='127.0.0.1', port=5001, debug=True)
