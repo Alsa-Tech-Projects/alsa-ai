@@ -6,13 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 // Lazy load all pages for better performance
-<<<<<<< HEAD
-const Index = lazy(() => import("./pages/Index"));
-const Landing = lazy(() => import("./pages/Landing"));
-=======
 const Landing = lazy(() => import("./pages/Landing"));
 const Chat = lazy(() => import("./pages/Chat"));
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
 const Settings = lazy(() => import("./pages/Settings"));
 const History = lazy(() => import("./pages/History"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -57,19 +52,11 @@ const App = () => (
       <BrowserRouter>
         <Suspense fallback={<PageLoader />}>
           <Routes>
-<<<<<<< HEAD
-            <Route path="/" element={<Index />} />
-            <Route path="/landing" element={<Landing />} />
-            <Route path="/pricing" element={<Pricing />} />
-            <Route path="/bridge-setup" element={<BridgeSetup />} />
-            <Route path="/c/:conversationId" element={<Index />} />
-=======
             <Route path="/" element={<Landing />} />
             <Route path="/Chat" element={<Chat />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/bridge-setup" element={<BridgeSetup />} />
             <Route path="/c/:conversationId" element={<Chat />} />
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
             <Route path="/auth" element={<Auth />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/history" element={<History />} />
@@ -89,8 +76,4 @@ const App = () => (
   </QueryClientProvider>
 );
 
-<<<<<<< HEAD
 export default App;
-=======
-export default App;
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
