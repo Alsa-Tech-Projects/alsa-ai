@@ -276,7 +276,7 @@ const Landing = () => {
             muted 
             loop 
             playsInline
-            poster="/videos/thumbnail.png" // Ek accha thumbnail image zaroor lagana
+            poster="/videos/thumbnail.png" 
           >
             <source src="/videos/demo-video.mp4" type="video/mp4" />
           </video>
