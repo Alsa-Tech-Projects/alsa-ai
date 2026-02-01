@@ -331,6 +331,7 @@ export const parseNaturalLanguage = (input: string): { action: string; target: s
     }
   }
 
+<<<<<<< HEAD
   // Check for screenshot
   if (MULTILANG_PATTERNS.screenshot.some(p => p.test(lowerInput))) {
     const delayMatch = lowerInput.match(/(\d+)\s*(?:sec|second|seconds|सेकंड)/i);
@@ -340,6 +341,8 @@ export const parseNaturalLanguage = (input: string): { action: string; target: s
       params: { delay: delayMatch ? parseInt(delayMatch[1]) : 0 }
     };
   }
+=======
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
 
   // Check for screen recording
   if (MULTILANG_PATTERNS.recording.some(p => p.test(lowerInput))) {
@@ -496,9 +499,12 @@ export const executeSystemCommand = async (action: string): Promise<{ success: b
       case 'close_window':
         return await closeWindow(parsed.target);
 
+<<<<<<< HEAD
       case 'screenshot':
         return await captureScreenshot(undefined, parsed.params.delay);
 
+=======
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
       case 'start_recording':
         return await startScreenRecording(parsed.params.duration);
 
@@ -623,6 +629,7 @@ export const createFolder = async (folderPath: string): Promise<{ success: boole
   }
 };
 
+<<<<<<< HEAD
 // whatsapp massage automation
 export const sendWhatsAppMsg = async (phone: string, message: string) => {
   const response = await fetch(`${BRIDGE_URL}/whatsapp-msg`, {
@@ -641,6 +648,50 @@ export const sendTelegramMsg = async (link: string, message: string) => {
     body: JSON.stringify({ link, message })
   });
   return await response.json();
+=======
+// WhatsApp message automation
+export const sendWhatsAppMsg = async (phone: string, message: string): Promise<{ success: boolean; message?: string; error?: string }> => {
+  try {
+    console.log('Sending WhatsApp message to:', phone);
+    const response = await fetch(`${BRIDGE_URL}/whatsapp-msg`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ phone, message })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: response.statusText }));
+      return { success: false, error: errorData.error || errorData.message || 'Failed to send WhatsApp message' };
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    console.error('WhatsApp message error:', error);
+    return { success: false, error: error.message || 'Cannot connect to PC Bridge for WhatsApp' };
+  }
+};
+
+// Telegram message automation
+export const sendTelegramMsg = async (link: string, message: string): Promise<{ success: boolean; message?: string; error?: string }> => {
+  try {
+    console.log('Sending Telegram message to:', link);
+    const response = await fetch(`${BRIDGE_URL}/telegram-msg`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ link, message })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: response.statusText }));
+      return { success: false, error: errorData.error || errorData.message || 'Failed to send Telegram message' };
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    console.error('Telegram message error:', error);
+    return { success: false, error: error.message || 'Cannot connect to PC Bridge for Telegram' };
+  }
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
 };
 
 // Create a text file with content at any path
@@ -781,6 +832,7 @@ export const adbCommand = async (command: string): Promise<{ success: boolean; m
   }
 };
 
+<<<<<<< HEAD
 export const captureScreenshot = async (
   savePath?: string,
   delaySeconds?: number
@@ -864,6 +916,8 @@ export const captureScreenshot = async (
   }
 };
 
+=======
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
 // Screen recording functions
 let recordingMediaRecorder: MediaRecorder | null = null;
 let recordingChunks: Blob[] = [];

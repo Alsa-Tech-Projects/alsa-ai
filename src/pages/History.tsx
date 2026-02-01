@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+<<<<<<< HEAD
 import { 
   ArrowLeft, 
   MessageSquare, 
@@ -12,6 +13,17 @@ import {
   Search, 
   Tag as TagIcon, 
   Plus, 
+=======
+import {
+  ArrowLeft,
+  MessageSquare,
+  Trash2,
+  Star,
+  StarOff,
+  Search,
+  Tag as TagIcon,
+  Plus,
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
   X,
   Sparkles,
   Share2,
@@ -85,7 +97,11 @@ const History = () => {
           description: "Please sign in to view history.",
           variant: "destructive"
         });
+<<<<<<< HEAD
         navigate('/');
+=======
+        navigate('/auth');
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
         return;
       }
 
@@ -112,7 +128,11 @@ const History = () => {
       const favoriteIds = new Set(
         (favoritesResult.data || []).map(f => f.conversation_id)
       );
+<<<<<<< HEAD
       
+=======
+
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
       const tagsByConversation: Record<string, string[]> = {};
       (tagsResult.data || []).forEach(t => {
         if (!tagsByConversation[t.conversation_id]) {
@@ -167,7 +187,11 @@ const History = () => {
       if (!user) return;
 
       const conversation = conversations.find(c => c.id === conversationId);
+<<<<<<< HEAD
       
+=======
+
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
       if (conversation?.isFavorite) {
         // Remove from favorites
         await supabase
@@ -259,7 +283,11 @@ const History = () => {
 
   const autoTagConversation = async (conversationId: string, title: string) => {
     setAutoTaggingConversation(conversationId);
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
     try {
       // Get conversation messages
       const { data: messages, error: messagesError } = await supabase
@@ -389,10 +417,17 @@ const History = () => {
       const pageWidth = doc.internal.pageSize.getWidth();
       const margin = 15;
       const maxWidth = pageWidth - 2 * margin;
+<<<<<<< HEAD
       
       doc.setFontSize(16);
       doc.text(title, margin, 20);
       
+=======
+
+      doc.setFontSize(16);
+      doc.text(title, margin, 20);
+
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
       let yPosition = 35;
       const lineHeight = 7;
       const pageHeight = doc.internal.pageSize.getHeight();
@@ -400,15 +435,26 @@ const History = () => {
       messages?.forEach((msg) => {
         const role = msg.role === 'user' ? 'You' : 'ALSA';
         const text = `${role}: ${msg.content.replace(/[#@*]/g, '')}`;
+<<<<<<< HEAD
         
         doc.setFontSize(10);
         const lines = doc.splitTextToSize(text, maxWidth);
         
+=======
+
+        doc.setFontSize(10);
+        const lines = doc.splitTextToSize(text, maxWidth);
+
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
         if (yPosition + (lines.length * lineHeight) > pageHeight - 20) {
           doc.addPage();
           yPosition = 20;
         }
+<<<<<<< HEAD
         
+=======
+
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
         doc.text(lines, margin, yPosition);
         yPosition += lines.length * lineHeight + 5;
       });

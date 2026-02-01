@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+<<<<<<< HEAD
 import { 
   ArrowLeft, Download, Terminal, Check, Copy, ExternalLink, 
+=======
+import {
+  ArrowLeft, Download, Terminal, Check, Copy, ExternalLink,
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
   Wifi, Shield, Zap, Sparkles, Crown, Monitor, Smartphone,
   Code, FileText, Camera, Video, Database, FolderOpen, Play,
   AlertTriangle, CheckCircle, Package
@@ -31,6 +36,7 @@ const BridgeSetup = () => {
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+<<<<<<< HEAD
       
       if (!session?.user) {
         navigate('/');
@@ -39,19 +45,37 @@ const BridgeSetup = () => {
       
       setUser(session.user);
       
+=======
+
+      if (!session?.user) {
+        navigate('/Chat');
+        return;
+      }
+
+      setUser(session.user);
+
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
       // Check subscription - only allow paid users or team members
       if (isAdminEmail(session.user.email) || isTeamEmail(session.user.email)) {
         setTier('elite');
         setLoading(false);
         return;
       }
+<<<<<<< HEAD
       
+=======
+
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
       const { data: profile } = await supabase
         .from('profiles')
         .select('subscription_tier, subscription_expires_at, trial_started_at')
         .eq('user_id', session.user.id)
         .single();
+<<<<<<< HEAD
       
+=======
+
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
       if (profile) {
         // Check if subscription is valid
         if (profile.subscription_expires_at && new Date(profile.subscription_expires_at) > new Date()) {
@@ -73,12 +97,21 @@ const BridgeSetup = () => {
         navigate('/pricing');
         return;
       }
+<<<<<<< HEAD
       
       setLoading(false);
     };
     
     checkAuth();
     
+=======
+
+      setLoading(false);
+    };
+
+    checkAuth();
+
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
     // Get tier from location state if available
     if (location.state?.tier) {
       setTier(location.state.tier);
@@ -114,7 +147,11 @@ const BridgeSetup = () => {
       ],
       limitations: [
         'Full-stack coding disabled',
+<<<<<<< HEAD
         'Shell commands disabled', 
+=======
+        'Shell commands disabled',
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
         'ADB/Android disabled',
         'Valid for 3 days only',
       ],
@@ -187,10 +224,17 @@ const BridgeSetup = () => {
             "name": "How to Setup ALSA AI PC Bridge",
             "description": "Step-by-step guide to install and configure ALSA AI PC Bridge",
             "step": [
+<<<<<<< HEAD
               {"@type": "HowToStep", "text": "Install Python 3.8+"},
               {"@type": "HowToStep", "text": "Download the PC Bridge file"},
               {"@type": "HowToStep", "text": "Install Python packages"},
               {"@type": "HowToStep", "text": "Run the bridge script"}
+=======
+              { "@type": "HowToStep", "text": "Install Python 3.8+" },
+              { "@type": "HowToStep", "text": "Download the PC Bridge file" },
+              { "@type": "HowToStep", "text": "Install Python packages" },
+              { "@type": "HowToStep", "text": "Run the bridge script" }
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
             ]
           })}
         </script>
@@ -242,7 +286,11 @@ const BridgeSetup = () => {
             <h2 className="text-2xl font-bold">Introduction Video</h2>
           </div>
           <div className="rounded-2xl overflow-hidden bg-slate-900/50 border border-white/10 shadow-xl">
+<<<<<<< HEAD
             <video 
+=======
+            <video
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
               className="w-full aspect-video"
               controls
               preload="metadata"
@@ -261,9 +309,15 @@ const BridgeSetup = () => {
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
             <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 backdrop-blur-xl transition-all hover:border-white/20">
+<<<<<<< HEAD
               <img 
                 src={aiPcControlImage} 
                 alt="AI PC Control Interface" 
+=======
+              <img
+                src={aiPcControlImage}
+                alt="AI PC Control Interface"
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
                 className="w-full h-64 object-cover opacity-80 group-hover:opacity-100 transition-opacity"
               />
               <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-950 to-transparent">
@@ -272,9 +326,15 @@ const BridgeSetup = () => {
               </div>
             </div>
             <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 backdrop-blur-xl transition-all hover:border-white/20">
+<<<<<<< HEAD
               <img 
                 src={voiceControlImage} 
                 alt="Voice AI Control" 
+=======
+              <img
+                src={voiceControlImage}
+                alt="Voice AI Control"
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
                 className="w-full h-64 object-cover opacity-80 group-hover:opacity-100 transition-opacity"
               />
               <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-950 to-transparent">
@@ -320,8 +380,13 @@ const BridgeSetup = () => {
                 </li>
               ))}
             </ul>
+<<<<<<< HEAD
             <Button 
               onClick={() => navigate('/pricing')} 
+=======
+            <Button
+              onClick={() => navigate('/pricing')}
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
               className="mt-4 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30"
             >
               Upgrade for Full Access
@@ -367,7 +432,11 @@ const BridgeSetup = () => {
           <Monitor className="w-6 h-6 text-emerald-400" />
           Setup Instructions
         </h2>
+<<<<<<< HEAD
         
+=======
+
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
         <Tabs defaultValue="windows" className="w-full">
           <TabsList className="bg-slate-900/50 border border-white/10 p-1">
             <TabsTrigger value="windows" className="data-[state=active]:bg-white/10">Windows</TabsTrigger>
@@ -463,7 +532,11 @@ const BridgeSetup = () => {
                   <div className="flex-1">
                     <h4 className="font-bold text-emerald-400 mb-2">Connect in ALSA AI</h4>
                     <p className="text-sm text-white/60">
+<<<<<<< HEAD
                       Go back to ALSA AI and click the <span className="text-blue-400 font-semibold">PC Bridge</span> button in the sidebar. 
+=======
+                      Go back to ALSA AI and click the <span className="text-blue-400 font-semibold">PC Bridge</span> button in the sidebar.
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
                       It should show <span className="text-emerald-400 font-semibold">"Connected"</span> with a green indicator.
                     </p>
                   </div>
@@ -564,8 +637,13 @@ const BridgeSetup = () => {
 
         {/* CTA */}
         <div className="mt-12 text-center">
+<<<<<<< HEAD
           <Button 
             onClick={() => navigate('/')} 
+=======
+          <Button
+            onClick={() => navigate('/')}
+>>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
             size="lg"
             className={`bg-gradient-to-r ${currentTier.gradient} hover:opacity-90 text-white px-10 py-7 text-lg font-bold rounded-2xl shadow-2xl`}
           >
