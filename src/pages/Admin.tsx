@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { 
   Shield, Users, MessageSquare, Bell, Mail, 
   Lock, CheckCircle, Send, Eye, EyeOff, ArrowLeft,
@@ -72,8 +73,13 @@ const Admin = () => {
   });
   
   const [users, setUsers] = useState<User[]>([]);
+  const [profiles, setProfiles] = useState<any[]>([]);
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [loginEvents, setLoginEvents] = useState<any[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
   
   // Notification form
   const [notificationTitle, setNotificationTitle] = useState('');
@@ -202,6 +208,8 @@ const Admin = () => {
       // We'll store email info when users sign up via a trigger or use the profile data
       
       if (profiles) {
+        setProfiles(profiles);
+
         const freeUsers = profiles.filter(p => !p.subscription_tier || p.subscription_tier === 'free').length;
         const proUsers = profiles.filter(p => p.subscription_tier === 'pro').length;
         const eliteUsers = profiles.filter(p => p.subscription_tier === 'elite').length;
@@ -281,6 +289,25 @@ const Admin = () => {
       console.error('Fetch error:', error);
     }
     setLoading(false);
+  };
+
+  const fetchLoginEvents = async (userId: string) => {
+    setLoadingEvents(true);
+    try {
+      const { data, error } = await supabase
+        .from('login_events')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      setLoginEvents(data ?? []);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to fetch events', variant: 'destructive' });
+    } finally {
+      setLoadingEvents(false);
+    }
   };
 
   // Promo code management functions
@@ -560,6 +587,9 @@ const Admin = () => {
             <TabsTrigger value="users" className="data-[state=active]:bg-white/10">
               <Users className="w-4 h-4 mr-2" /> Users
             </TabsTrigger>
+            <TabsTrigger value="profiles" className="data-[state=active]:bg-white/10">
+              <Shield className="w-4 h-4 mr-2" /> Profiles
+            </TabsTrigger>
             <TabsTrigger value="messages" className="data-[state=active]:bg-white/10">
               <Mail className="w-4 h-4 mr-2" /> Contact Messages
               {stats.unreadContacts > 0 && (
@@ -634,6 +664,145 @@ const Admin = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Profiles Tab */}
+          <TabsContent value="profiles">
+            <Card className="bg-slate-900/50 border-white/5">
+              <CardHeader>
+                <div className="flex items-center justify-between gap-4">
+                  <CardTitle className="text-white">Profiles</CardTitle>
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-64">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                      <Input
+                        placeholder="Search by name, bio or ID..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 bg-white/5 border-white/10 text-white"
+                      />
+                    </div>
+                    <Button variant="ghost" onClick={() => fetchAllData()}>
+                      <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="text-xs text-white/50 border-b border-white/5">
+                        <th className="py-3 px-2">Avatar</th>
+                        <th className="py-3 px-2">Display Name</th>
+                        <th className="py-3 px-2">Bio</th>
+                        <th className="py-3 px-2">Subscription</th>
+                        <th className="py-3 px-2">Created</th>
+                        <th className="py-3 px-2">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {profiles && profiles.filter(p => {
+                        const q = searchTerm.toLowerCase();
+                        return (
+                          !q ||
+                          (p.display_name || '').toLowerCase().includes(q) ||
+                          (p.bio || '').toLowerCase().includes(q) ||
+                          (p.user_id || '').toLowerCase().includes(q)
+                        );
+                      }).map((p) => (
+                        <tr key={p.id} className="border-b border-white/5 hover:bg-white/5">
+                          <td className="py-3 px-2 w-14">
+                            {p.avatar_url ? (
+                              <img src={p.avatar_url} className="h-10 w-10 rounded-full object-cover" />
+                            ) : (
+                              <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center">U</div>
+                            )}
+                          </td>
+                          <td className="py-3 px-2">
+                            <div className="font-medium text-white">{p.display_name || 'Anonymous'}</div>
+                            <div className="text-xs text-white/40 font-mono break-all">{p.user_id}</div>
+                          </td>
+                          <td className="py-3 px-2 text-sm text-white/70">{p.bio ? (p.bio.length > 80 ? p.bio.slice(0,80)+'...' : p.bio) : '-'}</td>
+                          <td className="py-3 px-2">
+                            <Badge className="bg-white/5 text-white">{p.subscription_tier || 'Free'}</Badge>
+                          </td>
+                          <td className="py-3 px-2 text-sm text-white/60">{new Date(p.created_at).toLocaleDateString()}</td>
+                          <td className="py-3 px-2">
+                            <div className="flex items-center gap-2">
+                              <Button size="sm" variant="ghost" onClick={() => { setSelectedProfile(p); (async () => { await fetchLoginEvents(p.user_id); setProfileDialogOpen(true); })(); }}>
+                                <Eye className="w-4 h-4" /> View
+                              </Button>
+                              <Button size="sm" variant="destructive" onClick={async () => {
+                                if (!confirm('Delete this profile? This is irreversible.')) return;
+                                const { error } = await supabase.from('profiles').delete().eq('id', p.id);
+                                if (error) {
+                                  toast({ title: 'Delete failed', description: error.message, variant: 'destructive' });
+                                } else {
+                                  toast({ title: 'Deleted', description: 'Profile removed' });
+                                  fetchAllData();
+                                }
+                              }}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {profiles && profiles.length === 0 && (
+                        <tr><td colSpan={6} className="py-8 text-center text-white/40">No profiles found</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
+              <DialogContent className="bg-[#0a0a0a] border-white/10 text-white max-w-xl">
+                <div className="flex items-start gap-4">
+                  <div>
+                    {selectedProfile?.avatar_url ? (
+                      <img src={selectedProfile.avatar_url} className="h-24 w-24 rounded-md object-cover" />
+                    ) : (
+                      <div className="h-24 w-24 rounded-md bg-white/5 flex items-center justify-center">U</div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold">{selectedProfile?.display_name || 'Anonymous'}</h3>
+                    <p className="text-sm text-white/60 mb-2">ID: {selectedProfile?.user_id}</p>
+                    <p className="text-sm text-white/80">{selectedProfile?.bio || 'No bio provided.'}</p>
+                    <div className="mt-4 flex gap-2">
+                      <Button variant="ghost" onClick={() => setProfileDialogOpen(false)}>Close</Button>
+                      <Button variant="outline" onClick={() => { navigator.clipboard.writeText(selectedProfile?.user_id || ''); toast({ title: 'Copied', description: 'User ID copied to clipboard' }); }}>Copy ID</Button>
+                    </div>
+
+                    {/* Recent login/profile events for this user */}
+                    <div className="mt-6">
+                      <h4 className="text-sm font-semibold text-white mb-2">Recent Events</h4>
+                      {loadingEvents ? (
+                        <p className="text-sm text-white/60">Loading events...</p>
+                      ) : loginEvents.length === 0 ? (
+                        <p className="text-sm text-white/60">No events found for this user.</p>
+                      ) : (
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {loginEvents.map((ev) => (
+                            <div key={ev.id} className="p-2 rounded-md bg-white/3 flex items-start gap-3">
+                              <div className="text-xs text-white/60 w-36">{new Date(ev.created_at).toLocaleString()}</div>
+                              <div className="flex-1">
+                                <div className="text-sm font-medium text-white">{ev.event_type}</div>
+                                <div className="text-xs text-white/60">{ev.name ?? ev.username ?? '-'}</div>
+                              </div>
+                              {ev.profile_url && <img src={ev.profile_url} className="h-8 w-8 rounded-md object-cover" />}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {/* Contact Messages Tab */}

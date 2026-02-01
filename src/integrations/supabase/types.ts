@@ -440,6 +440,48 @@ export type Database = {
         }
         Relationships: []
       }
+      login_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          user_id: string
+          username: string | null
+          name: string | null
+          gender: string | null
+          profile_url: string | null
+          bio: string | null
+          ip: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          user_id: string
+          username?: string | null
+          name?: string | null
+          gender?: string | null
+          profile_url?: string | null
+          bio?: string | null
+          ip?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          user_id?: string
+          username?: string | null
+          name?: string | null
+          gender?: string | null
+          profile_url?: string | null
+          bio?: string | null
+          ip?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       promo_codes: {
         Row: {
           code: string

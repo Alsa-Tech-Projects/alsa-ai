@@ -130,6 +130,23 @@ const Profile = () => {
         : await supabase.from('profiles').insert([profileData]);
 
       if (error) throw error;
+
+      // Log profile update event (client-side insert under RLS, user_id must match auth.uid())
+      (async () => {
+        try {
+          await supabase.from('login_events').insert({
+            user_id: user.id,
+            username: user.email ?? null,
+            name: displayName ?? null,
+            profile_url: avatarUrl ?? null,
+            bio: bio ?? null,
+            event_type: 'profile_update',
+          });
+        } catch (e) {
+          console.error('Failed to log profile update event:', e);
+        }
+      })();
+
       toast({ title: "System Updated", description: "Your neural profile is synchronized." });
       loadProfile();
     } catch (error: any) {
