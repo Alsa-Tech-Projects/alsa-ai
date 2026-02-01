@@ -238,20 +238,61 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Demo Video - Border Fix */}
-      <section className="py-16 px-4">
-        <div className="container mx-auto max-w-5xl">
-          <div className="text-center mb-10">
-            <Badge className="mb-4 bg-purple-500/20 text-purple-300 border-purple-500/30">See ALSA in Action</Badge>
-            <h2 className="text-3xl md:text-4xl font-bold">Watch the Demo</h2>
-          </div>
-          <div className="relative rounded-2xl md:rounded-3xl overflow-hidden border-4 border-white/5 shadow-2xl aspect-video bg-black">
-             <video className="w-full h-full" controls muted loop playsInline>
-               <source src="/videos/demo-video.mp4" type="video/mp4" />
-             </video>
-          </div>
+{/* Demo Video - Ultra Premium Look */}
+<section className="py-20 px-4 relative overflow-hidden">
+  {/* Background Glow behind video */}
+  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl h-72 bg-purple-600/20 blur-[120px] rounded-full pointer-events-none"></div>
+
+  <div className="container mx-auto max-w-5xl relative z-10">
+    <div className="text-center mb-12">
+      <Badge className="mb-4 bg-gradient-to-r from-purple-500/20 to-blue-500/20 text-purple-300 border-purple-500/30 px-4 py-1.5 animate-pulse">
+        <Play className="w-3 h-3 mr-2 inline fill-current" /> Experience The Future
+      </Badge>
+      <h2 className="text-3xl md:text-5xl font-black bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent">
+        Watch ALSA in Action
+      </h2>
+    </div>
+
+    {/* The Premium Video Frame */}
+    <div className="group relative mx-auto max-w-4xl">
+      {/* Outer Glow Border */}
+      <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-blue-500 to-cyan-400 rounded-[1.6rem] md:rounded-[2.6rem] blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+      
+      {/* Main Container */}
+      <div className="relative rounded-2xl md:rounded-[2.5rem] overflow-hidden bg-[#0A1A2F] border border-white/10 shadow-2xl">
+        {/* Browser Top Bar UI (Premium touch) */}
+        <div className="hidden md:flex items-center gap-1.5 px-6 py-3 border-b border-white/5 bg-white/5">
+          <div className="w-2.5 h-2.5 rounded-full bg-red-500/50"></div>
+          <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/50"></div>
+          <div className="w-2.5 h-2.5 rounded-full bg-green-500/50"></div>
+          <div className="ml-4 h-4 w-40 bg-white/5 rounded-full"></div>
         </div>
-      </section>
+
+        {/* Video Wrapper with Aspect Ratio */}
+        <div className="relative aspect-video bg-black">
+          <video 
+            className="w-full h-full object-cover md:object-contain" 
+            controls 
+            muted 
+            loop 
+            playsInline
+            poster="/videos/thumbnail.png" // Ek accha thumbnail image zaroor lagana
+          >
+            <source src="/videos/demo-video.mp4" type="video/mp4" />
+          </video>
+          
+          {/* Subtle Overlay Gradient */}
+          <div className="absolute inset-0 pointer-events-none ring-1 ring-inset ring-white/10 rounded-2xl md:rounded-[2.5rem]"></div>
+        </div>
+      </div>
+    </div>
+
+    {/* Bottom Caption for Mobile */}
+    <p className="mt-6 text-center text-white/40 text-sm md:text-base font-medium italic">
+      "ALSA intelligently handles your daily PC workflow"
+    </p>
+  </div>
+</section>
 
       {/* Features - Full Content Restored */}
       <section id="features" className="py-20 px-4">
