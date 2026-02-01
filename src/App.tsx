@@ -10,6 +10,7 @@ const Landing = lazy(() => import("./pages/Landing"));
 const Chat = lazy(() => import("./pages/Chat"));
 const Settings = lazy(() => import("./pages/Settings"));
 const History = lazy(() => import("./pages/History"));
+const Ratings = lazy(() => import("./pages/Ratings"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Analytics = lazy(() => import("./pages/Analytics"));
@@ -55,6 +56,7 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/Chat" element={<Chat />} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/ratings" element={<Ratings />} />
             <Route path="/bridge-setup" element={<BridgeSetup />} />
             <Route path="/c/:conversationId" element={<Chat />} />
             <Route path="/auth" element={<Auth />} />
