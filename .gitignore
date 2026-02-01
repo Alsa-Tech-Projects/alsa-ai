@@ -22,13 +22,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-<<<<<<< HEAD
-=======
-
-# environment variables
-.env
-
-# supabase folders and files
-supabase/
-.supabase/
->>>>>>> cecfda5aa40d83581041c88bc8c842f9bfe980e8
