@@ -311,7 +311,7 @@ const Landing = () => {
                   <CardTitle className="text-2xl">{plan.name}</CardTitle>
                   <div className="mt-4 flex flex-col">
                     {plan.originalPrice && <span className="text-sm text-white/30 line-through">{plan.originalPrice}</span>}
-                    <span className="text-4xl font-black">{plan.price}<span className="text-sm text-white/40">{plan.period}</span></span>
+                    <span className="text-4xl font-white">{plan.price}<span className="text-sm text-white/40">{plan.period}</span></span>
                   </div>
                 </CardHeader>
                 <CardContent>

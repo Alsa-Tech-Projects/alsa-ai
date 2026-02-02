@@ -63,8 +63,8 @@ const Pricing = () => {
     {
       id: 'pro',
       name: 'Alsa Pro',
-      price: 720,
-      originalPrice: 800,
+      price: 500,
+      originalPrice: 1000,
       period: 'month',
       description: 'For developers who want full control',
       tier: 'pro',
@@ -85,8 +85,8 @@ const Pricing = () => {
     {
       id: 'elite',
       name: 'Alsa Elite',
-      price: 1200,
-      originalPrice: 1500,
+      price: 900,
+      originalPrice: 1800,
       period: 'month',
       description: 'Maximum power for power users',
       tier: 'elite',
@@ -291,7 +291,7 @@ const Pricing = () => {
         {/* Hero */}
         <div className="text-center mb-16">
           <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0 mb-4">
-            🎉 Limited Time Offer - Save up to 25%
+            🎉 Limited Time Offer - Save up to 50%
           </Badge>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
             Choose Your Power Level
