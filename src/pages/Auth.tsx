@@ -34,29 +34,6 @@ const Auth = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        // When user signs in (including OAuth), log a login event.
-        if (event === 'SIGNED_IN') {
-          (async () => {
-            try {
-              const userId = session.user.id;
-
-              // Try to enrich with profile data if available
-              const { data: profileData } = await supabase.from('profiles').select('display_name, avatar_url, bio').eq('user_id', userId).maybeSingle();
-
-              await supabase.from('login_events').insert({
-                user_id: userId,
-                username: session.user.email ?? null,
-                name: profileData?.display_name ?? session.user.user_metadata?.full_name ?? null,
-                profile_url: profileData?.avatar_url ?? null,
-                bio: profileData?.bio ?? null,
-                event_type: 'login',
-              });
-            } catch (e) {
-              console.error('Failed to log login event:', e);
-            }
-          })();
-        }
-
         navigate('/Chat');
       }
     });
