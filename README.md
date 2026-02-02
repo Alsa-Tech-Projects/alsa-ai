@@ -1,1 +1,1 @@
-[![NodeJS with Webpack](https://github.com/Alsa-Tech-Projects/alsa-ai/actions/workflows/webpack.yml/badge.svg?branch=main)](https://github.com/Alsa-Tech-Projects/alsa-ai/actions/workflows/webpack.yml)
+
