@@ -54,6 +54,7 @@ const Pricing = () => {
         { name: 'Screen Recording', included: true },
         { name: 'HTML/CSS/JS Coding Only', included: true },
         { name: 'Basic AI Chat', included: true },
+        { name: 'Massage Automation', included: false},
         { name: 'Full-Stack Coding', included: false },
         { name: 'OS Shell Commands', included: false },
         { name: 'ADB Android Control', included: false },
@@ -74,6 +75,7 @@ const Pricing = () => {
       features: [
         { name: 'Full-Stack Coding (All Languages)', included: true },
         { name: 'OS Shell Commands', included: true },
+        { name: 'Massage Automation', included: false },
         { name: 'Project Generation', included: true },
         { name: 'Document Creation (PPT/Excel)', included: true },
         { name: 'Priority Support', included: true },
@@ -96,6 +98,7 @@ const Pricing = () => {
         { name: 'Everything in Pro', included: true },
         { name: 'ADB Android Control', included: true },
         { name: 'Advanced Excel Engine', included: true },
+        { name: 'Massage Automation', included: true },
         { name: 'Production Database Management', included: true },
         { name: 'Priority Secure Tunnel', included: true },
         { name: 'Early Access to Features', included: true },
