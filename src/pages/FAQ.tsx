@@ -18,7 +18,7 @@ const faqData: FAQItem[] = [
   {
     category: "General",
     question: "What is ALSA AI?",
-    answer: "ALSA AI (AI Lifestyle & Smart Assistant) is a powerful AI assistant created by Mohd Eisa. It combines conversational AI with PC automation capabilities, allowing you to control your computer, create projects, documents, and much more using natural language commands."
+    answer: "ALSA AI (AI Lifestyle & Smart Assistant) is a powerful AI assistant created by Alsa AI Techechechech. It combines conversational AI with PC automation capabilities, allowing you to control your computer, create projects, documents, and much more using natural language commands."
   },
   {
     category: "General",

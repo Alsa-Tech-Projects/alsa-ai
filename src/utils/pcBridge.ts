@@ -1,4 +1,4 @@
-// pcBridge.ts - Full PC Control Bridge with Natural Language Support
+by Alsa AI Techby Alsa AI Techby Alsa AI Tech// pcBridge.ts - Full PC Control Bridge with Natural Language Support
 const BRIDGE_URL = 'http://127.0.0.1:5001';
 
 const getHeaders = () => ({

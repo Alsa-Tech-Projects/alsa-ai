@@ -78,8 +78,8 @@ const Landing = () => {
     },
     {
       name: 'Alsa Pro',
-      price: '₹720',
-      originalPrice: '₹800',
+      price: '₹500',
+      originalPrice: '₹1000',
       period: '/month',
       features: ['Full-Stack Coding', 'OS Shell Commands', 'Project Generation', 'Document Creation', 'Priority Support'],
       cta: 'Get Pro',
@@ -89,10 +89,10 @@ const Landing = () => {
     },
     {
       name: 'Alsa Elite',
-      price: '₹1200',
-      originalPrice: '₹1,500',
+      price: '₹900',
+      originalPrice: '₹1800',
       period: '/month',
-      features: ['Everything in Pro', 'ADB Android Control', 'Excel Automation', 'Database Management', '24/7 Support'],
+      features: ['Everything in Pro', 'Massage Automation', 'ADB Android Control', 'Excel Automation', 'Database Management', '24/7 Support'],
       cta: 'Get Elite',
       highlight: false,
       gradient: 'from-purple-500 to-pink-500',
@@ -199,17 +199,14 @@ const Landing = () => {
                 <div className="inline-flex items-center gap-2 bg-orange-500/20 text-orange-300 px-4 py-2 rounded-full mb-6">
                   <span className="animate-pulse">🔥</span> <span className="font-bold text-xs uppercase">Limited Time Offer</span>
                 </div>
-                <h2 className="text-3xl md:text-5xl font-black mb-4">25% OFF <br className="md:hidden" /><span className="text-white/70 text-xl md:text-3xl">All Premium Plans!</span></h2>
+                <h2 className="text-3xl md:text-5xl font-black mb-4">50% OFF <br className="md:hidden" /><span className="text-white/70 text-xl md:text-3xl">All Premium Plans!</span></h2>
                 <p className="text-white/60 mb-8 max-w-md">Get full access to AI-powered PC automation. <span className="text-orange-400 font-semibold">Offer expires soon!</span></p>
                 <div className="flex flex-col sm:flex-row gap-3">
-                   <Button size="lg" className="bg-orange-500 hover:bg-orange-400 font-bold"
-                     onClick={() => navigate('/pricing')}
-                     >
-                     Claim 25% Discount</Button>
+                   <Button size="lg" className="bg-orange-500 hover:bg-orange-400 font-bold">Claim 50% Discount</Button>
                   <Button 
                     variant="outline"
+
                     className="border-white/20 bg-white/5 text-white hover:bg-white hover:text-[#0A1A2F] transition-all duration-300 font-semibold"
-                    onClick={() => navigate('/auth')}
                     >
                     Start ₹1 Trial
                   </Button>
@@ -238,61 +235,20 @@ const Landing = () => {
         </div>
       </section>
 
-{/* Demo Video - Ultra Premium Look */}
-<section className="py-20 px-4 relative overflow-hidden">
-  {/* Background Glow behind video */}
-  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl h-72 bg-purple-600/20 blur-[120px] rounded-full pointer-events-none"></div>
-
-  <div className="container mx-auto max-w-5xl relative z-10">
-    <div className="text-center mb-12">
-      <Badge className="mb-4 bg-gradient-to-r from-purple-500/20 to-blue-500/20 text-purple-300 border-purple-500/30 px-4 py-1.5 animate-pulse">
-        <Play className="w-3 h-3 mr-2 inline fill-current" /> Experience The Future
-      </Badge>
-      <h2 className="text-3xl md:text-5xl font-black bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent">
-        Watch ALSA in Action
-      </h2>
-    </div>
-
-    {/* The Premium Video Frame */}
-    <div className="group relative mx-auto max-w-4xl">
-      {/* Outer Glow Border */}
-      <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-blue-500 to-cyan-400 rounded-[1.6rem] md:rounded-[2.6rem] blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-      
-      {/* Main Container */}
-      <div className="relative rounded-2xl md:rounded-[2.5rem] overflow-hidden bg-[#0A1A2F] border border-white/10 shadow-2xl">
-        {/* Browser Top Bar UI (Premium touch) */}
-        <div className="hidden md:flex items-center gap-1.5 px-6 py-3 border-b border-white/5 bg-white/5">
-          <div className="w-2.5 h-2.5 rounded-full bg-red-500/50"></div>
-          <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/50"></div>
-          <div className="w-2.5 h-2.5 rounded-full bg-green-500/50"></div>
-          <div className="ml-4 h-4 w-40 bg-white/5 rounded-full"></div>
+      {/* Demo Video - Border Fix */}
+      <section className="py-16 px-4">
+        <div className="container mx-auto max-w-5xl">
+          <div className="text-center mb-10">
+            <Badge className="mb-4 bg-purple-500/20 text-purple-300 border-purple-500/30">See ALSA in Action</Badge>
+            <h2 className="text-3xl md:text-4xl font-bold">Watch the Demo</h2>
+          </div>
+          <div className="relative rounded-2xl md:rounded-3xl overflow-hidden border-4 border-white/5 shadow-2xl aspect-video bg-black">
+             <video className="w-full h-full" controls muted loop playsInline>
+               <source src="/videos/demo-video.mp4" type="video/mp4" />
+             </video>
+          </div>
         </div>
-
-        {/* Video Wrapper with Aspect Ratio */}
-        <div className="relative aspect-video bg-black">
-          <video 
-            className="w-full h-full object-cover md:object-contain" 
-            controls 
-            muted 
-            loop 
-            playsInline
-            poster="/videos/thumbnail.png" 
-          >
-            <source src="/videos/demo-video.mp4" type="video/mp4" />
-          </video>
-          
-          {/* Subtle Overlay Gradient */}
-          <div className="absolute inset-0 pointer-events-none ring-1 ring-inset ring-white/10 rounded-2xl md:rounded-[2.5rem]"></div>
-        </div>
-      </div>
-    </div>
-
-    {/* Bottom Caption for Mobile */}
-    <p className="mt-6 text-center text-white/40 text-sm md:text-base font-medium italic">
-      "ALSA intelligently handles your daily PC workflow"
-    </p>
-  </div>
-</section>
+      </section>
 
       {/* Features - Full Content Restored */}
       <section id="features" className="py-20 px-4">
@@ -370,52 +326,21 @@ const Landing = () => {
         </div>
       </section>
 
-            {/* Footer */}
-      <footer className="py-16 px-6 border-t border-white/5 bg-slate-950/80">
-        <div className="container mx-auto">
-          <div className="grid md:grid-cols-4 gap-12">
-            <div>
-              <div className="flex items-center gap-3 mb-6">
-                <img src={alsaLogo} alt="ALSA AI" className="w-10 h-10 rounded-xl ring-1 ring-white/10" />
-                <div>
-                  <span className="font-bold text-lg">ALSA AI</span>
-                  <p className="text-xs text-white/40">by Mohd Eisa</p>
-                </div>
-              </div>
-              <p className="text-white/40 text-sm leading-relaxed">
-                AI Lifestyle & Smart Assistant - Your intelligent companion for PC automation and productivity.
-              </p>
+      {/* Footer */}
+      <footer className="py-16 px-4 border-t border-white/5 bg-black/40">
+        <div className="container mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <img src={alsaLogo} className="w-8 h-8 rounded-lg" />
+              <span className="font-bold">ALSA AI</span>
             </div>
-            <div>
-              <h4 className="font-bold mb-6 text-white">Product</h4>
-              <ul className="space-y-3 text-white/50 text-sm">
-                <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
-                <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
-                <li><a href="/auth" className="hover:text-white transition-colors">Get Started</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold mb-6 text-white">Support</h4>
-              <ul className="space-y-3 text-white/50 text-sm">
-                <li><a href="/contact" className="hover:text-white transition-colors">Contact Us</a></li>
-                <li><a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a></li>
-                <li><a href="/terms" className="hover:text-white transition-colors">Terms of Service</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold mb-6 text-white">Connect</h4>
-              <ul className="space-y-3 text-white/50 text-sm">
-                <li><a href="https://www.instagram.com/alsa_ai_assistant/" target="_blank" className="hover:text-white transition-colors">Instagram</a></li>
-                <li><a href="https://x.com/AlsaAiAssistant" target="_blank" className="hover:text-white transition-colors">Twitter (X)</a></li>
-                <li><a href="https://www.linkedin.com/in/alsaai" target="_blank" className="hover:text-white transition-colors">LinkedIn</a></li>
-                <li><a href="https://www.reddit.com/r/join_alsa_ai/" target="_blank" className="hover:text-white transition-colors">Reddit</a></li>
-              </ul>
-            </div>
+            <p className="text-[10px] md:text-xs text-white/40">AI Lifestyle & Smart Assistant by Alsa AI Tech</p>
           </div>
-          <div className="mt-16 pt-8 border-t border-white/5 text-center text-white/40 text-sm">
-            <p>© 2026 ALSA AI. All rights reserved. Created with ❤️ by Alsa Tech Team.</p>
-          </div>
+          <div><h4 className="font-bold mb-4 text-sm">Product</h4><ul className="text-xs space-y-2 text-white/40"><li>Features</li><li>Pricing</li></ul></div>
+          <div><h4 className="font-bold mb-4 text-sm">Legal</h4><ul className="text-xs space-y-2 text-white/40"><li>Privacy</li><li>Terms</li></ul></div>
+          <div><h4 className="font-bold mb-4 text-sm">Social</h4><ul className="text-xs space-y-2 text-white/40"><li>Instagram</li><li>Twitter</li></ul></div>
         </div>
+        <div className="text-center mt-12 text-[10px] text-white/20">© 2026 ALSA AI. All rights reserved.</div>
       </footer>
     </div>
   );
