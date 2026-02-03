@@ -402,7 +402,7 @@
 // export default Auth;
 
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -417,69 +417,50 @@ import SignupWizard from '@/components/SignupWizard';
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   
-  // Wizard states
   const [showWizard, setShowWizard] = useState(false);
   const [wizardUserId, setWizardUserId] = useState<string | null>(null);
 
+  // AUTH STATE LISTENER
   useEffect(() => {
-    // 1. Check current session
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        handlePostLoginLogic(session.user);
-      }
-    };
-
-    // 2. Listen for auth changes (specifically for OAuth redirect)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        handlePostLoginLogic(session.user);
+      if (session?.user) {
+        setWizardUserId(session.user.id);
+        
+        // Check if profile is complete
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('bio, purpose')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        // Agar user naya hai ya bio missing hai, Wizard dikhao
+        if (!profile?.bio || !profile?.purpose) {
+          setShowWizard(true);
+        } else {
+          navigate('/Chat');
+        }
       }
     });
 
-    checkUser();
     return () => subscription.unsubscribe();
-  }, []);
-
-  const handlePostLoginLogic = async (user: any) => {
-    try {
-      // Check if profile exists
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      // Agar profile missing hai ya incomplete hai, wizard dikhao
-      if (!profile || !profile.bio || !profile.purpose) {
-        setWizardUserId(user.id);
-        setShowWizard(true);
-      } else {
-        navigate('/Chat');
-      }
-    } catch (err) {
-      console.error("Profile check error:", err);
-      navigate('/Chat');
-    }
-  };
+  }, [navigate]);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth`, // Redirect back here to trigger useEffect
-      },
+      options: { 
+        redirectTo: `${window.location.origin}/auth`,
+        queryParams: { access_type: 'offline', prompt: 'consent' }
+      }
     });
-
     if (error) {
-      toast({ title: "Login Failed", description: error.message, variant: "destructive" });
+      toast({ title: "Google Login Failed", description: error.message, variant: "destructive" });
       setLoading(false);
     }
   };
@@ -488,9 +469,8 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Login Failed", description: error.message, variant: "destructive" });
       setLoading(false);
     }
   };
@@ -501,113 +481,113 @@ const Auth = () => {
         <title>Login & Sign Up - ALSA AI</title>
       </Helmet>
 
-      {/* Background Glows */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-50">
-        <div className="absolute top-0 left-1/4 w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-blue-600/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 right-1/4 w-[250px] md:w-[500px] h-[250px] md:h-[500px] bg-purple-600/20 rounded-full blur-3xl animate-pulse" />
+      {/* Background Animations */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-3xl animate-pulse" />
       </div>
 
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-12 items-center relative z-10">
-        {/* Left Side: Info (Hidden on very small screens or re-stacked) */}
-        <div className="hidden lg:block space-y-8">
+        {/* Left Side Info */}
+        <div className="space-y-8 text-center lg:text-left">
           <div className="space-y-4">
-            <h1 className="text-6xl font-black text-white leading-tight">ALSA AI</h1>
-            <p className="text-xl text-white/60">Your intelligent PC automation partner.</p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm">
+              <Sparkles className="w-4 h-4 text-blue-400" />
+              <span className="text-sm text-white/80">Premium AI Assistant</span>
+            </div>
+            <h1 className="text-5xl lg:text-7xl font-black bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
+              ALSA AI
+            </h1>
+            <p className="text-xl text-white/50 max-w-md">The most powerful AI for PC automation and smart conversation.</p>
           </div>
-          <div className="space-y-4">
-            <Feature icon={<Shield />} title="Secure Sync" desc="Your data is encrypted and synced." />
-            <Feature icon={<Zap />} title="Fast Automation" desc="Control your system with voice." />
+
+          <div className="grid gap-4">
+            <Feature icon={<Shield className="text-blue-400" />} title="Private" desc="Your data stays yours." />
+            <Feature icon={<Zap className="text-purple-400" />} title="Fast" desc="Real-time voice and task control." />
           </div>
         </div>
 
-        {/* Right Side: Auth Card */}
-        <Card className="w-full border-white/10 backdrop-blur-xl bg-slate-900/80 shadow-2xl overflow-hidden">
-          <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-bold text-white">Welcome</CardTitle>
-            <CardDescription className="text-white/50">Start your AI journey today</CardDescription>
+        {/* Right Side Auth */}
+        <Card className="border-white/10 bg-slate-900/50 backdrop-blur-2xl shadow-2xl">
+          <CardHeader>
+            <CardTitle className="text-2xl text-white">Get Started</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup" onClick={() => setShowWizard(true)}>Sign Up</TabsTrigger>
+          <CardContent>
+            <Tabs defaultValue="signin">
+              <TabsList className="grid w-full grid-cols-2 bg-white/5 border border-white/10 mb-6">
+                <TabsTrigger value="signin" className="text-white">Sign In</TabsTrigger>
+                <TabsTrigger value="signup" onClick={() => setShowWizard(true)} className="text-white">Sign Up</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="signin">
+              <TabsContent value="signin" className="space-y-4">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-white">Email</Label>
+                    <Label className="text-white/70">Email</Label>
                     <Input 
                       type="email" 
-                      placeholder="name@company.com" 
-                      value={email} 
+                      placeholder="email@example.com" 
+                      className="bg-white/5 border-white/10 text-white"
+                      value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="bg-white/5 border-white/10 text-white" 
-                      required 
+                      required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-white">Password</Label>
+                    <Label className="text-white/70">Password</Label>
                     <div className="relative">
                       <Input 
                         type={showPassword ? "text" : "password"} 
+                        className="bg-white/5 border-white/10 text-white"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="bg-white/5 border-white/10 text-white" 
-                        required 
+                        required
                       />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-white/40">
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-white/30">
+                        {showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}
                       </button>
                     </div>
                   </div>
-                  <Button className="w-full bg-blue-600 hover:bg-blue-500" disabled={loading}>
-                    {loading ? "Processing..." : "Sign In"}
+                  <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600" disabled={loading}>
+                    {loading ? "Logging in..." : "Login"}
                   </Button>
                 </form>
+
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/10"></span></div>
+                  <div className="relative flex justify-center text-xs text-white/30 uppercase"><span className="bg-slate-900 px-2">Or</span></div>
+                </div>
+
+                <Button variant="outline" onClick={handleGoogleLogin} className="w-full bg-white text-black hover:bg-slate-100 gap-2 h-12 font-bold">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                  </svg>
+                  Sign in with Google
+                </Button>
               </TabsContent>
             </Tabs>
-
-            <div className="relative my-4">
-              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/10"></span></div>
-              <div className="relative flex justify-center text-xs uppercase"><span className="bg-slate-900 px-2 text-white/40">Or</span></div>
-            </div>
-
-            <Button 
-              variant="outline" 
-              onClick={handleGoogleLogin} 
-              disabled={loading}
-              className="w-full bg-white text-black hover:bg-slate-200 flex items-center justify-center gap-2 font-bold h-12"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-              </svg>
-              Continue with Google
-            </Button>
           </CardContent>
         </Card>
       </div>
 
-      <SignupWizard
-        open={showWizard}
-        setOpen={setShowWizard}
-        userId={wizardUserId}
-        onFinish={() => navigate('/Chat')}
+      <SignupWizard 
+        open={showWizard} 
+        setOpen={setShowWizard} 
+        userId={wizardUserId} 
+        onFinish={() => navigate('/Chat')} 
       />
     </div>
   );
 };
 
-// Sub-component for clean UI
-const Feature = ({ icon, title, desc }: { icon: any, title: string, desc: string }) => (
-  <div className="flex gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-    <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center shrink-0">{icon}</div>
+const Feature = ({ icon, title, desc }: any) => (
+  <div className="flex gap-4 p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
+    <div className="p-2 bg-white/5 rounded-lg">{icon}</div>
     <div>
-      <h3 className="font-semibold text-white">{title}</h3>
-      <p className="text-sm text-white/50">{desc}</p>
+      <h4 className="text-white font-bold">{title}</h4>
+      <p className="text-white/40 text-sm">{desc}</p>
     </div>
   </div>
 );
