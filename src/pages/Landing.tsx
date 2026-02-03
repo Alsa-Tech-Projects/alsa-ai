@@ -65,7 +65,7 @@ const Landing = () => {
     { icon: Zap, title: 'Real-time', desc: 'Instant responses and actions with streaming AI', color: 'from-yellow-500 to-orange-500' },
   ];
 
-   const pricingPlans = [
+  const pricingPlans = [
     {
       name: '3-Day Trial',
       price: '₹1',
@@ -177,7 +177,7 @@ const Landing = () => {
             <Button size="lg" onClick={() => navigate('/auth')} className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-7 rounded-2xl text-lg font-bold">
               Start Free Trial for ₹1 <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
-            <Button variant="outline" size="lg" onClick={() => document.getElementById('demo')?.scrollIntoView({behavior:'smooth'})} className="w-full sm:w-auto border-purple-500/30 bg-purple-500/5 px-8 py-7 rounded-2xl text-lg font-bold">
+            <Button variant="outline" size="lg" onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })} className="w-full sm:w-auto border-purple-500/30 bg-purple-500/5 px-8 py-7 rounded-2xl text-lg font-bold">
               <Play className="mr-2 w-5 h-5" /> Watch Demo
             </Button>
           </div>
@@ -202,17 +202,22 @@ const Landing = () => {
                 <h2 className="text-3xl md:text-5xl font-black mb-4">Save ₹800-₹1300 Today!<br className="md:hidden" /><span className="text-white/70 text-xl md:text-3xl">All Premium Plans!</span></h2>
                 <p className="text-white/60 mb-8 max-w-md">Get full access to AI-powered PC automation. <span className="text-orange-400 font-semibold">Offer expires soon!</span></p>
                 <div className="flex flex-col sm:flex-row gap-3">
-                   <Button size="lg" className="bg-orange-500 hover:bg-orange-400 font-bold">Claim 50% Discount</Button>
-                  <Button 
+                  <Button
+                    size="lg" className="bg-orange-500 hover:bg-orange-400 font-bold"
+
+                  >
+                    Claim 50% Discount
+                  </Button>
+                  <Button
                     variant="outline"
 
                     className="border-white/20 bg-white/5 text-white hover:bg-white hover:text-[#0A1A2F] transition-all duration-300 font-semibold"
-                    >
+                  >
                     Start ₹1 Trial
                   </Button>
                 </div>
               </div>
-              
+
               {/* Responsive Timer */}
               <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 w-full lg:w-auto">
                 <p className="text-center text-white/40 text-xs uppercase mb-4 tracking-widest">Offer Ends In</p>
@@ -235,17 +240,65 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Demo Video - Border Fix */}
-      <section className="py-16 px-4">
-        <div className="container mx-auto max-w-5xl">
-          <div className="text-center mb-10">
-            <Badge className="mb-4 bg-purple-500/20 text-purple-300 border-purple-500/30">See ALSA in Action</Badge>
-            <h2 className="text-3xl md:text-4xl font-bold">Watch the Demo</h2>
+      {/* Demo Video - Ultra Professional Version */}
+      <section className="py-24 px-4 relative overflow-hidden">
+        {/* Background Ambient Glow (Sirf look ke liye) */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none"></div>
+
+        <div className="container mx-auto max-w-5xl relative z-10">
+          <div className="text-center mb-12">
+            <Badge className="mb-4 bg-blue-500/10 text-blue-400 border-blue-500/20 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider animate-pulse">
+              Live Demo
+            </Badge>
+            <h2 className="text-4xl md:text-6xl font-black tracking-tighter mb-4 italic">
+              POWERING <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">YOUR WORKFLOW</span>
+            </h2>
+            <p className="text-white/40 max-w-xl mx-auto text-sm md:text-base">
+              Experience the seamless integration of ALSA AI with your desktop environment.
+            </p>
           </div>
-          <div className="relative rounded-2xl md:rounded-3xl overflow-hidden border-4 border-white/5 shadow-2xl aspect-video bg-black">
-             <video className="w-full h-full" controls muted loop playsInline>
-               <source src="/videos/demo-video.mp4" type="video/mp4" />
-             </video>
+
+          {/* The Video Mockup Frame */}
+          <div className="relative group mx-auto max-w-4xl">
+            {/* Outer Border Glow Effect */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-[2rem] md:rounded-[3rem] blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+
+            {/* Main Container */}
+            <div className="relative rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden bg-[#0D1F35] border border-white/10 shadow-2xl">
+
+              {/* Browser/Window Header (Ye isko professional dikhayega) */}
+              <div className="flex items-center justify-between px-4 md:px-8 py-3 md:py-4 border-b border-white/5 bg-white/5">
+                <div className="flex gap-1.5 md:gap-2">
+                  <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#FF5F56] shadow-inner shadow-black/20"></div>
+                  <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#FFBD2E] shadow-inner shadow-black/20"></div>
+                  <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#27C93F] shadow-inner shadow-black/20"></div>
+                </div>
+                <div className="px-3 md:px-6 py-1 rounded-full bg-white/5 border border-white/5 text-[10px] text-white/20 font-mono">
+                  alsa-core-v2.exe
+                </div>
+                <div className="w-10"></div> {/* Spacer for balance */}
+              </div>
+
+              {/* Video Wrapper */}
+              <div className="relative aspect-video bg-black/40 group-hover:bg-black/20 transition-colors">
+                <video
+                  className="w-full h-full object-cover md:object-contain"
+                  controls
+                  playsInline
+                  poster="/thumbnail.png" 
+                >
+                  <source src="/videos/demo-video.mp4" type="video/mp4" />
+                </video>
+
+                {/* Glass Overlay Shine */}
+                <div className="absolute inset-0 pointer-events-none bg-gradient-to-tr from-white/5 to-transparent opacity-50"></div>
+              </div>
+            </div>
+
+            {/* Decoration: Subtle Floating Badge */}
+            <div className="absolute -bottom-6 -right-6 hidden md:flex bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold shadow-xl items-center gap-2 animate-bounce">
+              <PlayCircle className="w-5 h-5" /> ALSA AI ACTIVE
+            </div>
           </div>
         </div>
       </section>
@@ -278,23 +331,23 @@ const Landing = () => {
             <Badge className="mb-6 bg-emerald-500/20 text-emerald-300">PC Bridge Features</Badge>
             <h2 className="text-3xl md:text-4xl font-bold mb-6">Control Your PC <span className="text-blue-400">Like Never Before</span></h2>
             <div className="grid gap-4">
-               {[
-                 { i: Monitor, t: 'Take screenshots & record screen' },
-                 { i: Terminal, t: 'Execute OS shell commands' },
-                 { i: Code, t: 'Generate complete coding projects' },
-                 { i: Smartphone, t: 'Control Android via ADB' },
-                 { i: Database, t: 'Database automation' }
-               ].map((item, idx) => (
-                 <div key={idx} className="flex items-center gap-4 p-4 bg-white/5 rounded-xl">
-                   <item.i className="w-5 h-5 text-blue-400" /> <span className="text-sm md:text-base">{item.t}</span>
-                 </div>
-               ))}
+              {[
+                { i: Monitor, t: 'Take screenshots & record screen' },
+                { i: Terminal, t: 'Execute OS shell commands' },
+                { i: Code, t: 'Generate complete coding projects' },
+                { i: Smartphone, t: 'Control Android via ADB' },
+                { i: Database, t: 'Database automation' }
+              ].map((item, idx) => (
+                <div key={idx} className="flex items-center gap-4 p-4 bg-white/5 rounded-xl">
+                  <item.i className="w-5 h-5 text-blue-400" /> <span className="text-sm md:text-base">{item.t}</span>
+                </div>
+              ))}
             </div>
           </div>
           <div className="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
             <img src={aiPcControl} alt="Control" className="w-full h-auto" />
             <div className="absolute bottom-0 p-6 bg-gradient-to-t from-black to-transparent w-full">
-               <p className="text-xs font-mono text-green-400">$ alsa "create a react portfolio"</p>
+              <p className="text-xs font-mono text-green-400">$ alsa "create a react portfolio"</p>
             </div>
           </div>
         </div>
@@ -315,10 +368,10 @@ const Landing = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                   <ul className="text-left space-y-4 mb-8 text-sm text-white/60">
-                     {plan.features.map((feat, idx) => <li key={idx} className="flex items-center gap-2"><Check className="w-4 h-4 text-green-400"/> {feat}</li>)}
-                   </ul>
-                   <Button className={`w-full py-6 bg-gradient-to-r ${plan.gradient} font-bold`}>{plan.cta}</Button>
+                  <ul className="text-left space-y-4 mb-8 text-sm text-white/60">
+                    {plan.features.map((feat, idx) => <li key={idx} className="flex items-center gap-2"><Check className="w-4 h-4 text-green-400" /> {feat}</li>)}
+                  </ul>
+                  <Button className={`w-full py-6 bg-gradient-to-r ${plan.gradient} font-bold`}>{plan.cta}</Button>
                 </CardContent>
               </Card>
             ))}
@@ -326,21 +379,53 @@ const Landing = () => {
         </div>
       </section>
 
+
       {/* Footer */}
-      <footer className="py-16 px-4 border-t border-white/5 bg-black/40">
-        <div className="container mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <img src={alsaLogo} className="w-8 h-8 rounded-lg" />
-              <span className="font-bold">ALSA AI</span>
+      <footer className="py-16 px-6 border-t border-white/5 bg-slate-950/80">
+        <div className="container mx-auto">
+          <div className="grid md:grid-cols-4 gap-12">
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <img src={alsaLogo} alt="ALSA AI" className="w-10 h-10 rounded-xl ring-1 ring-white/10" />
+                <div>
+                  <span className="font-bold text-lg">ALSA AI</span>
+                  <p className="text-xs text-white/40">by Mohd Eisa</p>
+                </div>
+              </div>
+              <p className="text-white/40 text-sm leading-relaxed">
+                AI Lifestyle & Smart Assistant - Your intelligent companion for PC automation and productivity.
+              </p>
             </div>
-            <p className="text-[10px] md:text-xs text-white/40">AI Lifestyle & Smart Assistant by Alsa AI Tech</p>
+            <div>
+              <h4 className="font-bold mb-6 text-white">Product</h4>
+              <ul className="space-y-3 text-white/50 text-sm">
+                <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
+                <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
+                <li><a href="/auth" className="hover:text-white transition-colors">Get Started</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold mb-6 text-white">Support</h4>
+              <ul className="space-y-3 text-white/50 text-sm">
+                <li><a href="/contact" className="hover:text-white transition-colors">Contact Us</a></li>
+                <li><a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="/terms" className="hover:text-white transition-colors">Terms of Service</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold mb-6 text-white">Connect</h4>
+              <ul className="space-y-3 text-white/50 text-sm">
+                <li><a href="https://www.instagram.com/alsa_ai_assistant/" target="_blank" className="hover:text-white transition-colors">Instagram</a></li>
+                <li><a href="https://x.com/AlsaAiAssistant" target="_blank" className="hover:text-white transition-colors">Twitter (X)</a></li>
+                <li><a href="https://www.linkedin.com/in/mohd-eisa-bey-061ba43a2/" target="_blank" className="hover:text-white transition-colors">LinkedIn</a></li>
+                <li><a href="https://www.reddit.com/r/join_alsa_ai/" target="_blank" className="hover:text-white transition-colors">Reddit</a></li>
+              </ul>
+            </div>
           </div>
-          <div><h4 className="font-bold mb-4 text-sm">Product</h4><ul className="text-xs space-y-2 text-white/40"><li>Features</li><li>Pricing</li></ul></div>
-          <div><h4 className="font-bold mb-4 text-sm">Legal</h4><ul className="text-xs space-y-2 text-white/40"><li>Privacy</li><li>Terms</li></ul></div>
-          <div><h4 className="font-bold mb-4 text-sm">Social</h4><ul className="text-xs space-y-2 text-white/40"><li>Instagram</li><li>Twitter</li></ul></div>
+          <div className="mt-16 pt-8 border-t border-white/5 text-center text-white/40 text-sm">
+            <p>© 2024 ALSA AI. All rights reserved. Created with ❤️ by Mohd Eisa.</p>
+          </div>
         </div>
-        <div className="text-center mt-12 text-[10px] text-white/20">© 2026 ALSA AI. All rights reserved.</div>
       </footer>
     </div>
   );
