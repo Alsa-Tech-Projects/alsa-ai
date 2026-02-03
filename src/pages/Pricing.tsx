@@ -64,8 +64,8 @@ const Pricing = () => {
     {
       id: 'pro',
       name: 'Alsa Pro',
-      price: 500,
-      originalPrice: 1000,
+      price: 799,
+      originalPrice: 1599,
       period: 'month',
       description: 'For developers who want full control',
       tier: 'pro',
@@ -87,8 +87,8 @@ const Pricing = () => {
     {
       id: 'elite',
       name: 'Alsa Elite',
-      price: 900,
-      originalPrice: 1800,
+      price: 1299,
+      originalPrice: 2599,
       period: 'month',
       description: 'Maximum power for power users',
       tier: 'elite',
@@ -257,14 +257,14 @@ const Pricing = () => {
               {
                 "@type": "Offer", 
                 "name": "Pro Plan",
-                "price": "449",
+                "price": "799",
                 "priceCurrency": "INR",
                 "availability": "https://schema.org/InStock"
               },
               {
                 "@type": "Offer",
                 "name": "Elite Plan",
-                "price": "999",
+                "price": "1299",
                 "priceCurrency": "INR",
                 "availability": "https://schema.org/InStock"
               }
@@ -294,7 +294,7 @@ const Pricing = () => {
         {/* Hero */}
         <div className="text-center mb-16">
           <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0 mb-4">
-            🎉 Limited Time Offer - Save up to 50%
+            🎉 Limited Time Offer - Save ₹800-₹1300 Today!
           </Badge>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
             Choose Your Power Level

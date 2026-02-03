@@ -199,7 +199,7 @@ const Landing = () => {
                 <div className="inline-flex items-center gap-2 bg-orange-500/20 text-orange-300 px-4 py-2 rounded-full mb-6">
                   <span className="animate-pulse">🔥</span> <span className="font-bold text-xs uppercase">Limited Time Offer</span>
                 </div>
-                <h2 className="text-3xl md:text-5xl font-black mb-4">50% OFF <br className="md:hidden" /><span className="text-white/70 text-xl md:text-3xl">All Premium Plans!</span></h2>
+                <h2 className="text-3xl md:text-5xl font-black mb-4">Save ₹800-₹1300 Today!<br className="md:hidden" /><span className="text-white/70 text-xl md:text-3xl">All Premium Plans!</span></h2>
                 <p className="text-white/60 mb-8 max-w-md">Get full access to AI-powered PC automation. <span className="text-orange-400 font-semibold">Offer expires soon!</span></p>
                 <div className="flex flex-col sm:flex-row gap-3">
                    <Button size="lg" className="bg-orange-500 hover:bg-orange-400 font-bold">Claim 50% Discount</Button>
