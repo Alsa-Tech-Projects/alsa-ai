@@ -205,15 +205,17 @@ const Landing = () => {
                   <Button
                     size="lg" className="bg-orange-500 hover:bg-orange-400 font-bold"
 
-                  >
+                  ><a href="/pricing">
                     Claim 50% Discount
+                    </a>
                   </Button>
                   <Button
                     variant="outline"
 
                     className="border-white/20 bg-white/5 text-white hover:bg-white hover:text-[#0A1A2F] transition-all duration-300 font-semibold"
-                  >
+                  ><a href="/pricing">
                     Start ₹1 Trial
+                    </a>
                   </Button>
                 </div>
               </div>
