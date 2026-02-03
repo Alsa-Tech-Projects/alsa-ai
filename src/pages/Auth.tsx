@@ -402,7 +402,7 @@
 // export default Auth;
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -417,50 +417,54 @@ import SignupWizard from '@/components/SignupWizard';
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  
+
+  // Wizard States
   const [showWizard, setShowWizard] = useState(false);
   const [wizardUserId, setWizardUserId] = useState<string | null>(null);
+  const [wizardInitialStep, setWizardInitialStep] = useState(1);
 
-  // AUTH STATE LISTENER
   useEffect(() => {
+    // Check if redirected from Google
+    const params = new URLSearchParams(location.search);
+    if (params.get('source') === 'google') {
+      setWizardInitialStep(2); // Google users jump to profile info
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         setWizardUserId(session.user.id);
         
-        // Check if profile is complete
+        // Profile Check: Sirf tabhi wizard dikhao agar data missing ho
         const { data: profile } = await supabase
           .from('profiles')
-          .select('bio, purpose')
+          .select('bio')
           .eq('user_id', session.user.id)
           .maybeSingle();
 
-        // Agar user naya hai ya bio missing hai, Wizard dikhao
-        if (!profile?.bio || !profile?.purpose) {
+        if (!profile?.bio) {
           setShowWizard(true);
-        } else {
+        } else if (event !== 'SIGNED_OUT') {
           navigate('/Chat');
         }
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, location]);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { 
-        redirectTo: `${window.location.origin}/auth`,
-        queryParams: { access_type: 'offline', prompt: 'consent' }
-      }
+      options: { redirectTo: `${window.location.origin}/auth?source=google` }
     });
     if (error) {
-      toast({ title: "Google Login Failed", description: error.message, variant: "destructive" });
+      toast({ title: "Google Error", description: error.message, variant: "destructive" });
       setLoading(false);
     }
   };
@@ -470,101 +474,89 @@ const Auth = () => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      toast({ title: "Login Failed", description: error.message, variant: "destructive" });
-      setLoading(false);
+      toast({ title: "Sign In Failed", description: "Invalid credentials or user doesn't exist.", variant: "destructive" });
     }
+    setLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
       <Helmet>
         <title>Login & Sign Up - ALSA AI</title>
+        <meta name="description" content="Sign up or login to ALSA AI - India's best AI assistant." />
       </Helmet>
 
-      {/* Background Animations */}
+      {/* Animated Background Glows */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-blue-600/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-cyan-600/10 rounded-full blur-3xl" />
       </div>
 
-      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-12 items-center relative z-10">
-        {/* Left Side Info */}
+      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center relative z-10">
+        {/* Hero Section with Original Features */}
         <div className="space-y-8 text-center lg:text-left">
           <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-white/10 backdrop-blur-sm">
               <Sparkles className="w-4 h-4 text-blue-400" />
-              <span className="text-sm text-white/80">Premium AI Assistant</span>
+              <span className="text-sm text-white/80">AI-Powered Assistant</span>
             </div>
-            <h1 className="text-5xl lg:text-7xl font-black bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
-              ALSA AI
+            <h1 className="text-5xl lg:text-6xl font-black bg-gradient-to-r from-white via-blue-200 to-purple-200 bg-clip-text text-transparent leading-tight">
+              Welcome to<br />ALSA AI
             </h1>
-            <p className="text-xl text-white/50 max-w-md">The most powerful AI for PC automation and smart conversation.</p>
+            <p className="text-xl text-white/60 max-w-md italic">"Innovating the future with voice and automation."</p>
           </div>
 
-          <div className="grid gap-4">
-            <Feature icon={<Shield className="text-blue-400" />} title="Private" desc="Your data stays yours." />
-            <Feature icon={<Zap className="text-purple-400" />} title="Fast" desc="Real-time voice and task control." />
+          <div className="space-y-4">
+            <FeatureCard icon={<Shield className="w-6 h-6 text-white" />} title="Secure Conversations" desc="Your data is encrypted and saved in the cloud." color="from-blue-500 to-cyan-500" />
+            <FeatureCard icon={<Zap className="w-6 h-6 text-white" />} title="PC Automation" desc="Control your system using just your voice." color="from-purple-500 to-pink-500" />
+            <FeatureCard icon={<User className="w-6 h-6 text-white" />} title="Custom Profiles" desc="Personalized AI responses and themes." color="from-amber-500 to-orange-500" />
           </div>
         </div>
 
-        {/* Right Side Auth */}
-        <Card className="border-white/10 bg-slate-900/50 backdrop-blur-2xl shadow-2xl">
-          <CardHeader>
-            <CardTitle className="text-2xl text-white">Get Started</CardTitle>
+        {/* Auth Card */}
+        <Card className="w-full border-white/10 backdrop-blur-xl bg-slate-900/80 shadow-2xl overflow-hidden">
+          <CardHeader className="text-center pb-2">
+            <CardTitle className="text-3xl font-bold text-white">Get Started</CardTitle>
+            <CardDescription className="text-white/50">Sign in to sync your AI assistant</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="signin">
-              <TabsList className="grid w-full grid-cols-2 bg-white/5 border border-white/10 mb-6">
-                <TabsTrigger value="signin" className="text-white">Sign In</TabsTrigger>
-                <TabsTrigger value="signup" onClick={() => setShowWizard(true)} className="text-white">Sign Up</TabsTrigger>
+            <Tabs defaultValue="signin" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-white/5 border border-white/10">
+                <TabsTrigger value="signin" className="text-white/60 data-[state=active]:text-white">Sign In</TabsTrigger>
+                <TabsTrigger value="signup" className="text-white/60 data-[state=active]:text-white" onClick={() => { setShowWizard(true); setWizardInitialStep(1); }}>
+                  Sign Up
+                </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="signin" className="space-y-4">
+              <TabsContent value="signin" className="mt-6 space-y-4">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-white/70">Email</Label>
-                    <Input 
-                      type="email" 
-                      placeholder="email@example.com" 
-                      className="bg-white/5 border-white/10 text-white"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
+                    <Label className="text-white/80">Email</Label>
+                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-white/5 border-white/10 text-white focus:border-blue-500" placeholder="you@example.com" />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-white/70">Password</Label>
+                    <Label className="text-white/80">Password</Label>
                     <div className="relative">
-                      <Input 
-                        type={showPassword ? "text" : "password"} 
-                        className="bg-white/5 border-white/10 text-white"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                      />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-white/30">
-                        {showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}
+                      <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-white/5 border-white/10 text-white focus:border-blue-500" placeholder="••••••••" />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors">
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
                   </div>
-                  <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600" disabled={loading}>
-                    {loading ? "Logging in..." : "Login"}
+                  <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:scale-[1.02] transition-transform font-bold" disabled={loading}>
+                    {loading ? 'Logging in...' : 'Sign In'}
                   </Button>
                 </form>
 
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/10"></span></div>
-                  <div className="relative flex justify-center text-xs text-white/30 uppercase"><span className="bg-slate-900 px-2">Or</span></div>
+                <div className="relative flex items-center py-2">
+                  <div className="flex-grow border-t border-white/10"></div>
+                  <span className="flex-shrink mx-4 text-white/30 text-xs uppercase">Or continue with</span>
+                  <div className="flex-grow border-t border-white/10"></div>
                 </div>
 
-                <Button variant="outline" onClick={handleGoogleLogin} className="w-full bg-white text-black hover:bg-slate-100 gap-2 h-12 font-bold">
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                  </svg>
-                  Sign in with Google
+                <Button variant="outline" onClick={handleGoogleLogin} className="w-full bg-white text-slate-900 hover:bg-slate-100 gap-3 font-bold h-12 shadow-lg">
+                  <GoogleLogo /> Sign in with Google
                 </Button>
               </TabsContent>
             </Tabs>
@@ -576,20 +568,33 @@ const Auth = () => {
         open={showWizard} 
         setOpen={setShowWizard} 
         userId={wizardUserId} 
+        initialStep={wizardInitialStep}
         onFinish={() => navigate('/Chat')} 
       />
     </div>
   );
 };
 
-const Feature = ({ icon, title, desc }: any) => (
-  <div className="flex gap-4 p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
-    <div className="p-2 bg-white/5 rounded-lg">{icon}</div>
-    <div>
-      <h4 className="text-white font-bold">{title}</h4>
-      <p className="text-white/40 text-sm">{desc}</p>
+// Sub-components for better organization
+const FeatureCard = ({ icon, title, desc, color }: any) => (
+  <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all group">
+    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}>
+      {icon}
+    </div>
+    <div className="text-left">
+      <h3 className="font-semibold text-white mb-1">{title}</h3>
+      <p className="text-sm text-white/50 leading-tight">{desc}</p>
     </div>
   </div>
+);
+
+const GoogleLogo = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24">
+    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+  </svg>
 );
 
 export default Auth;
