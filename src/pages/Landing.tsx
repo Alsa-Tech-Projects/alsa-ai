@@ -253,7 +253,7 @@ const Landing = () => {
               Live Demo
             </Badge>
             <h2 className="text-4xl md:text-6xl font-black tracking-tighter mb-4 italic">
-              POWERING <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">YOUR WORKFLOW</span>
+              Watch Alsa Ai <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">With Act</span>
             </h2>
             <p className="text-white/40 max-w-xl mx-auto text-sm md:text-base">
               Experience the seamless integration of ALSA AI with your desktop environment.
@@ -287,7 +287,7 @@ const Landing = () => {
                   className="w-full h-full object-cover md:object-contain"
                   controls
                   playsInline
-                  poster="/thumbnail.png" 
+                  poster="/videos/thumbnail.png" 
                 >
                   <source src="/videos/demo-video.mp4" type="video/mp4" />
                 </video>
