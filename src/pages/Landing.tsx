@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  Zap, Shield, Cpu, Smartphone, Bot, Code, Check, ArrowRight, Star, Users, Globe,
+  Zap, Shield, Cpu, Smartphone, Bot, Code, Check, PlayCircle, ArrowRight, Star, Users, Globe,
   Play, Monitor, Terminal, FileText, Database, Sparkles, Crown
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
