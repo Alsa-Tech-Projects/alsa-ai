@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useCursorGlow } from "@/hooks/useCursorGlow";
+import { TiltCard } from "@/components/ui/TiltCard";
+
 import {
   Card,
   CardContent,
@@ -42,6 +45,7 @@ const SkeletonBox = ({ className }: { className?: string }) => (
 );
 
 const Landing = () => {
+   useCursorGlow();
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   // const [loading, setLoading] = useState(true);
@@ -522,8 +526,10 @@ const Landing = () => {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {(authLoading ? Array(6).fill(null) : features).map((f, i) => (
+              <TiltCard key={i}>
+
               <Card
-                key={i}
+                
                 className="bg-white/5 border-white/5 hover:border-white/20 transition-all backdrop-blur-sm"
               >
                 {authLoading ? (
@@ -548,6 +554,7 @@ const Landing = () => {
                   </>
                 )}
               </Card>
+              </TiltCard>
             ))}
           </div>
         </div>
