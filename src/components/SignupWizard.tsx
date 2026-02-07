@@ -618,7 +618,6 @@ const SignupWizard = ({
               placeholder="Tell us about yourself"
               className={inputStyle + " resize-none outline-none"}
             />
-
             <Label>Profile Picture</Label>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-700 border-2 border-blue-500/50 flex items-center justify-center">
