@@ -19,6 +19,170 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  // Wizard state for collecting more profile info
+  const [showWizard, setShowWizard] = useState(false);
+  const [wizardUserId, setWizardUserId] = useState<string | null>(null);
+  const [wizardInitialName, setWizardInitialName] = useState('');
+  const [wizardInitialAvatarUrl, setWizardInitialAvatarUrl] = useState<string | null>(null);
+  const [wizardInitialStep, setWizardInitialStep] = useState<number>(1);
+  const [wizardOAuthProvider, setWizardOAuthProvider] = useState<string | null>(null);
+  const location = useLocation();
+
+
+
+  useEffect(() => {
+    const checkProfileAndMaybeOpen = async (user: any, initialStep = 2) => {
+      if (!user) return;
+
+      // If the user came from our pre-oauth flow, apply stored profile data first (DB-only)
+      try {
+        const params = new URLSearchParams(location.search);
+        const preId = params.get('pre_id');
+
+        if (preId) {
+          try {
+            const { data: pre, error: preErr } = await (supabase as any)
+              .from('pre_oauth_profiles')
+              .select('*')
+              .eq('id', preId)
+              .maybeSingle();
+
+            if (preErr) throw preErr;
+
+            if (pre) {
+              const p: any = pre;
+
+              const payload: any = {
+                user_id: user.id,
+                display_name: p.display_name || user.user_metadata?.full_name || user.email,
+                bio: p.bio || null,
+                found_from: p.found_from || null,
+                user_category: p.user_category || null,
+              };
+
+              if (p.avatar_url) {
+                payload.avatar_url = p.avatar_url;
+              }
+
+              const { error } = await supabase.from('profiles').upsert(payload);
+              if (error) throw error;
+
+              // Clean up pre record
+              try {
+                await (supabase as any).from('pre_oauth_profiles').delete().eq('id', preId);
+              } catch (cleanupErr) {
+                console.warn('Could not clean up pre_oauth_profiles record', cleanupErr);
+              }
+
+              navigate('/Chat');
+              return;
+            } else {
+              toast({ title: 'Pre-signup data not found', description: 'Please complete your profile', variant: 'destructive' });
+            }
+          } catch (err) {
+            console.error('Applying pre-oauth profile from DB failed', err);
+          }
+        }
+      } catch (e) {
+        console.error('Applying pre-oauth profile failed', e);
+      }
+
+      // Check for any pre-email profile saved during sign up (DB-only)
+      try {
+        if (user.email) {
+          try {
+            const { data: preEmail, error: preEmailErr } = await (supabase as any)
+              .from('pre_email_profiles')
+              .select('*')
+              .eq('email', user.email)
+              .maybeSingle();
+
+            if (preEmailErr) throw preEmailErr;
+
+            if (preEmail) {
+              const p: any = preEmail;
+              const payload: any = {
+                user_id: user.id,
+                display_name: p.display_name || user.user_metadata?.full_name || user.email,
+                bio: p.bio || null,
+                found_from: p.found_from || null,
+                user_category: p.user_category || null,
+              };
+
+              if (p.avatar_url) {
+                payload.avatar_url = p.avatar_url;
+              }
+
+              const { error } = await supabase.from('profiles').upsert(payload);
+              if (error) throw error;
+
+              // Clean up pre-email record
+              try {
+                await (supabase as any).from('pre_email_profiles').delete().eq('id', p.id);
+              } catch (cleanupErr) {
+                console.warn('Could not clean up pre_email_profiles record', cleanupErr);
+              }
+
+              navigate('/Chat');
+              return;
+            }
+          } catch (err) {
+            console.error('Applying pre-email profile from DB failed', err);
+          }
+        }
+      } catch (seedErr) {
+        console.warn('Applying pre-email profile failed', seedErr);
+      }
+
+      // Seed minimal profile from provider metadata (e.g., Google photo/name) before opening wizard
+      try {
+        try {
+          const seed: any = {};
+          if (user.user_metadata?.full_name) seed.display_name = user.user_metadata.full_name;
+          if (user.user_metadata?.avatar_url) seed.avatar_url = user.user_metadata.avatar_url;
+          else if (user.user_metadata?.picture) seed.avatar_url = user.user_metadata.picture;
+          if (Object.keys(seed).length) {
+            seed.user_id = user.id;
+            await supabase.from('profiles').upsert(seed);
+          }
+        } catch (seedErr) {
+          console.warn('Seeding profile from user metadata failed', seedErr);
+        }
+
+        const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle();
+        const p: any = profile;
+        // Gender is optional now — only prompt the wizard for core missing fields
+        if (!p || !p.bio || !p.found_from || !p.user_category) {
+          // Avoid re-opening the wizard immediately after a failed save attempt from the modal
+          const suppress = typeof window !== 'undefined' && sessionStorage.getItem('suppress_wizard_open');
+          if (suppress) {
+            console.info('Signup wizard open suppressed due to recent save error.');
+          } else {
+            setWizardUserId(user.id);
+            setWizardInitialName(user.user_metadata?.full_name || user.user_metadata?.name || user.email || '');
+            setWizardInitialAvatarUrl(p?.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || null);
+            setWizardInitialStep(initialStep);
+            setShowWizard(true);
+          }
+        } else {
+          navigate('/Chat');
+        }
+      } catch (err) {
+        console.error('Profile check failed', err);
+        navigate('/Chat');
+      }
+    };
+
+    // Check if user is already logged in; open wizard if profile incomplete (works for manual and oauth signups)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        checkProfileAndMaybeOpen(session.user as any, 2);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      if (session?.user) {
+        checkProfileAndMaybeOpen(session.user as any, 2);
   // Additional signup fields
   const [fullName, setFullName] = useState('');
   const [gender, setGender] = useState('');
@@ -35,6 +199,7 @@ const Auth = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         navigate('/Chat');
+ 
       }
     });
 
@@ -464,6 +629,18 @@ const Auth = () => {
           </CardContent>
         </Card>
       </div>
+
+      <SignupWizard
+        open={showWizard}
+        setOpen={setShowWizard}
+        userId={wizardUserId}
+        initialName={wizardInitialName}
+        initialAvatarUrl={wizardInitialAvatarUrl}
+        initialStep={wizardInitialStep}
+        initialOAuthProvider={wizardOAuthProvider}
+        onFinish={() => navigate('/Chat')}
+      />
+
     </div>
   );
 };
