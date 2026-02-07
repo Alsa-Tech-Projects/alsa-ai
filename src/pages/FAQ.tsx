@@ -18,7 +18,7 @@ const faqData: FAQItem[] = [
   {
     category: "General",
     question: "What is ALSA AI?",
-    answer: "ALSA AI (AI Lifestyle & Smart Assistant) is a powerful AI assistant created by Mohd Eisa. It combines conversational AI with PC automation capabilities, allowing you to control your computer, create projects, documents, and much more using natural language commands."
+    answer: "ALSA AI (AI Lifestyle & Smart Assistant) is a powerful AI assistant created by Alsa AI Techechechech. It combines conversational AI with PC automation capabilities, allowing you to control your computer, create projects, documents, and much more using natural language commands."
   },
   {
     category: "General",
@@ -357,7 +357,7 @@ const FAQ = () => {
       {/* Footer */}
       <footer className="border-t border-white/5 py-8 mt-12">
         <div className="container mx-auto px-6 text-center text-white/40 text-sm">
-          <p>© {new Date().getFullYear()} ALSA AI. Created by Mohd Eisa. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} ALSA AI. Created by Alsa Tech Team. All rights reserved.</p>
         </div>
       </footer>
     </div>

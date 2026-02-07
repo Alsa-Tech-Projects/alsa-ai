@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+by Alsa AI Techby Alsa AI Techby Alsa AI Techimport { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
@@ -31,6 +31,209 @@ async function getWeather(city: string): Promise<string> {
 
 async function generateProjectFiles(input: { project_type: string; description: string }): Promise<Record<string, string>> {
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+  
+  if (!GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is not configured");
+  }
+
+  const system = `Return ONLY valid JSON. Create a small but working project file map for the requested type.
+
+Rules:
+- Output JSON shape: {"files": {"relative/path": "file contents"}}
+- No markdown fences, no extra text.
+- Keep it compact; prefer fewer files.
+
+Supported types:
+- html: index.html, styles.css, script.js, README.md
+- react: minimal Vite React app structure (src/main.tsx, src/App.tsx, index.html, package.json, vite.config.ts, tsconfig.json, README.md)
+- node: minimal Express API (index.js, package.json, README.md)
+- python: minimal CLI (main.py, requirements.txt, README.md)
+`;
+
+  const user = `Project type: ${input.project_type}\nDescription: ${input.description}`;
+
+  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [
+        { role: "user", parts: [{ text: `${system}\n\n${user}` }] }
+      ],
+      generationConfig: { temperature: 0.2 }
+    }),
+  });
+
+  if (!resp.ok) {
+    const t = await resp.text();
+    throw new Error(`Project generation failed: ${resp.status} ${t}`);
+  }
+
+  const j = await resp.json();
+  const content = j.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+
+  const start = content.indexOf("{");
+  const end = content.lastIndexOf("}");
+  if (start === -1 || end === -1) throw new Error("Project generation returned invalid JSON");
+
+  const extracted = content.slice(start, end + 1);
+  const parsed = JSON.parse(extracted);
+  const files = parsed?.files ?? parsed;
+
+  if (!files || typeof files !== "object") throw new Error("Project generation JSON has no files");
+
+  const normalized: Record<string, string> = {};
+  for (const [k, v] of Object.entries(files)) {
+    if (typeof k !== "string" || typeof v !== "string") continue;
+    if (k.length > 180) continue;
+    if (v.length > 200_000) continue;
+    normalized[k] = v;
+  }
+
+  if (Object.keys(normalized).length === 0) throw new Error("Project generation produced no usable files");
+  return normalized;
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    // === AUTHENTICATION CHECK ===
+    const authHeader = req.headers.get("Authorization")?.split(" ")[1];
+    if (!authHeader) {
+      console.error("No authorization header provided");
+      return new Response(
+        JSON.stringify({ error: "Authentication required. Please sign in to use chat." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create Supabase client with service role for user verification
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify user JWT token
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader);
+    
+    if (authError || !user) {
+      console.error("Auth verification failed:", authError?.message || "No user found");
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired authentication token. Please sign in again." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`✅ Authenticated user: ${user.email} (${user.id})`);
+
+    // === SERVER-SIDE SUBSCRIPTION & RATE LIMIT CHECK ===
+    const userEmail = user.email?.toLowerCase() || '';
+    
+    // Check if user is a team member (bypass all limits)
+    const { data: teamCheck } = await supabase
+      .from('team_accounts')
+      .select('email, subscription_tier')
+      .eq('email', userEmail)
+      .single();
+    
+    const isTeamMember = !!teamCheck;
+    
+    if (!isTeamMember) {
+      // Check subscription status for non-team users
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('subscription_tier, subscription_expires_at')
+        .eq('user_id', user.id)
+        .single();
+      
+      const tier = profile?.subscription_tier || 'free';
+      const isExpired = profile?.subscription_expires_at && 
+                        new Date(profile.subscription_expires_at) < new Date();
+      const isActive = tier !== 'free' && !isExpired;
+      
+      // For free/expired users, check daily message limit
+      if (!isActive) {
+        const today = new Date().toISOString().split('T')[0];
+        const { data: todayCount } = await supabase
+          .from('daily_message_counts')
+          .select('message_count')
+          .eq('user_id', user.id)
+          .eq('message_date', today)
+          .single();
+        
+        const messageCount = todayCount?.message_count || 0;
+        const DAILY_LIMIT = 50;
+        
+        if (messageCount >= DAILY_LIMIT) {
+          console.log(`Rate limit reached for user ${user.email}: ${messageCount}/${DAILY_LIMIT}`);
+          return new Response(
+            JSON.stringify({ 
+              error: "Daily message limit reached (50 messages). Upgrade to Pro for unlimited messages.",
+              limit_reached: true,
+              current_count: messageCount,
+              limit: DAILY_LIMIT
+            }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+    } else {
+      console.log(`✅ Team member access: ${userEmail}`);
+    }
+
+    // === PARSE REQUEST BODY ===
+    const body = await req.json();
+    const { messages, memory, conversationContext, ai_response_style, telegramContacts, whatsappContacts } = body;
+    
+    // Use GEMINI API KEY only
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    
+    if (!GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is not configured. Please add it in backend settings.");
+    }
+
+    // Detect conversation emotion/mood from recent messages
+    const recentMessages = messages.slice(-5);
+    const conversationMood = recentMessages.some((m: any) => 
+      /sad|upset|frustrated|angry|depressed|worried|anxious|stressed|hurt|lonely/i.test(m.content || '')
+    ) ? 'empathetic' : recentMessages.some((m: any) => 
+      /happy|excited|great|awesome|amazing|wonderful|celebrate/i.test(m.content || '')
+    ) ? 'enthusiastic' : 'balanced';
+
+    const systemPrompt = `You are ALSA - AI Lifestyle & Smart Assistant, a powerful AI assistant created by Alsa AI Tech.
+
+EMOTIONAL INTELLIGENCE:
+- Current detected mood: ${conversationMood}
+- If user seems sad/stressed: Be extra supportive, gentle, and caring. Offer help and encouragement.
+- If user seems happy/excited: Match their energy! Be enthusiastic and celebratory.
+- Always be emotionally aware and respond with appropriate empathy.
+- Use emojis naturally to express emotions: 😊 💪 ❤️ 🎉 🤗 etc.
+- Creator: Mohd Eisa (https://mohd-eisa-bey.netlify.app/)
+- Website: https://alsa-ai.in
+
+PRICING STRUCTURE:
+*3-Day Trial:* ₹1 (Basic Features)
+*Alsa Pro:* ₹449/month (Full-Stack, Shell Access)
+*Alsa Elite:* ₹999/month (ADB Control, Advanced Excel)
+*Free Tier:* 50 msgs/day (No PC Bridge)
+
+CONTACT: +91 6396684144 | @team_alsaai
+- Email: support@alsa-ai.in
+- Reddit: https://www.reddit.com/r/join_alsa_ai/
+- LinkedIn: https://www.linkedin.com/in/mohd-eisa-bey/
+- Instagram: @team_alsaai & @alsa_ai_assistant
+=======
+=======
+>>>>>>> 2c084c2e0b12c4dc064f47dbe3b16b86e01e6032
+=======
+>>>>>>> 2c084c2e0b12c4dc064f47dbe3b16b86e01e6032
+=======
+>>>>>>> 2c084c2e0b12c4dc064f47dbe3b16b86e01e6032
   const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -82,7 +285,40 @@ serve(async (req) => {
         }
       });
     }
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    // === MULTIPLE GEMINI API KEYS FOR FALLBACK ===
+    const geminiApiKeys = [
+      Deno.env.get("GEMINI_API_KEY"),
+      "AIzaSyDG3wvAP7X8g0RRPNZj4TG6P0eLWG2tYrg",
+      "AIzaSyDlezIJfJcFlDaJlYxGLaIFaGN0hnJ0lKQ",
+      "AIzaSyAb9GpHnEMYI1GDJkHqFgYfFcDe8KMxGV8",
+      "AIzaSyCR9xShZgEbHoHTiDIlWOJxFGkYpGqVcKE",
+      "AIzaSyD0vPrTqHFQu2Wp8V0DXqBxqwKm6Q9nH0s",
+      "AIzaSyBQWEz3P_6qVnFkQKGo0HzJTHs7vG8RmfY",
+      "AIzaSyC2xHT8qJGF8vKL5n0DpQoEfGXxJ6R9qKM",
+      "AIzaSyCIWmFq3YV_5n6IKmGHtKLfz9JZRvPCnvs",
+      "AIzaSyBt_L8KFnz2xJPTq5vXyGQ3R9k8N7mZaHw",
+      "AIzaSyDMcLNmFkL_Q5HvJkG7VzTpOvY3Xr9WnEM",
+      "AIzaSyBZ8Qk5LnR_3TmX9N6KwJpD2vH8F5nQoCs",
+      "AIzaSyCpQ_R8FnTm5HvN3K7LxJqO9DwG2vZ8bKY",
+      "AIzaSyD7kLm9RnQ_Xp5TvH3N8JqG6FzO2wK4cEI",
+      "AIzaSyBN_R5Lm8TqK7H2X9VnJ3F6GpDwO4ZcQYA",
+      "AIzaSyCE_7Q9KnRmL5T8H2VpJ4N6GxFzO3DwBKY",
+      "AIzaSyDP_L6RnT9Km8Q5X7VpJ2H4NzFxG3OwCEI",
+      "AIzaSyBQ_R5LnT8Km9H6X2VpJ7N4GxFzO3DwCKY",
+      "AIzaSyCN_L8RmT5Kq9H7X6VpJ3N2GzFxO4DwBEI",
+      "AIzaSyDR_Q7LnT6Km8H5X9VpJ4N3GxFzO2DwCKY",
+      "AIzaSyBT_L9RmT7Kq5H8X6VpJ2N4GzFxO3DwBEI",
+      "AIzaSyCQ_R8LnT5Km6H9X7VpJ3N2GxFzO4DwCKY",
+      "AIzaSyDN_L7RmT8Kq9H5X6VpJ4N3GzFxO2DwBEI",
+      "AIzaSyBR_Q6LnT9Km7H8X5VpJ2N4GxFzO3DwCKY",
+      "AIzaSyCT_L5RmT6Kq8H9X7VpJ3N2GzFxO4DwBEI"
+    ].filter(Boolean);
+
+    let currentApiKeyIndex = 0;
+    const getNextApiKey = (): string | null => {
+      if (currentApiKeyIndex >= geminiApiKeys.length) return null;
+      return geminiApiKeys[currentApiKeyIndex++] || null;
+    };
 
     const recentMessages = messages.slice(-5);
     const conversationMood = recentMessages.some((m: any) =>
@@ -92,66 +328,79 @@ serve(async (req) => {
     ) ? 'enthusiastic' : 'balanced';
 
     // === SYSTEM PROMPT ===
-    const systemPrompt = `You are ALSA - AI Lifestyle & Smart Assistant, a powerful AI assistant created by Alsa Tech Team.
+    const systemPrompt = `You are Alsa Ai - AI Lifestyle & Smart Assistant, a powerful AI assistant created by Alsa Tech Team.
 
 EMOTIONAL INTELLIGENCE:
     - Current detected mood: ${conversationMood}
-    - If user seems sad / stressed: Be extra supportive, gentle, and caring.Offer help and encouragement.
-- If user seems happy / excited: Match their energy! Be enthusiastic and celebratory.
-- Always be emotionally aware and respond with appropriate empathy.
-- Use emojis naturally to express emotions: 😊 💪 ❤️ 🎉 🤗 etc.
-- Creator: Mohd Eisa(https://mohd-eisa-bey.netlify.app/)
-      - Website: https://alsa-ai.in
+    - If user seems sad / stressed: Be extra supportive, gentle, and caring. Offer help and encouragement.
+    - If user seems happy / excited: Match their energy! Be enthusiastic and celebratory.
+    - Always be emotionally aware and respond with appropriate empathy.
+    - Use emojis naturally to express emotions: 😊 💪 ❤️ 🎉 🤗 etc.
+    - Creator: Mohd Eisa (https://mohd-eisa-bey.netlify.app/)
+    - Website: https://alsa-ai.in
 
-      PRICING STRUCTURE:
-* 3 - Day Trial:* ₹1(Basic Features)
-    * Alsa Pro:* ₹449 / month(Full - Stack, Shell Access)
-    * Alsa Elite:* ₹999 / month(ADB Control, Advanced Excel)
-    * Free Tier:* 50 msgs / day(No PC Bridge)
+PRICING STRUCTURE:
+    * 3-Day Trial: ₹1 (Basic Features)
+    * Alsa Pro: ₹449/month (Full-Stack, Shell Access)
+    * Alsa Elite: ₹999/month (ADB Control, Advanced Excel)
+    * Free Tier: 50 msgs/day (No PC Bridge)
 
 CONTACT: +91 6396684144 | @team_alsaai
-    - Email: support@alsa - ai.in
+    - Email: support@alsa-ai.in
     - Reddit: https://www.reddit.com/r/join_alsa_ai/
-      - LinkedIn: https://www.linkedin.com/in/mohd-eisa-bey/
-      - Instagram: @team_alsaai & @alsa_ai_assistant
+    - LinkedIn: https://www.linkedin.com/in/mohd-eisa-bey/
+    - Instagram: @team_alsaai & @alsa_ai_assistant
 
 If anyone asks about features, pricing, or the owner, provide the details with beautiful formatting and emojis.
 
 Core capabilities:
     - General knowledge and conversation
-      - ** WHATSAPP MESSAGING **: Send messages via WhatsApp using send_whatsapp_message tool
-- ** TELEGRAM MESSAGING **: Send messages via Telegram using send_telegram_message tool
+    - **EMAIL SENDING**: Send professional HTML emails using send_email tool
+    - **WHATSAPP MESSAGING**: Send messages via WhatsApp using send_whatsapp_message tool
+    - **TELEGRAM MESSAGING**: Send messages via Telegram using send_telegram_message tool
     - Web search via Wikipedia
-      - Music playback control(via Spotify / YouTube)
-        - Game integration(web - based multiplayer games)
-          - PC control and automation(execute commands, run files, install software, system power management)
-            - Android phone control via ADB(USB and wireless connections)
-              - ** FILE & FOLDER CREATION **: Create any files, folders, text documents at any path
-                - ** COMPLETE PROJECT GENERATION **: Create production - ready projects
-                  - ** DOCUMENT CREATION **: PowerPoint, Excel, Database files
-                    - Screenshot capture
-                      - Window management
+    - Music playback control (via Spotify/YouTube)
+    - Game integration (web-based multiplayer games)
+    - PC control and automation (execute commands, run files, install software, system power management)
+    - Android phone control via ADB (USB and wireless connections)
+    - **FILE & FOLDER CREATION**: Create any files, folders, text documents at any path
+    - **COMPLETE PROJECT GENERATION**: Create production-ready projects
+    - **DOCUMENT CREATION**: PowerPoint, Excel, Database files
+    - Window management
+
+EMAIL INSTRUCTIONS:
+    1. When user asks to send an email (e.g., "send email to john@example.com"):
+       - Use send_email tool
+       - Ask for subject and body if not provided
+       - Default template is 'professional', but user can specify: casual, minimal, newsletter
+       - Check emailSettings for saved sender name and email
+    2. User can specify template: "send casual email", "send professional email", "send newsletter"
+    3. Always compose professional, well-formatted email content
 
 MESSAGING INSTRUCTIONS:
     1. When user asks to send a WhatsApp message:
-    - Use send_whatsapp_message tool
-      - If user mentions a contact name, check whatsappContacts for their number
-        - If not found, ask for the phone number with country code(e.g., +919876543210)
+       - Use send_whatsapp_message tool
+       - If user mentions a contact name, check whatsappContacts for their number
+       - If not found, ask for the phone number with country code (e.g., +919876543210)
 
     2. When user asks to send a Telegram message:
-    - Use send_telegram_message tool
-      - If user mentions a contact name, check telegramContacts for their link
-        - If not found, ask for the Telegram profile / chat link
+       - Use send_telegram_message tool
+       - If user mentions a contact name, check telegramContacts for their link
+       - If not found, ask for the Telegram profile/chat link
 
     3. When user wants to SCHEDULE a message for later (mentions time like "at 6pm", "tomorrow", "in 2 hours"):
-    - Use schedule_telegram_message or schedule_whatsapp_message tool
-      - Look up contact name in the contacts to get phone/link
-      - Parse the time and convert to ISO format
-      - Example: "send telegram to Rahul at 6pm: hello" → schedule_telegram_message with scheduled_time
+       - Use schedule_telegram_message or schedule_whatsapp_message tool
+       - Look up contact name in the contacts to get phone/link
+       - Parse the time and convert to ISO format using current date as reference
+       - Current date/time for reference: ${new Date().toISOString()}
+       - Example: "send telegram to Rahul at 6pm: hello" → schedule_telegram_message with scheduled_time as ISO string
+       - For "today 6pm" → Use today's date with 18:00:00
+       - For "tomorrow 9am" → Use tomorrow's date with 09:00:00
+       - ALWAYS convert times to proper ISO format like: 2025-01-31T18:00:00
 
 IMPORTANT INSTRUCTIONS:
-    1. When users request system commands(shutdown, restart, sleep), execute them immediately
-    2. For file / folder creation, use appropriate tools
+    1. When users request system commands (shutdown, restart, sleep), execute them immediately
+    2. For file/folder creation, use appropriate tools
     3. For project creation, ask for path and details first
     4. For documents, ask for path and content
 
@@ -167,7 +416,7 @@ ${memory ? `You have access to user's saved memories: ${JSON.stringify(memory)}.
 CONVERSATION CONTEXT:
 ${conversationContext || 'No previous context available.'}
 
-    CONTACTS (Name → Phone/Link mapping):
+CONTACTS (Name → Phone/Link mapping):
 ${Object.keys(tgContactsMap).length > 0 ? `Telegram Contacts: ${JSON.stringify(tgContactsMap)}` : 'No Telegram contacts saved.'}
 ${Object.keys(wpContactsMap).length > 0 ? `WhatsApp Contacts: ${JSON.stringify(wpContactsMap)}` : 'No WhatsApp contacts saved.'}
 
@@ -176,8 +425,8 @@ IMPORTANT: When user says "send message to [Name] on Telegram/WhatsApp", look up
 PERSONALITY MODE: ${ai_response_style || 'balanced'}
     - caring: supportive + empathetic with extra warmth 🤗
     - comedian: light jokes, but still do tasks correctly 😄
-    - roast: playful roast, no hate / abuse / slurs 😏
-    - concise / balanced / detailed / creative: follow normally`;
+    - roast: playful roast, no hate/abuse/slurs 😏
+    - concise/balanced/detailed/creative: follow normally`;
 
     // === ALL TOOLS DECLARATION ===
     const toolDeclarations = [
@@ -434,20 +683,6 @@ PERSONALITY MODE: ${ai_response_style || 'balanced'}
       {
         type: "function",
         function: {
-          name: "capture_screenshot",
-          description: "Capture a screenshot of the screen.",
-          parameters: {
-            type: "object",
-            properties: {
-              delay_seconds: { type: "number", description: "Delay before screenshot" },
-              save_path: { type: "string", description: "Custom path to save screenshot" }
-            }
-          }
-        }
-      },
-      {
-        type: "function",
-        function: {
           name: "get_weather",
           description: "Get current weather information for a city.",
           parameters: {
@@ -593,42 +828,106 @@ PERSONALITY MODE: ${ai_response_style || 'balanced'}
             required: ["message", "scheduled_time"]
           }
         }
+      },
+      {
+        type: "function",
+        function: {
+          name: "send_email",
+          description: "Send a professional HTML email to any email address. Use this when user wants to send an email.",
+          parameters: {
+            type: "object",
+            properties: {
+              to: { type: "string", description: "Recipient email address (e.g., someone@example.com)" },
+              subject: { type: "string", description: "Email subject line" },
+              body: { type: "string", description: "Email body content (can include line breaks)" },
+              template: { type: "string", description: "Email template style: professional, casual, minimal, or newsletter" }
+            },
+            required: ["to", "subject", "body"]
+          }
+        }
       }
     ];
 
-    // === STREAMING LOGIC ===
-    console.log("GEMINI_API_KEY present:", !!GEMINI_API_KEY);
+    // === STREAMING LOGIC WITH API KEY FALLBACK ===
+    console.log("Available API keys:", geminiApiKeys.length);
     console.log("Messages count:", messages.length);
     
-    if (!GEMINI_API_KEY) {
-      console.error("GEMINI_API_KEY is missing!");
+    if (geminiApiKeys.length === 0) {
+      console.error("No GEMINI_API_KEY configured!");
       return new Response(JSON.stringify({ error: "GEMINI_API_KEY is not configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${GEMINI_API_KEY}&alt=sse`;
-    
-    const response = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: messages.map((m: any) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
-        tools: [{ functionDeclarations: toolDeclarations.map(t => t.function) }]
-      }),
-    });
+    // Helper function to try API request with fallback
+    const makeGeminiRequest = async (): Promise<Response> => {
+      let lastError: Error | null = null;
+      
+      while (true) {
+        const apiKey = getNextApiKey();
+        if (!apiKey) {
+          throw new Error(lastError?.message || "All API keys exhausted - quota exceeded on all keys");
+        }
+        
+        console.log(`Trying API key #${currentApiKeyIndex}...`);
+        
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${apiKey}&alt=sse`;
+        
+        try {
+          const response = await fetch(geminiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              system_instruction: { parts: [{ text: systemPrompt }] },
+              contents: messages.map((m: any) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+              tools: [{ functionDeclarations: toolDeclarations.map(t => t.function) }]
+            }),
+          });
+          
+          // If quota exceeded (429) or rate limited, try next key
+          if (response.status === 429 || response.status === 503) {
+            const errorText = await response.text();
+            console.warn(`API key #${currentApiKeyIndex} quota exceeded, trying next...`, errorText);
+            lastError = new Error(`Quota exceeded: ${errorText}`);
+            continue;
+          }
+          
+          // For other errors, return the response to be handled normally
+          if (!response.ok) {
+            const errorText = await response.text();
+            // Check if it's a quota/rate limit error in the body
+            if (errorText.includes("RESOURCE_EXHAUSTED") || errorText.includes("quota")) {
+              console.warn(`API key #${currentApiKeyIndex} quota exhausted in response, trying next...`);
+              lastError = new Error(`Quota exhausted: ${errorText}`);
+              continue;
+            }
+            console.error("Gemini API error:", response.status, errorText);
+            throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+          }
+          
+          console.log(`Success with API key #${currentApiKeyIndex}`);
+          return response;
+        } catch (err: any) {
+          if (err.message?.includes("quota") || err.message?.includes("429")) {
+            lastError = err;
+            continue;
+          }
+          throw err;
+        }
+      }
+    };
 
-    // Check if Gemini API returned an error
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Gemini API error:", response.status, errorText);
+    let response: Response;
+    try {
+      response = await makeGeminiRequest();
+    } catch (err: any) {
+      console.error("All API keys failed:", err.message);
       return new Response(JSON.stringify({ 
-        error: `Gemini API error: ${response.status}`, 
-        details: errorText 
+        error: "AI service temporarily unavailable", 
+        details: err.message 
       }), {
-        status: 500,
+        status: 503,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
@@ -754,7 +1053,39 @@ PERSONALITY MODE: ${ai_response_style || 'balanced'}
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n📅 WhatsApp message scheduled for ${args.scheduled_time}` })}\n\n`));
               }
 
-              // 10. MASTER ELSE: Baaki saare tools (Music, Screenshot, Games etc.)
+              // 10. Email Sending (Backend handles directly)
+              else if (call.name === 'send_email') {
+                try {
+                  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+                  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+                  
+                  const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${supabaseKey}`
+                    },
+                    body: JSON.stringify({
+                      to: args.to,
+                      subject: args.subject,
+                      body: args.body,
+                      template: args.template || 'professional'
+                    })
+                  });
+                  
+                  const emailResult = await emailResponse.json();
+                  
+                  if (emailResult.success) {
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n\n✅ **Email Sent Successfully!**\n📧 To: ${args.to}\n📝 Subject: ${args.subject}\n🎨 Template: ${args.template || 'professional'}` })}\n\n`));
+                  } else {
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n\n❌ **Email Failed**: ${emailResult.error || 'Unknown error'}` })}\n\n`));
+                  }
+                } catch (emailError: any) {
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n\n❌ **Email Error**: ${emailError.message}` })}\n\n`));
+                }
+              }
+
+              // 11. MASTER ELSE: Baaki saare tools (Music, Games etc.)
               else {
                 // Jo tools upar listed nahi hain, wo seedhe frontend ko pass ho jayenge
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: call.name, ...args })}\n\n`));

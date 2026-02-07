@@ -5,14 +5,14 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Moon, Sun, FolderOpen, Key, Plus, Trash2, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, FolderOpen, Key, Plus, Trash2, MessageSquare, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
 
 interface OutputPaths {
-  screenshot: string;
   recording: string;
   ppt: string;
   excel: string;
@@ -55,7 +55,6 @@ const Settings = () => {
 
   // Output paths state
   const [outputPaths, setOutputPaths] = useState<OutputPaths>({
-    screenshot: 'C:\\Users\\Mohd Eisa\\Pictures\\Screenshots',
     recording: 'C:\\Users\\Mohd Eisa\\Videos\\Recordings',
     ppt: 'C:\\Users\\Mohd Eisa\\Documents\\Presentations',
     excel: 'C:\\Users\\Mohd Eisa\\Documents\\Spreadsheets',
@@ -81,6 +80,14 @@ const Settings = () => {
   const [customApps, setCustomApps] = useState<CustomApp[]>([]);
   const [newAppName, setNewAppName] = useState('');
   const [newAppPath, setNewAppPath] = useState('');
+
+  // Email settings state
+  const [emailSettings, setEmailSettings] = useState({
+    senderName: 'Mohd Eisa',
+    senderEmail: '',
+    defaultTemplate: 'professional' as 'professional' | 'casual' | 'minimal' | 'newsletter',
+    signature: ''
+  });
 
   useEffect(() => {
     loadPreferences();
@@ -130,6 +137,16 @@ const Settings = () => {
     const savedGender = localStorage.getItem('alsa_voice_gender') as 'male' | 'female' | 'auto';
     if (savedGender) {
       setPreferences(prev => ({ ...prev, voice_gender: savedGender }));
+    }
+
+    // 6. Load Email Settings
+    const savedEmailSettings = localStorage.getItem('alsa_email_settings');
+    if (savedEmailSettings) {
+      try {
+        setEmailSettings(JSON.parse(savedEmailSettings));
+      } catch (e) {
+        console.error('Error loading email settings:', e);
+      }
     }
   };
 
@@ -201,6 +218,7 @@ const Settings = () => {
       localStorage.setItem('alsa_voice_enabled', String(preferences.voice_enabled));
       localStorage.setItem('alsa_whatsapp_contacts', JSON.stringify(whatsappContacts));
       localStorage.setItem('alsa_telegram_contacts', JSON.stringify(telegramContacts));
+      localStorage.setItem('alsa_email_settings', JSON.stringify(emailSettings));
 
       // Apply theme immediately
       applyTheme(preferences.theme);
@@ -616,6 +634,86 @@ const Settings = () => {
               </CardContent>
             </Card>
 
+            {/* Email Settings */}
+            <Card className="bg-card border-border border-2 border-blue-500/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-blue-500" />
+                  Email Settings
+                </CardTitle>
+                <CardDescription>
+                  Configure how your AI-sent emails appear. Say "send email to someone@example.com: your message"
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="sender-name">Sender Name</Label>
+                    <Input
+                      id="sender-name"
+                      value={emailSettings.senderName}
+                      onChange={(e) => setEmailSettings({ ...emailSettings, senderName: e.target.value })}
+                      placeholder="Your Name"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="sender-email">Sender Email (Optional)</Label>
+                    <Input
+                      id="sender-email"
+                      type="email"
+                      value={emailSettings.senderEmail}
+                      onChange={(e) => setEmailSettings({ ...emailSettings, senderEmail: e.target.value })}
+                      placeholder="your@email.com"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="default-template">Default Email Template</Label>
+                  <Select
+                    value={emailSettings.defaultTemplate}
+                    onValueChange={(value: 'professional' | 'casual' | 'minimal' | 'newsletter') => 
+                      setEmailSettings({ ...emailSettings, defaultTemplate: value })
+                    }
+                  >
+                    <SelectTrigger id="default-template" className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="professional">Professional - Corporate style with gradient header</SelectItem>
+                      <SelectItem value="casual">Casual - Friendly and warm design</SelectItem>
+                      <SelectItem value="minimal">Minimal - Clean and simple</SelectItem>
+                      <SelectItem value="newsletter">Newsletter - Dark tech-style design</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="email-signature">Email Signature (Optional)</Label>
+                  <Textarea
+                    id="email-signature"
+                    value={emailSettings.signature}
+                    onChange={(e) => setEmailSettings({ ...emailSettings, signature: e.target.value })}
+                    placeholder="Add a custom signature to your emails..."
+                    className="mt-1 min-h-20"
+                  />
+                </div>
+
+                {/* Usage Tips */}
+                <div className="bg-blue-500/10 p-4 rounded-lg space-y-2">
+                  <p className="font-medium text-sm">📧 How to send emails:</p>
+                  <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                    <li>Say: "Send email to john@example.com: Hello, this is my message"</li>
+                    <li>Say: "Send professional email to client@company.com with subject Meeting Request"</li>
+                    <li>Say: "Email boss@work.com a casual message saying I'll be working remotely"</li>
+                    <li>Templates: professional, casual, minimal, newsletter</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Output Paths */}
             <Card className="bg-card border-border">
               <CardHeader>
@@ -627,16 +725,6 @@ const Settings = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="ss-path">Screenshot Path</Label>
-                    <Input
-                      id="ss-path"
-                      value={outputPaths.screenshot}
-                      onChange={(e) => setOutputPaths({ ...outputPaths, screenshot: e.target.value })}
-                      placeholder="C:\Users\...\Screenshots"
-                      className="mt-1"
-                    />
-                  </div>
                   <div>
                     <Label htmlFor="rec-path">Screen Recording Path</Label>
                     <Input

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Helmet } from 'react-helmet';
 import { Eye, EyeOff, Sparkles, Shield, Zap, User } from 'lucide-react';
-import SignupWizard from '@/components/SignupWizard';
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -184,18 +183,115 @@ const Auth = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       if (session?.user) {
         checkProfileAndMaybeOpen(session.user as any, 2);
+  // Additional signup fields
+  const [fullName, setFullName] = useState('');
+  const [gender, setGender] = useState('');
+  const [age, setAge] = useState('');
+
+  useEffect(() => {
+    // Check if user is already logged in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        navigate('/Chat');
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        navigate('/Chat');
+ 
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, location.search]);
+  }, [navigate]);
 
-  // clear wizard oauth provider when the modal closes
-  useEffect(() => {
-    if (!showWizard) setWizardOAuthProvider(null);
-  }, [showWizard]);
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
 
+    if (!fullName.trim()) {
+      toast({
+        title: "Name Required",
+        description: "Please enter your full name",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    if (!gender) {
+      toast({
+        title: "Gender Required",
+        description: "Please select your gender",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!age || parseInt(age) < 13) {
+      toast({
+        title: "Valid Age Required",
+        description: "Please enter a valid age (13+)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            full_name: fullName,
+            gender: gender,
+            age: parseInt(age),
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      // Create profile with additional data immediately
+      if (data.user) {
+        const { error: profileError } = await supabase.from('profiles').upsert({
+          user_id: data.user.id,
+          display_name: fullName,
+          subscription_tier: 'free', // Default to free tier
+        }, {
+          onConflict: 'user_id'
+        });
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+        }
+      }
+
+      // If session exists (auto-confirm enabled), navigate to home
+      if (data.session) {
+        toast({
+          title: "Welcome to ALSA AI!",
+          description: "Account created and signed in successfully.",
+        });
+        navigate('/Chat');
+      } else {
+        toast({
+          title: "Account Created!",
+          description: "Please check your email to confirm your account.",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Sign up failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,13 +322,12 @@ const Auth = () => {
 
   const handleGoogleLogin = async () => {
     try {
-
       setLoading(true);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          // Redirect back to auth so we can prompt for missing profile fields
-          redirectTo: `${window.location.origin}/auth?source=google`,
+          // Isse user login ke baad wapas isi page ya chat par aayega
+          redirectTo: `${window.location.origin}/Chat`,
         },
       });
 
@@ -285,8 +380,7 @@ const Auth = () => {
               <span className="text-sm text-white/80">AI-Powered Assistant</span>
             </div>
             <h1 className="text-5xl lg:text-6xl font-black bg-gradient-to-r from-white via-blue-200 to-purple-200 bg-clip-text text-transparent leading-tight">
-              
-               to<br />ALSA AI
+              Welcome to<br />ALSA AI
             </h1>
             <p className="text-xl text-white/60 max-w-md">
               Your intelligent assistant powered by advanced AI. Control your PC, automate tasks, and create with voice.
@@ -340,15 +434,9 @@ const Auth = () => {
                 <TabsTrigger value="signin" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/60">
                   Sign In
                 </TabsTrigger>
-                <div className="flex items-center justify-center">
-                <button
-                  type="button"
-                  onClick={() => { setWizardInitialStep(1); setWizardUserId(null); setWizardInitialName(''); setShowWizard(true); }}
-                  className="w-full text-white/60 hover:bg-white/5 py-2 rounded"
-                >
+                <TabsTrigger value="signup" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/60">
                   Sign Up
-                </button>
-              </div>
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin" className="mt-6">
@@ -398,7 +486,100 @@ const Auth = () => {
                 </form>
               </TabsContent>
 
+              <TabsContent value="signup" className="mt-6">
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-name" className="text-white/80">Full Name *</Label>
+                    <Input
+                      id="signup-name"
+                      type="text"
+                      placeholder="John Doe"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      required
+                      disabled={loading}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-blue-500"
+                    />
+                  </div>
 
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-gender" className="text-white/80">Gender *</Label>
+                      <Select value={gender} onValueChange={setGender} disabled={loading}>
+                        <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-900 border-white/10">
+                          <SelectItem value="male" className="text-white hover:bg-white/10">Male</SelectItem>
+                          <SelectItem value="female" className="text-white hover:bg-white/10">Female</SelectItem>
+                          <SelectItem value="other" className="text-white hover:bg-white/10">Other</SelectItem>
+                          <SelectItem value="prefer-not" className="text-white hover:bg-white/10">Prefer not to say</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-age" className="text-white/80">Age *</Label>
+                      <Input
+                        id="signup-age"
+                        type="number"
+                        placeholder="18"
+                        min="13"
+                        max="120"
+                        value={age}
+                        onChange={(e) => setAge(e.target.value)}
+                        required
+                        disabled={loading}
+                        className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email" className="text-white/80">Email *</Label>
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      disabled={loading}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password" className="text-white/80">Password *</Label>
+                    <div className="relative">
+                      <Input
+                        id="signup-password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        disabled={loading}
+                        minLength={6}
+                        className="bg-white/5 border-white/10 text-white placeholder:text-white/30 pr-10 focus:border-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-white/40">Minimum 6 characters</p>
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold"
+                    disabled={loading}
+                  >
+                    {loading ? 'Creating account...' : 'Create Account'}
+                  </Button>
+                </form>
+              </TabsContent>
             </Tabs>
 
             <div className="mt-6 text-center space-y-3">
@@ -448,6 +629,7 @@ const Auth = () => {
           </CardContent>
         </Card>
       </div>
+
       <SignupWizard
         open={showWizard}
         setOpen={setShowWizard}
@@ -458,6 +640,7 @@ const Auth = () => {
         initialOAuthProvider={wizardOAuthProvider}
         onFinish={() => navigate('/Chat')}
       />
+
     </div>
   );
 };

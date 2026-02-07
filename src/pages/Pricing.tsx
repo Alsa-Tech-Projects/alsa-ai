@@ -54,6 +54,7 @@ const Pricing = () => {
         { name: 'Screen Recording', included: true },
         { name: 'HTML/CSS/JS Coding Only', included: true },
         { name: 'Basic AI Chat', included: true },
+        { name: 'Massage Automation', included: false },
         { name: 'Full-Stack Coding', included: false },
         { name: 'OS Shell Commands', included: false },
         { name: 'ADB Android Control', included: false },
@@ -63,8 +64,8 @@ const Pricing = () => {
     {
       id: 'pro',
       name: 'Alsa Pro',
-      price: 720,
-      originalPrice: 800,
+      price: 799,
+      originalPrice: 1599,
       period: 'month',
       description: 'For developers who want full control',
       tier: 'pro',
@@ -74,6 +75,7 @@ const Pricing = () => {
       features: [
         { name: 'Full-Stack Coding (All Languages)', included: true },
         { name: 'OS Shell Commands', included: true },
+        { name: 'Massage Automation', included: false },
         { name: 'Project Generation', included: true },
         { name: 'Document Creation (PPT/Excel)', included: true },
         { name: 'Priority Support', included: true },
@@ -85,8 +87,8 @@ const Pricing = () => {
     {
       id: 'elite',
       name: 'Alsa Elite',
-      price: 1200,
-      originalPrice: 1500,
+      price: 1299,
+      originalPrice: 2599,
       period: 'month',
       description: 'Maximum power for power users',
       tier: 'elite',
@@ -96,6 +98,7 @@ const Pricing = () => {
         { name: 'Everything in Pro', included: true },
         { name: 'ADB Android Control', included: true },
         { name: 'Advanced Excel Engine', included: true },
+        { name: 'Massage Automation', included: true },
         { name: 'Production Database Management', included: true },
         { name: 'Priority Secure Tunnel', included: true },
         { name: 'Early Access to Features', included: true },
@@ -107,7 +110,7 @@ const Pricing = () => {
 
   const validatePromoCode = async () => {
     if (!promoCode.trim()) return;
-    
+
     setValidatingPromo(true);
     try {
       const { data, error } = await supabase
@@ -154,19 +157,37 @@ const Pricing = () => {
 
     try {
       const finalPrice = getDiscountedPrice(plan.price);
-      
-      // Call Razorpay edge function to create order
+
+      // 1. Get current session token to avoid 401 Unauthorized
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        throw new Error("Your session has expired. Please login again.");
+      }
+
+      // 2. Call Razorpay edge function to create order
+      // We pass the token in headers to ensure the function recognizes the user
       const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
         body: {
           amount: Math.round(finalPrice * 100), // Razorpay expects paise
           tier: plan.tier,
           promoCode: appliedPromo?.code,
         },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
       });
 
-      if (error) throw error;
+      if (error) {
+        // Agar edge function ne specifically 401 return kiya hai
+        if (error.status === 401) {
+          throw new Error("Authentication failed. Please try logging out and in again.");
+        }
+        throw error;
+      }
 
-      // Open Razorpay checkout
+      // 3. Open Razorpay checkout
       const options = {
         key: data.key_id,
         amount: data.amount,
@@ -175,7 +196,9 @@ const Pricing = () => {
         description: `${plan.name} Subscription`,
         order_id: data.order_id,
         handler: async (response: any) => {
-          // Verify payment
+          setLoading(plan.id); // Verification ke time loading dikhao
+
+          // 4. Verify payment
           const { error: verifyError } = await supabase.functions.invoke('verify-razorpay-payment', {
             body: {
               razorpay_order_id: response.razorpay_order_id,
@@ -183,10 +206,18 @@ const Pricing = () => {
               razorpay_signature: response.razorpay_signature,
               tier: plan.tier,
             },
+            headers: {
+              Authorization: `Bearer ${token}`,
+            }
           });
 
           if (verifyError) {
-            toast({ title: 'Payment verification failed', variant: 'destructive' });
+            toast({
+              title: 'Payment verification failed',
+              description: 'Please contact support if amount was deducted.',
+              variant: 'destructive'
+            });
+            setLoading(null);
             return;
           }
 
@@ -199,6 +230,12 @@ const Pricing = () => {
         theme: {
           color: '#6366f1',
         },
+        // User agar window close karde
+        modal: {
+          ondismiss: function () {
+            setLoading(null);
+          }
+        }
       };
 
       // Load Razorpay script if not loaded
@@ -219,10 +256,9 @@ const Pricing = () => {
       console.error('Payment error:', err);
       toast({
         title: 'Payment Failed',
-        description: err.message || 'Something went wrong',
+        description: err.message || 'Something went wrong while connecting to the server',
         variant: 'destructive',
       });
-    } finally {
       setLoading(null);
     }
   };
@@ -252,16 +288,16 @@ const Pricing = () => {
                 "availability": "https://schema.org/InStock"
               },
               {
-                "@type": "Offer", 
+                "@type": "Offer",
                 "name": "Pro Plan",
-                "price": "449",
+                "price": "799",
                 "priceCurrency": "INR",
                 "availability": "https://schema.org/InStock"
               },
               {
                 "@type": "Offer",
                 "name": "Elite Plan",
-                "price": "999",
+                "price": "1299",
                 "priceCurrency": "INR",
                 "availability": "https://schema.org/InStock"
               }
@@ -291,7 +327,7 @@ const Pricing = () => {
         {/* Hero */}
         <div className="text-center mb-16">
           <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0 mb-4">
-            🎉 Limited Time Offer - Save up to 25%
+            🎉 Limited Time Offer - Save ₹800-₹1300 Today!
           </Badge>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
             Choose Your Power Level
@@ -333,16 +369,15 @@ const Pricing = () => {
           {plans.map((plan) => (
             <Card
               key={plan.id}
-              className={`relative bg-[#1a1a1a] border-white/10 overflow-hidden ${
-                plan.popular ? 'ring-2 ring-blue-500 scale-105' : ''
-              }`}
+              className={`relative bg-[#1a1a1a] border-white/10 overflow-hidden ${plan.popular ? 'ring-2 ring-blue-500 scale-105' : ''
+                }`}
             >
               {plan.popular && (
                 <div className="absolute top-0 right-0 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs font-bold px-4 py-1 rounded-bl-lg">
                   MOST POPULAR
                 </div>
               )}
-              
+
               <CardHeader>
                 <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${plan.gradient} flex items-center justify-center text-white mb-4`}>
                   {plan.icon}

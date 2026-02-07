@@ -331,6 +331,15 @@ export const parseNaturalLanguage = (input: string): { action: string; target: s
     }
   }
 
+  // Check for screenshot
+  if (MULTILANG_PATTERNS.screenshot.some(p => p.test(lowerInput))) {
+    const delayMatch = lowerInput.match(/(\d+)\s*(?:sec|second|seconds|सेकंड)/i);
+    return {
+      action: 'screenshot',
+      target: '',
+      params: { delay: delayMatch ? parseInt(delayMatch[1]) : 0 }
+    };
+  }
 
   // Check for screen recording
   if (MULTILANG_PATTERNS.recording.some(p => p.test(lowerInput))) {
@@ -486,6 +495,9 @@ export const executeSystemCommand = async (action: string): Promise<{ success: b
       case 'close_app':
       case 'close_window':
         return await closeWindow(parsed.target);
+
+      case 'screenshot':
+        return await captureScreenshot(undefined, parsed.params.delay);
 
       case 'start_recording':
         return await startScreenRecording(parsed.params.duration);
@@ -789,6 +801,89 @@ export const adbCommand = async (command: string): Promise<{ success: boolean; m
     return {
       success: false,
       message: 'Cannot connect to PC Bridge for ADB command'
+    };
+  }
+};
+
+export const captureScreenshot = async (
+  savePath?: string,
+  delaySeconds?: number
+): Promise<{ success: boolean; message: string; filename?: string; path?: string }> => {
+  try {
+    // Wait for delay if specified
+    if (delaySeconds && delaySeconds > 0) {
+      console.log(`Waiting ${delaySeconds} seconds before screenshot...`);
+      await new Promise(resolve => setTimeout(resolve, delaySeconds * 1000));
+    }
+
+    // Create screen blink effect
+    const blinkOverlay = document.createElement('div');
+    blinkOverlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: white;
+      z-index: 999999;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.1s ease-in-out;
+    `;
+    document.body.appendChild(blinkOverlay);
+
+    // Trigger blink
+    requestAnimationFrame(() => {
+      blinkOverlay.style.opacity = '1';
+      setTimeout(() => {
+        blinkOverlay.style.opacity = '0';
+        setTimeout(() => {
+          document.body.removeChild(blinkOverlay);
+        }, 100);
+      }, 100);
+    });
+
+    // Determine save path
+    let finalSavePath = savePath;
+    if (!finalSavePath) {
+      const storedPaths = localStorage.getItem('alsa_output_paths');
+      if (storedPaths) {
+        try {
+          const parsed = JSON.parse(storedPaths);
+          finalSavePath = parsed.screenshot;
+        } catch { }
+      }
+    }
+    if (!finalSavePath) {
+      finalSavePath = 'C:\\Users\\Mohd Eisa\\Pictures\\Screenshots';
+    }
+
+    const response = await fetch(`${BRIDGE_URL}/capture_screenshot`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        save_path: finalSavePath
+      })
+    });
+    const data = await response.json();
+
+    if (data.error) {
+      return {
+        success: false,
+        message: `Screenshot failed: ${data.error}`
+      };
+    }
+
+    return {
+      success: data.success ?? true,
+      message: data.message || 'Screenshot captured',
+      filename: data.filename,
+      path: data.path || savePath
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || 'Cannot connect to PC Bridge for screenshot'
     };
   }
 };

@@ -1189,5 +1189,5 @@ if __name__ == '__main__':
     print("=" * 50)
     print("ALSA AI Elite PC Control Bridge Started")
     print("Bridge is running on http://localhost:5001")
-    print("You can now control your PC through ALSA AI!\nFeatures: Project creation, PPT, Excel, Database, Screenshots, ADB, Music")
+    print("You can now control your PC through ALSA AI!\nFeatures: Project creation, PPT, Excel, Database, Screenshots, ADB, Music & Massage Automation etc..")
     app.run(host='127.0.0.1', port=5001, debug=True)
