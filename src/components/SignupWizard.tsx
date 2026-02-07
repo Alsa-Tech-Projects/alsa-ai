@@ -64,6 +64,19 @@ const SignupWizard = ({
     setName(initialName);
     setStep(initialStep);
     setLocalUserId(propUserId ?? null);
+    
+    // If step is 2+, check if email/password/gender/age are in sessionStorage (from Auth form)
+    if (initialStep >= 2) {
+      const sessionEmail = sessionStorage.getItem('signup_email');
+      const sessionPassword = sessionStorage.getItem('signup_password');
+      const sessionGender = sessionStorage.getItem('signup_gender');
+      const sessionAge = sessionStorage.getItem('signup_age');
+      
+      if (sessionEmail) setEmail(sessionEmail);
+      if (sessionPassword) setPassword(sessionPassword);
+      if (sessionGender) setGender(sessionGender);
+      // Note: age is stored but not used in wizard - it was already collected in signup form
+    }
   }, [initialName, initialStep, propUserId]);
 
   useEffect(() => {
@@ -83,6 +96,12 @@ const SignupWizard = ({
       setPreEmailId(null);
       setSaveError(null);
       setOauthAuthUrl(null);
+      
+      // Clean up sessionStorage credentials
+      sessionStorage.removeItem('signup_email');
+      sessionStorage.removeItem('signup_password');
+      sessionStorage.removeItem('signup_gender');
+      sessionStorage.removeItem('signup_age');
     }
 
     // if wizard opens and we have a provided initial avatar url, use it as preview
@@ -173,7 +192,8 @@ const SignupWizard = ({
 
   const handleGoogleSignup = async () => {
     // Perform OAuth immediately
-    handleSave("google");
+    setPendingOAuthProvider("google");
+    setStep(2);
   };
 
   const handleSignUpStep = async () => {
@@ -371,6 +391,12 @@ const SignupWizard = ({
             const { error: upsertErr, removedGender } = await safeUpsertProfiles(payload) as any;
             if (upsertErr) throw upsertErr;
 
+            // Clear sessionStorage after successful signup
+            sessionStorage.removeItem('signup_email');
+            sessionStorage.removeItem('signup_password');
+            sessionStorage.removeItem('signup_gender');
+            sessionStorage.removeItem('signup_age');
+
             if (removedGender) {
               toast({ title: 'Account created', description: "Account created but DB missing 'gender' column — profile saved without gender." });
             } else {
@@ -420,6 +446,12 @@ const SignupWizard = ({
               toast({ title: "Profile saved", description: "Check your email to confirm — we'll attach this profile after confirmation." });
             }
           }
+          
+          // Clear sessionStorage after successful profile save
+          sessionStorage.removeItem('signup_email');
+          sessionStorage.removeItem('signup_password');
+          sessionStorage.removeItem('signup_gender');
+          sessionStorage.removeItem('signup_age');
 
           setOpen(false);
           return;
@@ -589,11 +621,11 @@ const SignupWizard = ({
 
             <Label>Profile Picture</Label>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full overflow-hidden bg-transparent border border-gray-400 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-700 border-2 border-blue-500/50 flex items-center justify-center">
                 {avatarPreview ? (
                   <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="text-black text-[8px] text-center">Profile</div>
+                  <div className="text-white text-[8px] text-center">Profile</div>
                 )}
               </div>
               <Input type="file" accept="image/*" onChange={handleFileChange} className={inputStyle + " max-w-xs"} />
@@ -659,7 +691,7 @@ const SignupWizard = ({
             >
               {saving ? "Saving..." : pendingOAuthProvider ? "Save & Continue to Google →" : "Finish Setup "}
             </Button>
-           
+
 
             {oauthAuthUrl && (
               <div className="text-sm text-blue-300 mt-2 text-center">
