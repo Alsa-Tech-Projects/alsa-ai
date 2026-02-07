@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import type { User } from '@supabase/supabase-js';
-
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Helmet } from 'react-helmet';
-import { Eye, EyeOff, Sparkles, Shield, Zap, User as UserIcon } from 'lucide-react';
-import SignupWizard from '@/components/SignupWizard';
+import { Eye, EyeOff, Sparkles, Shield, Zap, User } from 'lucide-react';
+
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -33,7 +31,7 @@ const Auth = () => {
 
 
   useEffect(() => {
-    const checkProfileAndMaybeOpen = async (user: User | null, initialStep = 2) => {
+    const checkProfileAndMaybeOpen = async (user: any, initialStep = 2) => {
       if (!user) return;
 
       // If the user came from our pre-oauth flow, apply stored profile data first (DB-only)
@@ -185,12 +183,6 @@ const Auth = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       if (session?.user) {
         checkProfileAndMaybeOpen(session.user as any, 2);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate, location, toast]);
-
   // Additional signup fields
   const [fullName, setFullName] = useState('');
   const [gender, setGender] = useState('');
@@ -207,7 +199,7 @@ const Auth = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         navigate('/Chat');
-
+ 
       }
     });
 
@@ -418,7 +410,7 @@ const Auth = () => {
 
             <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shrink-0">
-                <UserIcon className="w-6 h-6 text-white" />
+                <User className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h3 className="font-semibold text-white mb-1">Organize with Tags</h3>
