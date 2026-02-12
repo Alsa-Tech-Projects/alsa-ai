@@ -274,7 +274,7 @@ const RightPanel = ({
           <span className="group-hover:text-white transition-colors">ACCESS NEURAL MEMORY</span>
         </Button>
         <div className="flex justify-center">
-          <Settings className="w-4 h-4 text-white/10 hover:text-white transition-colors cursor-pointer" onClick={() => navigate('/settings')} />
+          <Settings className="w-4 h-4 text-white/40 hover:text-white/80 transition-colors cursor-pointer" onClick={() => navigate('/settings')} />
         </div>
       </div>
     </div>

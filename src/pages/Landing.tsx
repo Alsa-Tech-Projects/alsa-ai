@@ -154,7 +154,7 @@ const Landing = () => {
             <a href="#pricing" className="text-xs font-medium text-white/60 hover:text-white transition-colors">Pricing</a>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/auth')} className="text-white/70 hover:text-white text-xs px-2 md:px-4">Login</Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/auth')} className="text-white/70 hover:bg-white hover:text-black text-xs px-2 md:px-4">Login</Button>
             <Button size="sm" onClick={() => navigate('/auth')} className="bg-gradient-to-r from-blue-600 to-purple-600 text-[10px] md:text-sm px-3 py-1">Get Started</Button>
           </div>
         </div>
@@ -206,7 +206,7 @@ const Landing = () => {
                     size="lg" className="bg-orange-500 hover:bg-orange-400 font-bold"
 
                   ><a href="/pricing">
-                    Claim 50% Discount
+                      Claim 50% Discount
                     </a>
                   </Button>
                   <Button
@@ -214,7 +214,7 @@ const Landing = () => {
 
                     className="border-white/20 bg-white/5 text-white hover:bg-white hover:text-[#0A1A2F] transition-all duration-300 font-semibold"
                   ><a href="/pricing">
-                    Start ₹1 Trial
+                      Start ₹1 Trial
                     </a>
                   </Button>
                 </div>
@@ -287,7 +287,7 @@ const Landing = () => {
                   className="w-full h-full object-cover md:object-contain"
                   controls
                   playsInline
-                  poster="/videos/thumbnail.png" 
+                  poster="/videos/thumbnail.png"
                 >
                   <source src="/videos/demo-video.mp4" type="video/mp4" />
                 </video>

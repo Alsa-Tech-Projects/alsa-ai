@@ -33,6 +33,9 @@ interface CustomApp {
   path: string;
 }
 
+import { useIsMobile } from '@/hooks/use-mobile';
+
+
 interface Contact {
   id: string;
   name: string;
@@ -40,6 +43,7 @@ interface Contact {
 }
 
 const Settings = () => {
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -339,10 +343,10 @@ const Settings = () => {
       toast({ title: "Error", description: "Enter name and phone number", variant: "destructive" });
       return;
     }
-    setWhatsappContacts([...whatsappContacts, { 
-      id: Date.now().toString(), 
-      name: newWpName.trim(), 
-      value: newWpNum.trim() 
+    setWhatsappContacts([...whatsappContacts, {
+      id: Date.now().toString(),
+      name: newWpName.trim(),
+      value: newWpNum.trim()
     }]);
     setNewWpName('');
     setNewWpNum('');
@@ -354,10 +358,10 @@ const Settings = () => {
       toast({ title: "Error", description: "Enter name and Telegram link/username", variant: "destructive" });
       return;
     }
-    setTelegramContacts([...telegramContacts, { 
-      id: Date.now().toString(), 
-      name: newTgName.trim(), 
-      value: newTgLink.trim() 
+    setTelegramContacts([...telegramContacts, {
+      id: Date.now().toString(),
+      name: newTgName.trim(),
+      value: newTgLink.trim()
     }]);
     setNewTgName('');
     setNewTgLink('');
@@ -533,7 +537,7 @@ const Settings = () => {
                   <p className="text-xs text-muted-foreground">
                     Add contacts with their phone numbers (with country code like 91xxxxxxxxxx)
                   </p>
-                  
+
                   {whatsappContacts.length > 0 && (
                     <div className="space-y-2">
                       {whatsappContacts.map((c) => (
@@ -542,9 +546,9 @@ const Settings = () => {
                             <p className="font-medium">{c.name}</p>
                             <p className="text-xs text-muted-foreground">{c.value}</p>
                           </div>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => setWhatsappContacts(whatsappContacts.filter(i => i.id !== c.id))}
                           >
                             <Trash2 className="w-4 h-4 text-destructive" />
@@ -553,19 +557,19 @@ const Settings = () => {
                       ))}
                     </div>
                   )}
-                  
+
                   <div className="flex gap-2 bg-secondary/20 p-3 rounded-lg">
-                    <Input 
-                      placeholder="Name (e.g., Rahul)" 
-                      value={newWpName} 
-                      onChange={e => setNewWpName(e.target.value)} 
+                    <Input
+                      placeholder={isMobile ? "Name" : "Name (e.g., Rahul)"}
+                      value={newWpName}
+                      onChange={e => setNewWpName(e.target.value)}
                       className="flex-1"
                     />
-                    <Input 
-                      placeholder="Phone (e.g., 919876543210)" 
-                      value={newWpNum} 
+                    <Input
+                      placeholder={isMobile ? "Phone" : "Phone (e.g., 919876543210)"}
+                      value={newWpNum}
                       onChange={e => setNewWpNum(e.target.value)}
-                      className="flex-1" 
+                      className="flex-1"
                     />
                     <Button onClick={addWhatsappContact} size="icon">
                       <Plus className="w-4 h-4" />
@@ -581,7 +585,7 @@ const Settings = () => {
                   <p className="text-xs text-muted-foreground">
                     Add contacts with their Telegram web link (e.g., https://web.telegram.org/k/#@username)
                   </p>
-                  
+
                   {telegramContacts.length > 0 && (
                     <div className="space-y-2">
                       {telegramContacts.map((c) => (
@@ -590,9 +594,9 @@ const Settings = () => {
                             <p className="font-medium">{c.name}</p>
                             <p className="text-xs text-muted-foreground truncate">{c.value}</p>
                           </div>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => setTelegramContacts(telegramContacts.filter(i => i.id !== c.id))}
                           >
                             <Trash2 className="w-4 h-4 text-destructive" />
@@ -601,19 +605,19 @@ const Settings = () => {
                       ))}
                     </div>
                   )}
-                  
+
                   <div className="flex gap-2 bg-secondary/20 p-3 rounded-lg">
-                    <Input 
-                      placeholder="Name (e.g., Rahul)" 
-                      value={newTgName} 
+                    <Input
+                      placeholder={isMobile ? "Name" : "Name (e.g., Rahul)"}
+                      value={newTgName}
                       onChange={e => setNewTgName(e.target.value)}
-                      className="flex-1" 
+                      className="flex-1"
                     />
-                    <Input 
-                      placeholder="https://web.telegram.org/k/#@username" 
-                      value={newTgLink} 
+                    <Input
+                      placeholder={isMobile ? "Telegram" : "https://web.telegram.org/k/#@username"}
+                      value={newTgLink}
                       onChange={e => setNewTgLink(e.target.value)}
-                      className="flex-[2]" 
+                      className="flex-1"
                     />
                     <Button onClick={addTelegramContact} size="icon">
                       <Plus className="w-4 h-4" />
@@ -624,7 +628,7 @@ const Settings = () => {
                 {/* Usage Tips */}
                 <div className="bg-primary/10 p-4 rounded-lg space-y-2">
                   <p className="font-medium text-sm">💡 How to use:</p>
-                  <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                  <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-5">
                     <li>Say: "Send message to Rahul on Telegram: I'll be late today"</li>
                     <li>Say: "WhatsApp Rahul ko bhejo: Meeting 5 baje hai"</li>
                     <li>Messages can be in any language - Hindi, English, etc.</li>
@@ -674,7 +678,7 @@ const Settings = () => {
                   <Label htmlFor="default-template">Default Email Template</Label>
                   <Select
                     value={emailSettings.defaultTemplate}
-                    onValueChange={(value: 'professional' | 'casual' | 'minimal' | 'newsletter') => 
+                    onValueChange={(value: 'professional' | 'casual' | 'minimal' | 'newsletter') =>
                       setEmailSettings({ ...emailSettings, defaultTemplate: value })
                     }
                   >
@@ -704,7 +708,7 @@ const Settings = () => {
                 {/* Usage Tips */}
                 <div className="bg-blue-500/10 p-4 rounded-lg space-y-2">
                   <p className="font-medium text-sm">📧 How to send emails:</p>
-                  <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                  <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-5">
                     <li>Say: "Send email to john@example.com: Hello, this is my message"</li>
                     <li>Say: "Send professional email to client@company.com with subject Meeting Request"</li>
                     <li>Say: "Email boss@work.com a casual message saying I'll be working remotely"</li>
