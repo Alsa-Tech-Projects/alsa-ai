@@ -20,21 +20,39 @@ export default defineConfig(({ mode }) => ({
   },
   // --- YAHAN SE CHANGES HAIN ---
   build: {
-    chunkSizeWarningLimit: 1000, // 1MB tak warning nahi dega
+    target: 'es2015',
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // Ye har library (node_modules) ko alag file mein baante ga
+          // React ecosystem
+          if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+            return 'react-vendor';
+          }
+          // UI libraries (Radix, Lucide)
+          if (id.includes('@radix-ui') || id.includes('lucide-react')) {
+            return 'ui-vendor';
+          }
+          // Supabase
+          if (id.includes('@supabase') || id.includes('@tanstack/react-query')) {
+            return 'supabase-vendor';
+          }
+          // Other node_modules
           if (id.includes('node_modules')) {
-            return id
-              .toString()
-              .split('node_modules/')[1]
-              .split('/')[0]
-              .toString();
+            return 'vendor';
           }
         },
       },
     },
+  },
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      '@supabase/supabase-js',
+      'lucide-react'
+    ],
   },
   // --- CHANGES KHATAM ---
 }));

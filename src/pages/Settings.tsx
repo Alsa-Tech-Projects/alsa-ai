@@ -94,8 +94,12 @@ const Settings = () => {
   });
 
   useEffect(() => {
-    loadPreferences();
+    // Load local data first (instant) - show UI immediately
     loadLocalSettings();
+    setLoading(false); // UI shows instantly with local data
+
+    // Load Supabase preferences in background (non-blocking)
+    loadPreferences();
   }, []);
 
   const loadLocalSettings = () => {
@@ -158,8 +162,7 @@ const Settings = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        setLoading(false);
-        return;
+        return; // Don't block UI if not logged in
       }
 
       const { data, error } = await supabase
@@ -186,9 +189,8 @@ const Settings = () => {
       }
     } catch (error) {
       console.error('Error loading preferences:', error);
-    } finally {
-      setLoading(false);
     }
+    // No finally block - don't control loading state here
   };
 
   const savePreferences = async () => {
