@@ -217,7 +217,14 @@ export const LOCAL_SONGS: LocalSong[] = [
     artist: 'unknown',
     path:'/music/tere-naam-se.mp3',
     keywords: ['romantic', 'bollywood']
-  }
+  },
+  {
+    id: '31',
+    name: 'Aala Hazrat Kalam',
+    artist: 'Imam Ahmed Raza Khan',
+    path: 'https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/songs/Lamyate%20Nazeerok%20Nee.mp3',
+    keywords: ['romantic', 'bollywood']
+}
 ];
 
 // Find matching song by search query
