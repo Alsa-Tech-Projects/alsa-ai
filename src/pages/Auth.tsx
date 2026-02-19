@@ -163,11 +163,35 @@ const Auth = () => {
         
         // Check if all 4 mandatory fields are completed
         if (!p || !p.display_name || !p.bio || !p.found_from || !p.user_category) {
+            // If this user has already completed the wizard previously, don't reopen it
+            try {
+              const completed = typeof window !== 'undefined' && localStorage.getItem(`wizard_completed_${user.id}`);
+              if (completed) {
+                navigate('/Chat');
+                return;
+              }
+            } catch (e) {
+              // ignore storage errors and continue
+            }
+
+            // If this was a manual sign-in, do NOT force the signup wizard — allow sign-ins
+            // to proceed. The wizard is intended only for signup flows.
+            try {
+              const manual = typeof window !== 'undefined' && sessionStorage.getItem('manual_signin');
+              if (manual) {
+                try { sessionStorage.removeItem('manual_signin'); } catch (e) { /* ignore */ }
+                navigate('/Chat');
+                return;
+              }
+            } catch (e) {
+              // ignore storage errors and continue to wizard logic
+            }
+
           const suppress = typeof window !== 'undefined' && sessionStorage.getItem('suppress_wizard_open');
           if (suppress) {
             console.info('Signup wizard open suppressed due to recent save error.');
           } else {
-            // Force wizard to open - these 4 fields are mandatory for everyone
+            // Force wizard to open - these 4 fields are mandatory for signup flows
             setWizardUserId(user.id);
             setWizardInitialName(p?.display_name || user.user_metadata?.full_name || user.user_metadata?.name || user.email || '');
             setWizardInitialAvatarUrl(p?.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || null);
@@ -279,6 +303,14 @@ const Auth = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // Mark this as a manual sign-in so we don't force the signup wizard
+    // (the wizard is only required for signup flows)
+    try {
+      if (typeof window !== 'undefined') sessionStorage.setItem('manual_signin', '1');
+    } catch (e) {
+      /* ignore */
+    }
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
