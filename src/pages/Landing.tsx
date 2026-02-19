@@ -276,7 +276,7 @@ const Landing = () => {
                   <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#27C93F] shadow-inner shadow-black/20"></div>
                 </div>
                 <div className="px-3 md:px-6 py-1 rounded-full bg-white/5 border border-white/5 text-[10px] text-white/20 font-mono">
-                  alsa-core-v2.exe
+                  Alsa AI 
                 </div>
                 <div className="w-10"></div> {/* Spacer for balance */}
               </div>
@@ -392,7 +392,7 @@ const Landing = () => {
           <div className="grid md:grid-cols-4 gap-12">
             <div>
               <div className="flex items-center gap-3 mb-6">
-                <img src={alsaLogo} alt="ALSA AI" className="w-10 h-10 rounded-xl ring-1 ring-white/10" />
+                <img src="https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/alsa-logo.png" alt="ALSA AI" className="w-10 h-10 rounded-xl ring-1 ring-white/10" />
                 <div>
                   <span className="font-bold text-lg">ALSA AI</span>
                   <p className="text-xs text-white/40">by Mohd Eisa</p>
@@ -429,7 +429,7 @@ const Landing = () => {
             </div>
           </div>
           <div className="mt-16 pt-8 border-t border-white/5 text-center text-white/40 text-sm">
-            <p>© 2024 ALSA AI. All rights reserved. Created with ❤️ by Mohd Eisa.</p>
+            <p>© 2024 ALSA AI. All rights reserved. Created with ❤️ by Alsa Tech Team.</p>
           </div>
         </div>
       </footer>
