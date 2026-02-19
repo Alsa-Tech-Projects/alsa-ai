@@ -230,7 +230,7 @@ const Settings = () => {
       applyTheme(preferences.theme);
 
       toast({
-        title: "Success",
+        title: preferences.theme === 'dark' ? "Success (Andhera Ho Gaya!)" : "Success (Ujala Hi Ujala!)",
         description: "Settings saved successfully!",
       });
     } catch (error) {
@@ -379,31 +379,31 @@ const Settings = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container max-w-4xl mx-auto p-6">
+    <div className="min-h-screen bg-background overflow-x-hidden">
+      <div className="w-full max-w-4xl mx-auto px-2 sm:px-6 py-4 sm:py-6 overflow-x-hidden">
         <Button
           variant="ghost"
           onClick={() => navigate('/')}
-          className="mb-6"
+          className="mb-4 sm:mb-6 px-2 sm:px-4"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Chat
+          <ArrowLeft className="w-4 h-4 mr-1 sm:mr-2" />
+          <span className="text-sm">Back to Chat</span>
         </Button>
 
-        <ScrollArea className="h-[calc(100vh-120px)]">
-          <div className="space-y-6 pr-4">
+        <ScrollArea className="h-[calc(100vh-100px)] sm:h-[calc(100vh-120px)] w-full">
+          <div className="space-y-4 sm:space-y-6 px-1 sm:pr-4 pb-20">
             <div>
-              <h1 className="text-3xl font-bold">Settings</h1>
-              <p className="text-muted-foreground mt-2">Customize your ALSA AI assistant experience</p>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Settings</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">Customize your ALSA AI experience</p>
             </div>
 
             {/* AI Response Style */}
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <CardTitle>AI Response Style</CardTitle>
-                <CardDescription>Choose how the AI responds to your queries</CardDescription>
+            <Card className="bg-card border-border overflow-hidden">
+              <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-3">
+                <CardTitle className="text-lg sm:text-xl">AI Response Style</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Choose how the AI responds</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 sm:p-6 pt-0">
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="response-style">Response Style</Label>
@@ -411,8 +411,8 @@ const Settings = () => {
                       value={preferences.ai_response_style}
                       onValueChange={(value) => setPreferences({ ...preferences, ai_response_style: value })}
                     >
-                      <SelectTrigger id="response-style" className="mt-2">
-                        <SelectValue />
+                      <SelectTrigger id="response-style" className="mt-2 w-full min-w-0">
+                        <SelectValue placeholder="Select style" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="concise">Concise - Short and direct answers</SelectItem>
@@ -430,12 +430,12 @@ const Settings = () => {
             </Card>
 
             {/* Voice Settings */}
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <CardTitle>Voice Settings</CardTitle>
-                <CardDescription>Configure voice input and output preferences</CardDescription>
+            <Card className="bg-card border-border overflow-hidden">
+              <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-3">
+                <CardTitle className="text-lg sm:text-xl">Voice Settings</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Configure voice preferences</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 sm:p-6 pt-0">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -455,8 +455,8 @@ const Settings = () => {
                       value={preferences.voice_gender}
                       onValueChange={(value: 'male' | 'female' | 'auto') => setPreferences({ ...preferences, voice_gender: value })}
                     >
-                      <SelectTrigger id="voice-gender" className="mt-2">
-                        <SelectValue />
+                      <SelectTrigger id="voice-gender" className="mt-2 w-full min-w-0">
+                        <SelectValue placeholder="Select gender" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="auto">Auto - System Default</SelectItem>
@@ -473,8 +473,8 @@ const Settings = () => {
                       value={preferences.voice_name}
                       onValueChange={(value) => setPreferences({ ...preferences, voice_name: value })}
                     >
-                      <SelectTrigger id="voice-name" className="mt-2">
-                        <SelectValue />
+                      <SelectTrigger id="voice-name" className="mt-2 w-full min-w-0">
+                        <SelectValue placeholder="Select character" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="default">Default</SelectItem>
@@ -489,12 +489,12 @@ const Settings = () => {
             </Card>
 
             {/* Appearance */}
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <CardTitle>Appearance</CardTitle>
-                <CardDescription>Customize the visual theme</CardDescription>
+            <Card className="bg-card border-border overflow-hidden">
+              <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-3">
+                <CardTitle className="text-lg sm:text-xl">Appearance</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Customize visual theme</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 sm:p-6 pt-0">
                 <div className="space-y-4">
                   <div className="flex items-center gap-4">
                     <Button
@@ -521,137 +521,139 @@ const Settings = () => {
             </Card>
 
             {/* Messaging Automation - MOST IMPORTANT */}
-            <Card className="bg-card border-border border-2 border-primary/30">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-primary" />
-                  Messaging Automation (WhatsApp & Telegram)
+            <Card className="bg-card border-border border-2 border-primary/30 overflow-hidden">
+              <CardHeader className="p-3 sm:p-6 pb-3 sm:pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                  <MessageSquare className="w-5 h-5 text-primary shrink-0" />
+                  Messaging Automation
                 </CardTitle>
-                <CardDescription>
-                  Save contacts for AI automation. Say "Send message to [Name] on Telegram: [Your message]"
+                <CardDescription className="text-xs sm:text-sm">
+                  Save contacts for AI automation.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+                <div className="w-full overflow-hidden">
+                  {/* WhatsApp Section */}
+                  <div className="space-y-4">
+                    <Label className="text-primary font-bold text-lg">📱 WhatsApp Contacts</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Add contacts with phone numbers
+                    </p>
 
-                {/* WhatsApp Section */}
-                <div className="space-y-4">
-                  <Label className="text-primary font-bold text-lg">📱 WhatsApp Contacts</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Add contacts with their phone numbers (with country code like 91xxxxxxxxxx)
-                  </p>
-
-                  {whatsappContacts.length > 0 && (
-                    <div className="space-y-2">
-                      {whatsappContacts.map((c) => (
-                        <div key={c.id} className="flex gap-2 items-center p-3 bg-secondary/30 rounded-lg">
-                          <div className="flex-1">
-                            <p className="font-medium">{c.name}</p>
-                            <p className="text-xs text-muted-foreground">{c.value}</p>
+                    {whatsappContacts.length > 0 && (
+                      <div className="space-y-2">
+                        {whatsappContacts.map((c) => (
+                          <div key={c.id} className="flex gap-2 items-center p-3 bg-secondary/30 rounded-lg">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{c.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{c.value}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setWhatsappContacts(whatsappContacts.filter(i => i.id !== c.id))}
+                              className="shrink-0"
+                            >
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setWhatsappContacts(whatsappContacts.filter(i => i.id !== c.id))}
-                          >
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row gap-2 bg-secondary/20 p-2 sm:p-3 rounded-lg">
+                      <Input
+                        placeholder={isMobile ? "Name" : "Name (e.g., Rahul)"}
+                        value={newWpName}
+                        onChange={e => setNewWpName(e.target.value)}
+                        className="w-full sm:flex-1 min-w-0"
+                      />
+                      <Input
+                        placeholder={isMobile ? "Number" : "Phone (e.g., 919876543210)"}
+                        value={newWpNum}
+                        onChange={e => setNewWpNum(e.target.value)}
+                        className="w-full sm:flex-1 min-w-0"
+                      />
+                      <Button onClick={addWhatsappContact} className="w-full sm:w-auto" size={isMobile ? "default" : "icon"}>
+                        {isMobile ? "Add Contact" : <Plus className="w-4 h-4" />}
+                      </Button>
                     </div>
-                  )}
-
-                  <div className="flex gap-2 bg-secondary/20 p-3 rounded-lg">
-                    <Input
-                      placeholder={isMobile ? "Name" : "Name (e.g., Rahul)"}
-                      value={newWpName}
-                      onChange={e => setNewWpName(e.target.value)}
-                      className="flex-1"
-                    />
-                    <Input
-                      placeholder={isMobile ? "Phone" : "Phone (e.g., 919876543210)"}
-                      value={newWpNum}
-                      onChange={e => setNewWpNum(e.target.value)}
-                      className="flex-1"
-                    />
-                    <Button onClick={addWhatsappContact} size="icon">
-                      <Plus className="w-4 h-4" />
-                    </Button>
                   </div>
-                </div>
 
-                <div className="border-t border-border my-4" />
+                  <div className="border-t border-border my-4" />
 
-                {/* Telegram Section */}
-                <div className="space-y-4">
-                  <Label className="text-primary font-bold text-lg">✈️ Telegram Contacts</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Add contacts with their Telegram web link (e.g., https://web.telegram.org/k/#@username)
-                  </p>
+                  {/* Telegram Section */}
+                  <div className="space-y-4">
+                    <Label className="text-primary font-bold text-lg">✈️ Telegram Contacts</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Add contacts with Telegram link
+                    </p>
 
-                  {telegramContacts.length > 0 && (
-                    <div className="space-y-2">
-                      {telegramContacts.map((c) => (
-                        <div key={c.id} className="flex gap-2 items-center p-3 bg-secondary/30 rounded-lg">
-                          <div className="flex-1">
-                            <p className="font-medium">{c.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">{c.value}</p>
+                    {telegramContacts.length > 0 && (
+                      <div className="space-y-2">
+                        {telegramContacts.map((c) => (
+                          <div key={c.id} className="flex gap-2 items-center p-3 bg-secondary/30 rounded-lg">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{c.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{c.value}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setTelegramContacts(telegramContacts.filter(i => i.id !== c.id))}
+                              className="shrink-0"
+                            >
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setTelegramContacts(telegramContacts.filter(i => i.id !== c.id))}
-                          >
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row gap-2 bg-secondary/20 p-2 sm:p-3 rounded-lg">
+                      <Input
+                        placeholder={isMobile ? "Name" : "Name (e.g., Rahul)"}
+                        value={newTgName}
+                        onChange={e => setNewTgName(e.target.value)}
+                        className="w-full sm:flex-1 min-w-0"
+                      />
+                      <Input
+                        placeholder={isMobile ? "Username/Link" : "https://web.telegram.org/k/#@username"}
+                        value={newTgLink}
+                        onChange={e => setNewTgLink(e.target.value)}
+                        className="w-full sm:flex-1 min-w-0"
+                      />
+                      <Button onClick={addTelegramContact} className="w-full sm:w-auto" size={isMobile ? "default" : "icon"}>
+                        {isMobile ? "Add Contact" : <Plus className="w-4 h-4" />}
+                      </Button>
                     </div>
-                  )}
-
-                  <div className="flex gap-2 bg-secondary/20 p-3 rounded-lg">
-                    <Input
-                      placeholder={isMobile ? "Name" : "Name (e.g., Rahul)"}
-                      value={newTgName}
-                      onChange={e => setNewTgName(e.target.value)}
-                      className="flex-1"
-                    />
-                    <Input
-                      placeholder={isMobile ? "Telegram" : "https://web.telegram.org/k/#@username"}
-                      value={newTgLink}
-                      onChange={e => setNewTgLink(e.target.value)}
-                      className="flex-1"
-                    />
-                    <Button onClick={addTelegramContact} size="icon">
-                      <Plus className="w-4 h-4" />
-                    </Button>
                   </div>
-                </div>
 
-                {/* Usage Tips */}
-                <div className="bg-primary/10 p-4 rounded-lg space-y-2">
-                  <p className="font-medium text-sm">💡 How to use:</p>
-                  <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-5">
-                    <li>Say: "Send message to Rahul on Telegram: I'll be late today"</li>
-                    <li>Say: "WhatsApp Rahul ko bhejo: Meeting 5 baje hai"</li>
-                    <li>Messages can be in any language - Hindi, English, etc.</li>
-                    <li>PC Bridge must be running for this to work!</li>
-                  </ul>
+                  {/* Usage Tips */}
+                  <div className="bg-primary/10 p-3 sm:p-4 rounded-lg space-y-2">
+                    <p className="font-medium text-xs sm:text-sm">💡 How to use:</p>
+                    <ul className="text-[10px] sm:text-xs text-muted-foreground space-y-1 list-disc pl-4 sm:pl-5">
+                      <li>"Send message to Rahul on Telegram"</li>
+                      <li>"WhatsApp Rahul ko bhejo: Meeting hai"</li>
+                      <li>PC Bridge must be running!</li>
+                    </ul>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Email Settings */}
-            <Card className="bg-card border-border border-2 border-blue-500/30">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mail className="w-5 h-5 text-blue-500" />
+            <Card className="bg-card border-border border-2 border-blue-500/30 overflow-hidden">
+              <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                  <Mail className="w-5 h-5 text-blue-500 shrink-0" />
                   Email Settings
                 </CardTitle>
-                <CardDescription>
-                  Configure how your AI-sent emails appear. Say "send email to someone@example.com: your message"
+                <CardDescription className="text-xs sm:text-sm">
+                  Configure AI-sent emails.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-3 sm:p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="sender-name">Sender Name</Label>
@@ -708,28 +710,26 @@ const Settings = () => {
                 </div>
 
                 {/* Usage Tips */}
-                <div className="bg-blue-500/10 p-4 rounded-lg space-y-2">
-                  <p className="font-medium text-sm">📧 How to send emails:</p>
-                  <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-5">
-                    <li>Say: "Send email to john@example.com: Hello, this is my message"</li>
-                    <li>Say: "Send professional email to client@company.com with subject Meeting Request"</li>
-                    <li>Say: "Email boss@work.com a casual message saying I'll be working remotely"</li>
-                    <li>Templates: professional, casual, minimal, newsletter</li>
+                <div className="bg-blue-500/10 p-3 sm:p-4 rounded-lg space-y-2">
+                  <p className="font-medium text-xs sm:text-sm">📧 How to send emails:</p>
+                  <ul className="text-[10px] sm:text-xs text-muted-foreground space-y-1 list-disc pl-4 sm:pl-5">
+                    <li>"Send email to john@example.com: Hello"</li>
+                    <li>"Send professional email to client"</li>
                   </ul>
                 </div>
               </CardContent>
             </Card>
 
             {/* Output Paths */}
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FolderOpen className="w-5 h-5" />
+            <Card className="bg-card border-border overflow-hidden">
+              <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                  <FolderOpen className="w-5 h-5 shrink-0" />
                   Output Paths
                 </CardTitle>
-                <CardDescription>Configure default save locations for files</CardDescription>
+                <CardDescription className="text-xs sm:text-sm">Default save locations</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 sm:p-6 pt-0">
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="rec-path">Screen Recording Path</Label>
@@ -766,17 +766,17 @@ const Settings = () => {
             </Card>
 
             {/* Custom Sites */}
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Key className="w-5 h-5" />
+            <Card className="bg-card border-border overflow-hidden">
+              <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                  <Key className="w-5 h-5 shrink-0" />
                   Custom Sites
                 </CardTitle>
-                <CardDescription>
-                  Add your own website shortcuts. Say "open [site name]" to open them quickly.
+                <CardDescription className="text-xs sm:text-sm">
+                  Add website shortcuts.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 sm:p-6 pt-0">
                 <div className="space-y-4">
                   {customSites.length > 0 && (
                     <div className="space-y-2">
@@ -801,21 +801,21 @@ const Settings = () => {
 
                   <div className="space-y-2 pt-2 border-t border-border">
                     <Label>Add New Site</Label>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Input
                         value={newSiteName}
                         onChange={(e) => setNewSiteName(e.target.value)}
-                        placeholder="Site name (e.g., mywork)"
-                        className="flex-1"
+                        placeholder={isMobile ? "Name" : "Site name (e.g., mywork)"}
+                        className="w-full sm:flex-1 min-w-0"
                       />
                       <Input
                         value={newSiteUrl}
                         onChange={(e) => setNewSiteUrl(e.target.value)}
-                        placeholder="URL (e.g., mywork.com)"
-                        className="flex-[2]"
+                        placeholder={isMobile ? "URL" : "URL (e.g., mywork.com)"}
+                        className="w-full sm:flex-[2] min-w-0"
                       />
-                      <Button onClick={addCustomSite} size="icon">
-                        <Plus className="w-4 h-4" />
+                      <Button onClick={addCustomSite} className="w-full sm:w-auto" size={isMobile ? "default" : "icon"}>
+                        {isMobile ? "Add Site" : <Plus className="w-4 h-4" />}
                       </Button>
                     </div>
                   </div>
@@ -824,17 +824,17 @@ const Settings = () => {
             </Card>
 
             {/* Custom Apps */}
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FolderOpen className="w-5 h-5" />
+            <Card className="bg-card border-border overflow-hidden">
+              <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                  <FolderOpen className="w-5 h-5 shrink-0" />
                   Custom Apps
                 </CardTitle>
-                <CardDescription>
-                  Add your own applications with their paths. Say "open [app name]" to launch them.
+                <CardDescription className="text-xs sm:text-sm">
+                  Add applications with paths.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 sm:p-6 pt-0">
                 <div className="space-y-4">
                   {customApps.length > 0 && (
                     <div className="space-y-2">
@@ -859,21 +859,21 @@ const Settings = () => {
 
                   <div className="space-y-2 pt-2 border-t border-border">
                     <Label>Add New App</Label>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Input
                         value={newAppName}
                         onChange={(e) => setNewAppName(e.target.value)}
-                        placeholder="App name (e.g., antigravity)"
-                        className="flex-1"
+                        placeholder={isMobile ? "App Name" : "App name (e.g., antigravity)"}
+                        className="w-full sm:flex-1 min-w-0"
                       />
                       <Input
                         value={newAppPath}
                         onChange={(e) => setNewAppPath(e.target.value)}
-                        placeholder="Full path to .exe file"
-                        className="flex-[2]"
+                        placeholder={isMobile ? "Path" : "Full path to .exe file"}
+                        className="w-full sm:flex-[2] min-w-0"
                       />
-                      <Button onClick={addCustomApp} size="icon">
-                        <Plus className="w-4 h-4" />
+                      <Button onClick={addCustomApp} className="w-full sm:w-auto" size={isMobile ? "default" : "icon"}>
+                        {isMobile ? "Add App" : <Plus className="w-4 h-4" />}
                       </Button>
                     </div>
                   </div>
@@ -881,19 +881,26 @@ const Settings = () => {
               </CardContent>
             </Card>
 
-            {/* Save Button */}
-            <div className="flex justify-end gap-4 pb-6">
-              <Button variant="outline" onClick={() => navigate('/')}>
+            <div className="mt-4 w-full flex flex-col sm:flex-row gap-2 sm:justify-end pb-12">
+              <button
+                onClick={() => navigate('/')}
+                className="w-full sm:w-auto border border-white/20 rounded-md px-4 py-2 text-sm text-white hover:bg-white/5 transition-colors"
+              >
                 Cancel
-              </Button>
-              <Button onClick={savePreferences} disabled={saving}>
-                {saving ? 'Saving...' : 'Save Changes'}
-              </Button>
+              </button>
+
+              <button
+                onClick={savePreferences}
+                disabled={saving}
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-md px-4 py-2 text-sm text-white transition-colors font-medium"
+              >
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
             </div>
           </div>
         </ScrollArea>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 

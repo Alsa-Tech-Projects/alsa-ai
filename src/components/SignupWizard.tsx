@@ -137,6 +137,15 @@ const SignupWizard = ({
     }
   };
 
+  const markWizardCompletedFor = (uid?: string | null) => {
+    try {
+      if (!uid) return;
+      localStorage.setItem(`wizard_completed_${uid}`, '1');
+    } catch (e) {
+      // ignore
+    }
+  };
+
   const safeUpsertPreEmail = async (data: any, id?: string | null, isUpdate = false) => {
     try {
       if (isUpdate && id) {
@@ -404,6 +413,7 @@ const SignupWizard = ({
             }
 
             setOpen(false);
+            markWizardCompletedFor(newUid);
             onFinish?.();
             return;
           }
@@ -509,6 +519,7 @@ const SignupWizard = ({
       }
 
       setOpen(false);
+      markWizardCompletedFor(uid);
       onFinish?.();
     } catch (err: any) {
       const msg = err?.message || 'Save failed';
@@ -517,6 +528,7 @@ const SignupWizard = ({
         console.warn("Suppressing schema error:", msg);
         toast({ title: "Profile saved", description: "Profile saved (schema warning ignored)." });
         setOpen(false);
+        markWizardCompletedFor(uid);
         onFinish?.();
         return;
       }
