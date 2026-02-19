@@ -374,7 +374,9 @@ const Settings = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container max-w-4xl mx-auto p-6">
+      {/* <div className="container max-w-4xl mx-auto p-6"> */}
+      <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-4">
+
         <Button
           variant="ghost"
           onClick={() => navigate('/')}
@@ -384,7 +386,9 @@ const Settings = () => {
           Back to Chat
         </Button>
 
-        <ScrollArea className="h-[calc(100vh-120px)]">
+        {/* <ScrollArea className="h-[calc(100vh-120px)]"> */}
+        <ScrollArea className="h-[calc(100vh-80px)] md:h-[calc(100vh-120px)]">
+
           <div className="space-y-6 pr-4">
             <div>
               <h1 className="text-3xl font-bold">Settings</h1>
@@ -490,7 +494,9 @@ const Settings = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center gap-4">
+                  {/* <div className="flex items-center gap-4"> */}
+                  <div className="flex flex-col sm:flex-row gap-4">
+
                     <Button
                       variant={preferences.theme === 'light' ? 'default' : 'outline'}
                       size="lg"
@@ -528,7 +534,9 @@ const Settings = () => {
               <CardContent className="space-y-6">
 
                 {/* WhatsApp Section */}
-                <div className="space-y-4">
+                {/* <div className="space-y-4"> */}
+                <CardContent className="space-y-4 p-4 sm:p-6">
+
                   <Label className="text-primary font-bold text-lg">📱 WhatsApp Contacts</Label>
                   <p className="text-xs text-muted-foreground">
                     Add contacts with their phone numbers (with country code like 91xxxxxxxxxx)
@@ -571,7 +579,7 @@ const Settings = () => {
                       <Plus className="w-4 h-4" />
                     </Button>
                   </div>
-                </div>
+                </CardContent>
 
                 <div className="border-t border-border my-4" />
 
