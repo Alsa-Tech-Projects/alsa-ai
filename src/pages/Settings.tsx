@@ -548,17 +548,20 @@ const Settings = () => {
                     Add contacts with their phone numbers (with country code like 91xxxxxxxxxx)
                   </p>
                   
-                  {whatsappContacts.length > 0 && (
-                    <div className="space-y-2">
-                      {whatsappContacts.map((c) => (
-                        <div key={c.id} className="flex gap-2 items-center p-3 bg-secondary/30 rounded-lg">
-                          <div className="flex-1">
-                            <p className="font-medium">{c.name}</p>
-                            <p className="text-xs text-muted-foreground">{c.value}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                            {whatsappContacts.length > 0 && (
+            <div className="space-y-2">
+              {whatsappContacts.map((c) => (
+                <div key={c.id} className="flex gap-2 items-center p-3 bg-secondary/30 rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-medium">{c.name}</p>
+                    <p className="text-xs text-muted-foreground">{c.value}</p>
+                  </div>
+                  {/* Agar delete button hai toh yahan aayega */}
+                </div>
+              ))}
+            </div>
+          )}
+
 
                     <div className="flex flex-col sm:flex-row gap-2 bg-secondary/20 p-2 sm:p-3 rounded-lg">
                       <Input
