@@ -379,8 +379,10 @@ const Settings = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
-      <div className="w-full max-w-4xl mx-auto px-2 sm:px-6 py-4 sm:py-6 overflow-x-hidden">
+    <div className="min-h-screen bg-background">
+      {/* <div className="container max-w-4xl mx-auto p-6"> */}
+      <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-4">
+
         <Button
           variant="ghost"
           onClick={() => navigate('/')}
@@ -390,8 +392,10 @@ const Settings = () => {
           <span className="text-sm">Back to Chat</span>
         </Button>
 
-        <ScrollArea className="h-[calc(100vh-100px)] sm:h-[calc(100vh-120px)] w-full">
-          <div className="space-y-4 sm:space-y-6 px-1 sm:pr-4 pb-20">
+        {/* <ScrollArea className="h-[calc(100vh-120px)]"> */}
+        <ScrollArea className="h-[calc(100vh-80px)] md:h-[calc(100vh-120px)]">
+
+          <div className="space-y-6 pr-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Settings</h1>
               <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">Customize your ALSA AI experience</p>
@@ -496,7 +500,9 @@ const Settings = () => {
               </CardHeader>
               <CardContent className="p-3 sm:p-6 pt-0">
                 <div className="space-y-4">
-                  <div className="flex items-center gap-4">
+                  {/* <div className="flex items-center gap-4"> */}
+                  <div className="flex flex-col sm:flex-row gap-4">
+
                     <Button
                       variant={preferences.theme === 'light' ? 'default' : 'outline'}
                       size="lg"
@@ -531,31 +537,24 @@ const Settings = () => {
                   Save contacts for AI automation.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-3 sm:p-6 space-y-4 sm:space-y-6">
-                <div className="w-full overflow-hidden">
-                  {/* WhatsApp Section */}
-                  <div className="space-y-4">
-                    <Label className="text-primary font-bold text-lg">📱 WhatsApp Contacts</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Add contacts with phone numbers
-                    </p>
+              <CardContent className="space-y-6">
 
-                    {whatsappContacts.length > 0 && (
-                      <div className="space-y-2">
-                        {whatsappContacts.map((c) => (
-                          <div key={c.id} className="flex gap-2 items-center p-3 bg-secondary/30 rounded-lg">
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{c.name}</p>
-                              <p className="text-xs text-muted-foreground truncate">{c.value}</p>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setWhatsappContacts(whatsappContacts.filter(i => i.id !== c.id))}
-                              className="shrink-0"
-                            >
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
+                {/* WhatsApp Section */}
+                {/* <div className="space-y-4"> */}
+                <CardContent className="space-y-4 p-4 sm:p-6">
+
+                  <Label className="text-primary font-bold text-lg">📱 WhatsApp Contacts</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Add contacts with their phone numbers (with country code like 91xxxxxxxxxx)
+                  </p>
+                  
+                  {whatsappContacts.length > 0 && (
+                    <div className="space-y-2">
+                      {whatsappContacts.map((c) => (
+                        <div key={c.id} className="flex gap-2 items-center p-3 bg-secondary/30 rounded-lg">
+                          <div className="flex-1">
+                            <p className="font-medium">{c.name}</p>
+                            <p className="text-xs text-muted-foreground">{c.value}</p>
                           </div>
                         ))}
                       </div>
@@ -579,6 +578,9 @@ const Settings = () => {
                       </Button>
                     </div>
                   </div>
+                </CardContent>
+
+                <div className="border-t border-border my-4" />
 
                   <div className="border-t border-border my-4" />
 

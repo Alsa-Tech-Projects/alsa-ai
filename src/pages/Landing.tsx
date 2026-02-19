@@ -8,8 +8,6 @@ import {
   Play, Monitor, Terminal, FileText, Database, Sparkles, Crown
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import alsaLogo from '@/assets/alsa-logo.png';
-import aiPcControl from '@/assets/ai-pc-control.jpg';
 import { Helmet } from 'react-helmet';
 
 const Landing = () => {
@@ -105,7 +103,7 @@ const Landing = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
         <div className="relative">
           <div className="absolute inset-0 blur-3xl bg-gradient-to-r from-blue-600/30 to-purple-600/30 rounded-full"></div>
-          <img src={alsaLogo} alt="ALSA AI" className="w-24 h-24 rounded-2xl relative z-10 animate-pulse" />
+          <img src="https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/alsa-logo.png" alt="ALSA AI" className="w-24 h-24 rounded-2xl relative z-10 animate-pulse" />
         </div>
       </div>
     );
@@ -142,7 +140,7 @@ const Landing = () => {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0A1A2F]/90 backdrop-blur-xl border-b border-white/5">
         <div className="container mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 md:gap-3">
-            <img src={alsaLogo} alt="ALSA AI" className="w-9 h-9 md:w-11 md:h-11 rounded-xl" />
+            <img src="https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/alsa-logo.png" alt="ALSA AI" className="w-9 h-9 md:w-11 md:h-11 rounded-xl" />
             <div className="flex flex-col">
               <span className="font-black text-base md:text-xl tracking-tight bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent leading-tight">ALSA AI</span>
               <p className="hidden xs:block text-[8px] md:text-[10px] text-white/40 font-medium tracking-wide">AI Lifestyle & Smart Assistant</p>
@@ -276,7 +274,7 @@ const Landing = () => {
                   <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#27C93F] shadow-inner shadow-black/20"></div>
                 </div>
                 <div className="px-3 md:px-6 py-1 rounded-full bg-white/5 border border-white/5 text-[10px] text-white/20 font-mono">
-                  alsa-core-v2.exe
+                  Alsa AI 
                 </div>
                 <div className="w-10"></div> {/* Spacer for balance */}
               </div>
@@ -289,14 +287,16 @@ const Landing = () => {
                   playsInline
                   poster="/videos/thumbnail.png"
                 >
-                  <source src="/videos/demo-video.mp4" type="video/mp4" />
+                  {/* <source src="/videos/demo-video.mp4" type="video/mp4" /> */}
+                                    <source src="https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/videos/demo-video.mp4" type="video/mp4" />
+
+
                 </video>
 
                 {/* Glass Overlay Shine */}
                 <div className="absolute inset-0 pointer-events-none bg-gradient-to-tr from-white/5 to-transparent opacity-50"></div>
               </div>
             </div>
-
             {/* Decoration: Subtle Floating Badge */}
             <div className="absolute -bottom-6 -right-6 hidden md:flex bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold shadow-xl items-center gap-2 animate-bounce">
               <PlayCircle className="w-5 h-5" /> ALSA AI ACTIVE
@@ -347,7 +347,7 @@ const Landing = () => {
             </div>
           </div>
           <div className="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
-            <img src={aiPcControl} alt="Control" className="w-full h-auto" />
+            <img src="https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/ai-pc-control.jpg" alt="Control" className="w-full h-auto" />
             <div className="absolute bottom-0 p-6 bg-gradient-to-t from-black to-transparent w-full">
               <p className="text-xs font-mono text-green-400">$ alsa "create a react portfolio"</p>
             </div>
@@ -388,7 +388,7 @@ const Landing = () => {
           <div className="grid md:grid-cols-4 gap-12">
             <div>
               <div className="flex items-center gap-3 mb-6">
-                <img src={alsaLogo} alt="ALSA AI" className="w-10 h-10 rounded-xl ring-1 ring-white/10" />
+                <img src="https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/alsa-logo.png" alt="ALSA AI" className="w-10 h-10 rounded-xl ring-1 ring-white/10" />
                 <div>
                   <span className="font-bold text-lg">ALSA AI</span>
                   <p className="text-xs text-white/40">by Mohd Eisa</p>
@@ -425,7 +425,7 @@ const Landing = () => {
             </div>
           </div>
           <div className="mt-16 pt-8 border-t border-white/5 text-center text-white/40 text-sm">
-            <p>© 2024 ALSA AI. All rights reserved. Created with ❤️ by Mohd Eisa.</p>
+            <p>© 2024 ALSA AI. All rights reserved. Created with ❤️ by Alsa Tech Team.</p>
           </div>
         </div>
       </footer>
