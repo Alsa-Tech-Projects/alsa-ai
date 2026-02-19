@@ -8,8 +8,6 @@ import {
   Play, Monitor, Terminal, FileText, Database, Sparkles, Crown
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import alsaLogo from '@/assets/alsa-logo.png';
-import aiPcControl from '@/assets/ai-pc-control.jpg';
 import { Helmet } from 'react-helmet';
 
 const Landing = () => {
