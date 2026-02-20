@@ -43,6 +43,17 @@ const Auth = () => {
     const checkProfileAndMaybeOpen = async (user: any, initialStep = 2) => {
       if (!user) return;
 
+      try {
+        if (typeof window !== 'undefined') {
+          console.debug('[Auth] checkProfileAndMaybeOpen user:', user?.id, user?.email);
+          console.debug('[Auth] session.manual_signin:', sessionStorage.getItem('manual_signin'));
+          const emailKey = user?.email ? `wizard_completed_email_${user.email.toLowerCase()}` : null;
+          if (emailKey) console.debug('[Auth] localStorage email flag:', emailKey, localStorage.getItem(emailKey));
+        }
+      } catch (e) {
+        // ignore logging errors
+      }
+
       // If the user came from our pre-oauth flow, apply stored profile data first
       try {
         const params = new URLSearchParams(location.search);
@@ -160,6 +171,20 @@ const Auth = () => {
 
         const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle();
         const p: any = profile;
+
+        // If this user completed the wizard during signup in the browser, skip the wizard
+        try {
+          const emailKey = typeof user?.email === 'string' ? `wizard_completed_email_${user.email.toLowerCase()}` : null;
+          if (emailKey) {
+            const completedByEmail = typeof window !== 'undefined' && localStorage.getItem(emailKey);
+            if (completedByEmail) {
+              navigate('/Chat');
+              return;
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
         
         // Check if all 4 mandatory fields are completed
         if (!p || !p.display_name || !p.bio || !p.found_from || !p.user_category) {
@@ -300,14 +325,17 @@ const Auth = () => {
     setAge('');
   };
 
-  const handleSignIn = async (e: React.FormEvent) => {
+    const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     // Mark this as a manual sign-in so we don't force the signup wizard
     // (the wizard is only required for signup flows)
     try {
-      if (typeof window !== 'undefined') sessionStorage.setItem('manual_signin', '1');
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('manual_signin', '1');
+        console.debug('[Auth] handleSignIn set manual_signin=1 for', email);
+      }
     } catch (e) {
       /* ignore */
     }

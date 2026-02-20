@@ -146,6 +146,16 @@ const SignupWizard = ({
     }
   };
 
+  const markWizardCompletedForEmail = (email?: string) => {
+    try {
+      if (!email) return;
+      const key = `wizard_completed_email_${email.toLowerCase()}`;
+      localStorage.setItem(key, '1');
+    } catch (e) {
+      // ignore
+    }
+  };
+
   const safeUpsertPreEmail = async (data: any, id?: string | null, isUpdate = false) => {
     try {
       if (isUpdate && id) {
@@ -414,6 +424,7 @@ const SignupWizard = ({
 
             setOpen(false);
             markWizardCompletedFor(newUid);
+            markWizardCompletedForEmail(email);
             onFinish?.();
             return;
           }
@@ -436,6 +447,8 @@ const SignupWizard = ({
             } else {
               toast({ title: "Profile saved", description: "Check your email to confirm — we'll attach this profile after confirmation." });
             }
+            // mark completed by email so manual signin skips wizard
+            markWizardCompletedForEmail(email);
           } else {
             const { error: preErr, inserted, removedGender } = await safeUpsertPreEmail({
               email,
@@ -455,6 +468,8 @@ const SignupWizard = ({
             } else {
               toast({ title: "Profile saved", description: "Check your email to confirm — we'll attach this profile after confirmation." });
             }
+            // mark completed by email so manual signin skips wizard
+            markWizardCompletedForEmail(email);
           }
           
           // Clear sessionStorage after successful profile save
