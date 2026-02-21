@@ -566,7 +566,7 @@ const Admin = () => {
       <header className="border-b border-white/5 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={alsaLogo} alt="ALSA AI" className="w-10 h-10 rounded-xl" />
+            <img src="https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/alsa-logo.png" alt="ALSA AI" className="w-10 h-10 rounded-xl" />
             <div>
               <h1 className="font-bold text-lg flex items-center gap-2">
                 Admin Panel
