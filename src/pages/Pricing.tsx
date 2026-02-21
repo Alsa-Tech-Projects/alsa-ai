@@ -312,7 +312,7 @@ const Pricing = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <img src={alsaLogo} alt="ALSA AI" className="h-10 w-10 rounded-xl" />
+            <img src="https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/alsa-logo.png" alt="ALSA AI" className="h-10 w-10 rounded-xl" />
             <span className="text-xl font-bold text-white">Pricing</span>
           </div>
           {!user && (
