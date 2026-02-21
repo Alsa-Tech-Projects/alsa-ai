@@ -540,57 +540,6 @@ def adb_command():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
-@app.route('/capture_screenshot', methods=['POST'])
-def capture_screenshot():
-    """Capture a screenshot of the entire screen"""
-    try:
-        from PIL import ImageGrab
-        import base64
-        from io import BytesIO
-        from datetime import datetime
-        import time
-        
-        data = request.get_json() or {}
-        delay_seconds = data.get('delay_seconds', 0)
-        save_path = data.get('save_path', os.path.expanduser('~\\Pictures\\Screenshots'))
-        
-        # Validate save path
-        if not is_path_allowed(save_path):
-            save_path = os.path.expanduser('~\\Pictures\\Screenshots')
-        
-        # Delay if requested
-        if delay_seconds and isinstance(delay_seconds, (int, float)) and 0 < delay_seconds <= 60:
-            time.sleep(delay_seconds)
-        
-        # Capture the screenshot
-        screenshot = ImageGrab.grab()
-        
-        # Convert to base64
-        buffered = BytesIO()
-        screenshot.save(buffered, format="PNG")
-        img_str = base64.b64encode(buffered.getvalue()).decode()
-        
-        # Save to file
-        os.makedirs(save_path, exist_ok=True)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"screenshot_{timestamp}.png"
-        full_path = os.path.join(save_path, filename)
-        screenshot.save(full_path)
-        
-        return jsonify({
-            'success': True,
-            'message': f'Screenshot captured: {full_path}',
-            'filename': filename,
-            'full_path': full_path,
-            'image_data': img_str
-        })
-        
-    except Exception as e:
-        print(f"Error capturing screenshot: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-
 @app.route('/close_window', methods=['POST'])
 def close_window():
     """Close a specific window by name"""
@@ -1189,5 +1138,6 @@ if __name__ == '__main__':
     print("=" * 50)
     print("ALSA AI Elite PC Control Bridge Started")
     print("Bridge is running on http://localhost:5001")
-    print("You can now control your PC through ALSA AI!\nFeatures: Project creation, PPT, Excel, Database, Screenshots, ADB, Music & Massage Automation etc..")
+    print("You can now control your PC through ALSA AI!\nFeatures: Project creation, PPT, Excel, Database, ADB, Music & Massage Automation etc..")
     app.run(host='127.0.0.1', port=5001, debug=True)
+
