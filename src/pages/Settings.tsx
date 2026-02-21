@@ -374,7 +374,7 @@ const Settings = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container max-w-4xl mx-auto p-6">
+      <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
         <Button
           variant="ghost"
           onClick={() => navigate('/')}
@@ -384,7 +384,7 @@ const Settings = () => {
           Back to Chat
         </Button>
 
-        <ScrollArea className="h-[calc(100vh-120px)]">
+        <ScrollArea className="h-auto sm:h-[calc(100vh-120px)]">
           <div className="space-y-6 pr-4">
             <div>
               <h1 className="text-3xl font-bold">Settings</h1>
@@ -490,7 +490,8 @@ const Settings = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center gap-4">
+                  {/* <div className="flex items-center gap-4"> */}
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <Button
                       variant={preferences.theme === 'light' ? 'default' : 'outline'}
                       size="lg"
@@ -515,7 +516,7 @@ const Settings = () => {
             </Card>
 
             {/* Messaging Automation - MOST IMPORTANT */}
-            <Card className="bg-card border-border border-2 border-primary/30">
+            <Card className="bg-card border border-primary/30 border-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageSquare className="w-5 h-5 text-primary" />
@@ -554,7 +555,8 @@ const Settings = () => {
                     </div>
                   )}
                   
-                  <div className="flex gap-2 bg-secondary/20 p-3 rounded-lg">
+                  {/* <div className="flex gap-2 bg-secondary/20 p-3 rounded-lg"> */}
+                  <div className="flex flex-col sm:flex-row gap-2 bg-secondary/20 p-3 rounded-lg">
                     <Input 
                       placeholder="Name (e.g., Rahul)" 
                       value={newWpName} 
@@ -635,7 +637,7 @@ const Settings = () => {
             </Card>
 
             {/* Email Settings */}
-            <Card className="bg-card border-border border-2 border-blue-500/30">
+            <Card className="bg-card border border-blue-500/30 border-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Mail className="w-5 h-5 text-blue-500" />
@@ -795,7 +797,7 @@ const Settings = () => {
 
                   <div className="space-y-2 pt-2 border-t border-border">
                     <Label>Add New Site</Label>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Input
                         value={newSiteName}
                         onChange={(e) => setNewSiteName(e.target.value)}
@@ -876,7 +878,8 @@ const Settings = () => {
             </Card>
 
             {/* Save Button */}
-            <div className="flex justify-end gap-4 pb-6">
+            {/* <div className="flex justify-end gap-4 pb-6"> */}
+            <div className="flex flex-col sm:flex-row justify-end gap-3 pb-6">
               <Button variant="outline" onClick={() => navigate('/')}>
                 Cancel
               </Button>
