@@ -527,61 +527,60 @@ const Settings = () => {
             </Card>
 
             {/* Messaging Automation - MOST IMPORTANT */}
-            <Card className="bg-card border-border border-2 border-primary/30 overflow-hidden">
-              <CardHeader className="p-3 sm:p-6 pb-3 sm:pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                  <MessageSquare className="w-5 h-5 text-primary shrink-0" />
-                  Messaging Automation
-                </CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  Save contacts for AI automation.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-
-                {/* WhatsApp Section */}
-                {/* <div className="space-y-4"> */}
-                <CardContent className="space-y-4 p-4 sm:p-6">
-
-                  <Label className="text-primary font-bold text-lg">📱 WhatsApp Contacts</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Add contacts with their phone numbers (with country code like 91xxxxxxxxxx)
-                  </p>
-                  
-                            {whatsappContacts.length > 0 && (
-            <div className="space-y-2">
-              {whatsappContacts.map((c) => (
-                <div key={c.id} className="flex gap-2 items-center p-3 bg-secondary/30 rounded-lg">
-                  <div className="flex-1">
-                    <p className="font-medium">{c.name}</p>
-                    <p className="text-xs text-muted-foreground">{c.value}</p>
-                  </div>
-                  {/* Agar delete button hai toh yahan aayega */}
-                </div>
-              ))}
+<Card className="bg-card border-border border-2 border-primary/30 overflow-hidden">
+  <CardHeader className="p-3 sm:p-6 pb-3 sm:pb-4">
+    <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+      <MessageSquare className="w-5 h-5 text-primary shrink-0" />
+      Messaging Automation
+    </CardTitle>
+    <CardDescription className="text-xs sm:text-sm">
+      Save contacts for AI automation.
+    </CardDescription>
+  </CardHeader>
+  
+  {/* Yahan se correction shuru hai */}
+  <CardContent className="space-y-6 p-4 sm:p-6">
+    {/* WhatsApp Section */}
+    <div className="space-y-4"> 
+      <Label className="text-primary font-bold text-lg">📱 WhatsApp Contacts</Label>
+      <p className="text-xs text-muted-foreground">
+        Add contacts with their phone numbers (with country code like 91xxxxxxxxxx)
+      </p>
+      
+      {whatsappContacts.length > 0 && (
+        <div className="space-y-2">
+          {whatsappContacts.map((c) => (
+            <div key={c.id} className="flex gap-2 items-center p-3 bg-secondary/30 rounded-lg">
+              <div className="flex-1">
+                <p className="font-medium">{c.name}</p>
+                <p className="text-xs text-muted-foreground">{c.value}</p>
+              </div>
             </div>
-          )}
+          ))}
+        </div>
+      )}
 
+      <div className="flex flex-col sm:flex-row gap-2 bg-secondary/20 p-2 sm:p-3 rounded-lg">
+        <Input
+          placeholder={isMobile ? "Name" : "Name (e.g., Rahul)"}
+          value={newWpName}
+          onChange={e => setNewWpName(e.target.value)}
+          className="w-full sm:flex-1 min-w-0"
+        />
+        <Input
+          placeholder={isMobile ? "Number" : "Phone (e.g., 919876543210)"}
+          value={newWpNum}
+          onChange={e => setNewWpNum(e.target.value)}
+          className="w-full sm:flex-1 min-w-0"
+        />
+        <Button onClick={addWhatsappContact} className="w-full sm:w-auto" size={isMobile ? "default" : "icon"}>
+          {isMobile ? "Add Contact" : <Plus className="w-4 h-4" />}
+        </Button>
+      </div>
+    </div> {/* Ye div upar wale space-y-4 ko band kar raha hai */}
+  </CardContent>
+</Card>
 
-                    <div className="flex flex-col sm:flex-row gap-2 bg-secondary/20 p-2 sm:p-3 rounded-lg">
-                      <Input
-                        placeholder={isMobile ? "Name" : "Name (e.g., Rahul)"}
-                        value={newWpName}
-                        onChange={e => setNewWpName(e.target.value)}
-                        className="w-full sm:flex-1 min-w-0"
-                      />
-                      <Input
-                        placeholder={isMobile ? "Number" : "Phone (e.g., 919876543210)"}
-                        value={newWpNum}
-                        onChange={e => setNewWpNum(e.target.value)}
-                        className="w-full sm:flex-1 min-w-0"
-                      />
-                      <Button onClick={addWhatsappContact} className="w-full sm:w-auto" size={isMobile ? "default" : "icon"}>
-                        {isMobile ? "Add Contact" : <Plus className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
 
                 <div className="border-t border-border my-4" />
 
