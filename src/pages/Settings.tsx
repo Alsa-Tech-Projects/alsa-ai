@@ -643,8 +643,7 @@ const Settings = () => {
                     </ul>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+            
 
             {/* Email Settings */}
             <Card className="bg-card border-border border-2 border-blue-500/30 overflow-hidden">
