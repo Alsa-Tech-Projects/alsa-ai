@@ -212,7 +212,7 @@ const FAQ = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="hover:bg-white/5 text-white">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <img src={alsaLogo} alt="ALSA AI" className="h-10 w-10 rounded-xl ring-1 ring-white/10" />
+            <img src="https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/alsa-logo.png" alt="ALSA AI" className="h-10 w-10 rounded-xl ring-1 ring-white/10" />
             <div>
               <span className="text-xl font-bold text-white">FAQ</span>
               <p className="text-xs text-white/40">Frequently Asked Questions</p>
