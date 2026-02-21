@@ -156,7 +156,7 @@ const BridgeSetup = () => {
     { name: 'pip (Package Manager)', command: 'pip --version', description: 'For installing dependencies' },
   ];
 
-  const dependencies = 'flask flask-cors winapps speech_recognition PyAudio openpyxl python-pptx Pillow pyodbc';
+  const dependencies = 'flask flask-cors winapps python-pptx openpyxl pyautogui pyodbc webbrowser';
 
   if (loading) {
     return (
