@@ -119,7 +119,7 @@ const Contact = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="hover:bg-white/5">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <img src={alsaLogo} alt="ALSA AI" className="w-10 h-10 rounded-xl ring-1 ring-white/10" />
+            <img src="https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/alsa-logo.png" alt="ALSA AI" className="w-10 h-10 rounded-xl ring-1 ring-white/10" />
             <div>
               <span className="font-bold text-lg">Contact Us</span>
               <p className="text-xs text-white/40">We're here to help</p>

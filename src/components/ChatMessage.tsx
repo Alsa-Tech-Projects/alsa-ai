@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { jsPDF } from 'jspdf';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ChatMessageProps {
@@ -14,7 +14,7 @@ interface ChatMessageProps {
   onToggleFavorite?: (messageId: string) => void;
 }
 
-const ChatMessage = ({ role, content, messageId, isFavorite, onToggleFavorite }: ChatMessageProps) => {
+const ChatMessage = memo(({ role, content, messageId, isFavorite, onToggleFavorite }: ChatMessageProps) => {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -183,6 +183,8 @@ const ChatMessage = ({ role, content, messageId, isFavorite, onToggleFavorite }:
       )}
     </div>
   );
-};
+});
+
+ChatMessage.displayName = 'ChatMessage';
 
 export default ChatMessage;

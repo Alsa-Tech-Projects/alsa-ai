@@ -75,14 +75,16 @@ const CircularSiriWave = ({ isSpeaking, isListening, size = 200 }: CircularSiriW
     };
   }, [isSpeaking, isListening, size]);
 
+  const cssSize = `min(${size}px, 60vw)`;
+
   return (
-    <div 
+    <div
       className={`relative flex items-center justify-center transition-all duration-1000 ease-in-out ${
         isListening || isSpeaking ? 'scale-110' : 'scale-100'
-      }`}
-      style={{ width: size, height: size }}
+      } max-w-full`}
+      style={{ width: cssSize, height: cssSize }}
     >
-      <canvas ref={canvasRef} width={size} height={size} className="rounded-full" />
+      <canvas ref={canvasRef} width={size} height={size} className="rounded-full w-full h-full" />
     </div>
   );
 };

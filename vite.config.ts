@@ -3,7 +3,6 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
@@ -18,23 +17,29 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // --- YAHAN SE CHANGES HAIN ---
   build: {
-    chunkSizeWarningLimit: 1000, // 1MB tak warning nahi dega
+    // es2015 thoda purana ho gaya hai, modern projects ke liye 'esnext' ya 'modules' better hai
+    target: 'modules', 
+    chunkSizeWarningLimit: 2000, // 1000 se badha do kyunki AI apps heavy hote hain
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          // Ye har library (node_modules) ko alag file mein baante ga
-          if (id.includes('node_modules')) {
-            return id
-              .toString()
-              .split('node_modules/')[1]
-              .split('/')[0]
-              .toString();
-          }
+        // Sabse safe tareeka: React aur Router ko ek saath rakho taaki context mismatch na ho
+        manualChunks: {
+          'vendor-core': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-ui': ['lucide-react'],
+          'vendor-lib': ['@supabase/supabase-js', '@tanstack/react-query'],
         },
       },
     },
   },
-  // --- CHANGES KHATAM ---
+  // Isko thoda aur clean rakhte hain
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      '@supabase/supabase-js',
+      'lucide-react'
+    ],
+  },
 }));

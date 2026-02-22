@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Shield, Lock, Eye, Database, Bell, UserCheck } from 'lucide-react';
-import alsaLogo from '@/assets/alsa-logo.png';
 import { Helmet } from 'react-helmet';
 
 const Privacy = () => {
@@ -126,7 +125,7 @@ const Privacy = () => {
             Back
           </Button>
           <div className="flex items-center gap-2">
-            <img src={alsaLogo} alt="ALSA AI" className="w-8 h-8 rounded-full" />
+            <img src= "https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/alsa-logo.png" alt="ALSA AI" className="w-8 h-8 rounded-full" />
             <span className="font-bold">ALSA AI</span>
           </div>
         </div>

@@ -89,6 +89,22 @@ const Admin = () => {
   const [newPromoMaxUses, setNewPromoMaxUses] = useState('');
   const [creatingPromo, setCreatingPromo] = useState(false);
 
+  // Pre-signup profiles (for debugging)
+  interface PreProfile {
+    id: string;
+    display_name: string | null;
+    email: string | null;
+    bio: string | null;
+    avatar_url: string | null;
+    found_from: string | null;
+    user_category: string | null;
+    gender: string | null;
+    created_at: string;
+  }
+  const [preOauthProfiles, setPreOauthProfiles] = useState<PreProfile[]>([]);
+  const [preEmailProfiles, setPreEmailProfiles] = useState<PreProfile[]>([]);
+  const [loadingPreProfiles, setLoadingPreProfiles] = useState(false);
+
   // Check auth and admin role
   useEffect(() => {
     const checkAuth = async () => {
@@ -270,6 +286,23 @@ const Admin = () => {
         if (promos) {
           setPromoCodes(promos);
         }
+
+        // Fetch pre-signup profiles for debugging
+        try {
+          const { data: preOauth } = await (supabase as any)
+            .from('pre_oauth_profiles')
+            .select('*')
+            .order('created_at', { ascending: false });
+          const { data: preEmail } = await (supabase as any)
+            .from('pre_email_profiles')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (preOauth) setPreOauthProfiles(preOauth);
+          if (preEmail) setPreEmailProfiles(preEmail);
+        } catch (ppErr) {
+          console.warn('Could not fetch pre-profiles', ppErr);
+        }
       }
       
       setStats(prev => ({
@@ -344,6 +377,32 @@ const Admin = () => {
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
+  };
+
+  // Pre-profile management
+  const deletePreProfile = async (table: 'pre_oauth_profiles' | 'pre_email_profiles', id: string) => {
+    try {
+      const { error } = await (supabase as any).from(table).delete().eq('id', id);
+      if (error) throw error;
+      toast({ title: 'Deleted', description: 'Record deleted successfully' });
+      fetchAllData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to delete record', variant: 'destructive' });
+    }
+  };
+
+  const clearPreProfiles = async () => {
+    if (!confirm('Delete all pre-signup profiles? This cannot be undone.')) return;
+    setLoadingPreProfiles(true);
+    try {
+      await (supabase as any).from('pre_oauth_profiles').delete();
+      await (supabase as any).from('pre_email_profiles').delete();
+      toast({ title: 'Deleted', description: 'All pre-profiles deleted' });
+      fetchAllData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to clear pre-profiles', variant: 'destructive' });
+    }
+    setLoadingPreProfiles(false);
   };
 
   const sendNotification = async () => {
@@ -507,7 +566,7 @@ const Admin = () => {
       <header className="border-b border-white/5 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={alsaLogo} alt="ALSA AI" className="w-10 h-10 rounded-xl" />
+            <img src="https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/alsa-logo.png" alt="ALSA AI" className="w-10 h-10 rounded-xl" />
             <div>
               <h1 className="font-bold text-lg flex items-center gap-2">
                 Admin Panel
@@ -571,6 +630,9 @@ const Admin = () => {
             </TabsTrigger>
             <TabsTrigger value="promocodes" className="data-[state=active]:bg-white/10">
               <Gift className="w-4 h-4 mr-2" /> Promo Codes
+            </TabsTrigger>
+            <TabsTrigger value="pre_profiles" className="data-[state=active]:bg-white/10">
+              <Trash2 className="w-4 h-4 mr-2" /> Pre-Profiles
             </TabsTrigger>
           </TabsList>
 
@@ -827,6 +889,76 @@ const Admin = () => {
                         </div>
                       </div>
                     ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Pre-Profiles Tab */}
+          <TabsContent value="pre_profiles">
+            <Card className="bg-slate-900/50 border-white/5">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-white">Pre-Signup Profiles</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="ghost" onClick={clearPreProfiles} disabled={loadingPreProfiles} className="text-red-400">
+                      <Trash2 className="w-4 h-4 mr-2" /> Clear All
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => fetchAllData()}>
+                      <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Refresh
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h3 className="text-white font-medium mb-2">Pre OAuth Profiles</h3>
+                  {preOauthProfiles.length === 0 ? (
+                    <p className="text-white/40">No pre-oauth profiles</p>
+                  ) : (
+                    <div className="space-y-2 max-h-[240px] overflow-y-auto">
+                      {preOauthProfiles.map(p => (
+                        <div key={p.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                          <div className="min-w-0">
+                            <p className="font-medium text-white">{p.display_name || p.email || 'Anonymous'}</p>
+                            <p className="text-xs text-white/40">{p.email}</p>
+                            <p className="text-xs text-white/40">{p.user_category} • {p.found_from}</p>
+                            <p className="text-xs text-white/30">{new Date(p.created_at).toLocaleString()}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" variant="ghost" onClick={() => deletePreProfile('pre_oauth_profiles', p.id)} className="text-red-400">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="text-white font-medium mb-2">Pre Email Profiles</h3>
+                  {preEmailProfiles.length === 0 ? (
+                    <p className="text-white/40">No pre-email profiles</p>
+                  ) : (
+                    <div className="space-y-2 max-h-[240px] overflow-y-auto">
+                      {preEmailProfiles.map(p => (
+                        <div key={p.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                          <div className="min-w-0">
+                            <p className="font-medium text-white">{p.display_name || p.email || 'Anonymous'}</p>
+                            <p className="text-xs text-white/40">{p.email}</p>
+                            <p className="text-xs text-white/40">{p.user_category} • {p.found_from}</p>
+                            <p className="text-xs text-white/30">{new Date(p.created_at).toLocaleString()}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" variant="ghost" onClick={() => deletePreProfile('pre_email_profiles', p.id)} className="text-red-400">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </CardContent>

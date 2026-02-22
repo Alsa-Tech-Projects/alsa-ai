@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import CircularSiriWave from '@/components/CircularSiriWave';
 
 interface RightPanelProps {
-  user: any;
+  user: Record<string, unknown>;
   bridgeConnected: boolean;
   isListening: boolean;
   isSpeaking: boolean;

@@ -38,12 +38,21 @@ All colors MUST be HSL.
     --ring: 221 83% 53%;
 
     --radius: 0.75rem;
-    
-    --gradient-radial: radial-gradient(circle, hsl(var(--primary)) 0%, hsl(var(--primary-glow) / 0.4) 40%, transparent 70%);
+
+    --gradient-radial: radial-gradient(
+      circle,
+      hsl(var(--primary)) 0%,
+      hsl(var(--primary-glow) / 0.4) 40%,
+      transparent 70%
+    );
     --glow-sm: 0 0 20px hsl(var(--primary) / 0.3);
-    --glow-md: 0 0 40px hsl(var(--primary) / 0.4), 0 0 80px hsl(var(--primary-glow) / 0.2);
-    --glow-lg: 0 0 60px hsl(var(--primary) / 0.6), 0 0 120px hsl(var(--primary-glow) / 0.4);
-    
+    --glow-md:
+      0 0 40px hsl(var(--primary) / 0.4),
+      0 0 80px hsl(var(--primary-glow) / 0.2);
+    --glow-lg:
+      0 0 60px hsl(var(--primary) / 0.6),
+      0 0 120px hsl(var(--primary-glow) / 0.4);
+
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     --sidebar-background: 0 0% 98%;
@@ -99,7 +108,8 @@ All colors MUST be HSL.
 
 @layer base {
   @keyframes pulse-glow {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 1;
       transform: scale(1);
     }
@@ -119,7 +129,8 @@ All colors MUST be HSL.
   }
 
   @keyframes bracket-pulse {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 0.4;
     }
     50% {
@@ -133,9 +144,20 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family:
+      "Inter",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
   }
 }
 
@@ -143,23 +165,23 @@ All colors MUST be HSL.
   .animate-pulse-glow {
     animation: pulse-glow 2s ease-in-out infinite;
   }
-  
+
   .animate-rotate {
     animation: rotate 8s linear infinite;
   }
-  
+
   .animate-bracket-pulse {
     animation: bracket-pulse 2s ease-in-out infinite;
   }
-  
+
   .text-glow {
     text-shadow: var(--glow-sm);
   }
-  
+
   .glow-effect {
     box-shadow: var(--glow-md);
   }
-  
+
   .animate-fade-in {
     animation: fade-in 0.5s ease-out forwards;
   }

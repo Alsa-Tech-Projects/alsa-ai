@@ -15,8 +15,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { isAdminEmail } from '@/utils/adminConfig';
 import { isTeamEmail } from '@/utils/teamAccounts';
 import alsaLogo from '@/assets/alsa-logo.png';
-import aiPcControlImage from '@/assets/ai-pc-control.jpg';
-import voiceControlImage from '@/assets/voice-ai-control.jpg';
 import { Helmet } from 'react-helmet';
 
 const BridgeSetup = () => {
@@ -158,13 +156,13 @@ const BridgeSetup = () => {
     { name: 'pip (Package Manager)', command: 'pip --version', description: 'For installing dependencies' },
   ];
 
-  const dependencies = 'flask flask-cors winapps speech_recognition PyAudio openpyxl python-pptx Pillow pyodbc';
+  const dependencies = 'flask flask-cors winapps python-pptx openpyxl pyautogui pyodbc webbrowser';
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
         <div className="animate-pulse">
-          <img src={alsaLogo} alt="ALSA AI" className="w-20 h-20 rounded-2xl" />
+          <img src="https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/alsa-logo.png" alt="ALSA AI" className="w-20 h-20 rounded-2xl" />
         </div>
       </div>
     );
@@ -208,7 +206,7 @@ const BridgeSetup = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="hover:bg-white/5">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <img src={alsaLogo} alt="ALSA AI" className="h-10 w-10 rounded-xl ring-1 ring-white/10" />
+            <img src="https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/alsa-logo.png" alt="ALSA AI" className="h-10 w-10 rounded-xl ring-1 ring-white/10" />
             <div>
               <span className="text-xl font-bold">PC Bridge Setup</span>
               <p className="text-xs text-white/40">Configure your local bridge</p>
@@ -247,7 +245,7 @@ const BridgeSetup = () => {
               controls
               preload="metadata"
             >
-              <source src="/videos/introduction-video.mp4" type="video/mp4" />
+              <source src="https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/videos/demo-video.mp4" type="video/mp4" />
               Your browser does not support the video tag.
             </video>
           </div>
@@ -262,7 +260,7 @@ const BridgeSetup = () => {
           <div className="grid md:grid-cols-2 gap-6">
             <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 backdrop-blur-xl transition-all hover:border-white/20">
               <img
-                src={aiPcControlImage}
+                src="https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/ai-pc-control.jpg"
                 alt="AI PC Control Interface"
                 className="w-full h-64 object-cover opacity-80 group-hover:opacity-100 transition-opacity"
               />
@@ -273,7 +271,7 @@ const BridgeSetup = () => {
             </div>
             <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 backdrop-blur-xl transition-all hover:border-white/20">
               <img
-                src={voiceControlImage}
+                src="https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/voice-ai-control.jpg"
                 alt="Voice AI Control"
                 className="w-full h-64 object-cover opacity-80 group-hover:opacity-100 transition-opacity"
               />
