@@ -1156,7 +1156,7 @@ const Chat = () => {
                   ALSA AI
                 </h1>
                 <p className="text-blue-500/50 font-mono text-[8px] uppercase tracking-[0.3em] mt-2">
-                  Neural Link Active
+                  From Chat To Executions Version 1.0
                 </p>
               </div>
             )}
