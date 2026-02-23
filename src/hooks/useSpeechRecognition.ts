@@ -4,90 +4,97 @@ export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
   const [transcript, setTranscript] = useState('');
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
-  const manualStopRef = useRef(true);
+  const isManualStop = useRef(true);
+  const isAISpeakingRef = useRef(isAISpeaking);
+
+  // Sync AI state with Ref to prevent closure bugs
+  useEffect(() => {
+    isAISpeakingRef.current = isAISpeaking;
+    if (isAISpeaking) {
+      // Logic: AI bolte hi mic ka gala ghot do (Abort)
+      recognitionRef.current?.abort();
+    } else if (!isManualStop.current) {
+      // AI chup hote hi 500ms baad mic on karo (Echo prevention)
+      setTimeout(() => {
+        if (!isManualStop.current) safeStart();
+      }, 500);
+    }
+  }, [isAISpeaking]);
+
+  const safeStart = () => {
+    try {
+      if (recognitionRef.current && !isAISpeakingRef.current) {
+        recognitionRef.current.start();
+      }
+    } catch (e) {
+      // Already running - ignore error
+    }
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    if (!SpeechRecognition) {
+      console.error("Browser doesn't support Speech Recognition");
+      return;
+    }
 
     const recognition = new SpeechRecognition();
+    
+    // Mobile Settings: Continuous true rakho par results interim false
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-IN';
 
-    recognition.onstart = () => {
-      console.log("Mic Started...");
-      setIsListening(true);
-    };
-
+    recognition.onstart = () => setIsListening(true);
+    
     recognition.onresult = (event: any) => {
-      if (isAISpeaking) return;
+      // Echo Protection Check
+      if (isAISpeakingRef.current) return;
 
       let current = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         current += event.results[i][0].transcript;
       }
-      setTranscript(current);
+      if (current) setTranscript(current);
     };
 
     recognition.onend = () => {
-      console.log("Mic Ended. ManualStop:", manualStopRef.current);
-      if (!manualStopRef.current && !isAISpeaking) {
-        try {
-          recognition.start();
-        } catch (e) {
-          console.error("Auto-restart failed:", e);
-        }
+      // Mobile Keep-Alive: Agar user ne stop nahi kiya, toh restart karo
+      if (!isManualStop.current && !isAISpeakingRef.current) {
+        safeStart();
       } else {
         setIsListening(false);
       }
     };
 
+    recognition.onerror = (event: any) => {
+      if (event.error === 'no-speech') return; // Ignore silent pauses
+      console.error("Speech Error:", event.error);
+      if (event.error === 'network') alert("Check Internet Connection!");
+    };
+
     recognitionRef.current = recognition;
 
     return () => {
-      if (recognitionRef.current) recognitionRef.current.abort();
+      isManualStop.current = true;
+      recognition.abort();
     };
-  }, [isAISpeaking]);
-
-  useEffect(() => {
-    if (isAISpeaking) {
-      if (recognitionRef.current) recognitionRef.current.stop();
-    } else {
-      if (!manualStopRef.current && recognitionRef.current) {
-        try {
-          recognitionRef.current.start();
-        } catch (e) {}
-      }
-    }
-  }, [isAISpeaking]);
+  }, []);
 
   const startListening = useCallback(() => {
-    if (!recognitionRef.current) return;
-    
-    manualStopRef.current = false;
+    isManualStop.current = false;
     setTranscript('');
-    
-    try {
-      recognitionRef.current.start();
-    } catch (e) {
-      console.log("Mic is already active");
-    }
+    safeStart();
   }, []);
 
   const stopListening = useCallback(() => {
-    manualStopRef.current = true;
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    }
+    isManualStop.current = true;
+    recognitionRef.current?.stop();
+    setIsListening(false);
   }, []);
 
-  const resetTranscript = useCallback(() => {
-    setTranscript('');
-  }, []);
-
-  return { transcript, isListening, startListening, stopListening, resetTranscript };
+  return { transcript, isListening, startListening, stopListening, setTranscript };
 };
+        
