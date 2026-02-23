@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import alsaLogo from '@/assets/alsa-logo.png';
 import { Helmet } from 'react-helmet';
 
 interface PricingPlan {
