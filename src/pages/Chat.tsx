@@ -438,9 +438,10 @@ const Chat = () => {
   };
 
   const handleSubmit = async (text: string = inputText) => {
-    if (!text.trim() && uploadedFiles.length === 0) return;
+    // Agar AI reply de raha hai (isTyping) ya text empty hai, to aage mat badho
+    if (isTyping || (!text.trim() && uploadedFiles.length === 0)) return;
 
-    // Check 50 message/day limit for free tier users (only if logged in)
+    // Check 50 message/day limit for free tier users
     if (user && subscription.isFree && !subscription.canSendMessage) {
       toast({
         title: 'Daily Limit Reached',
@@ -450,7 +451,8 @@ const Chat = () => {
       navigate('/pricing');
       return;
     }
-
+    // ... baaki ka code same rahega
+    
     // Increment message count for free users (only if logged in)
     if (user && subscription.isFree) {
       subscription.incrementMessageCount();
@@ -1186,39 +1188,34 @@ const Chat = () => {
               ))}
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowFileUpload(true)}
-              className="text-white/40"
-            >
-              <Paperclip className="w-4 h-4" />
-            </Button>
-            <Input
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
-              placeholder="Message ALSA..."
-              className="flex-1 bg-white/5 border-white/10 text-white text-sm"
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleVoice}
-              className={isListening ? 'text-red-400' : 'text-white/40'}
-            >
-              <Mic className="w-4 h-4" />
-            </Button>
-            <Button
-              size="icon"
-              onClick={() => handleSubmit()}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Send className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
+  <div className="flex items-center gap-2">
+    <Button
+      variant="ghost"
+      size="icon"
+      disabled={isTyping} // Disable paperclip
+      onClick={() => setShowFileUpload(true)}
+      className="text-white/40"
+    >
+      <Paperclip className="w-4 h-4" />
+    </Button>
+    <Input
+      value={inputText}
+      disabled={isTyping} // Disable typing
+      onChange={(e) => setInputText(e.target.value)}
+      onKeyPress={(e) => e.key === 'Enter' && !isTyping && handleSubmit()}
+      placeholder={isTyping ? "Typing..." : "Message ALSA..."}
+      className="flex-1 bg-white/5 border-white/10 text-white text-sm"
+    />
+    <Button
+      size="icon"
+      disabled={isTyping} // Disable Send button
+      onClick={() => handleSubmit()}
+      className={isTyping ? "bg-gray-700" : "bg-blue-600 hover:bg-blue-700"}
+    >
+      <Send className="w-4 h-4" />
+    </Button>
+  </div>
+</div>
 
         {/* Mobile Sidebar Overlay */}
         {showSidebar && (
@@ -1351,25 +1348,31 @@ const Chat = () => {
               </ScrollArea>
 
               {/* INPUT BAR (DURING CHAT) */}
-              <div className="p-6 bg-gradient-to-t from-black via-black/80 to-transparent">
-                <div className="max-w-5xl mx-auto flex items-center bg-[#1a1a1a]/80 border border-white/10 rounded-2xl px-5 py-3 backdrop-blur-xl">
-                  <Plus
-                    className="w-5 h-5 text-white/30 hover:text-white cursor-pointer"
-                    onClick={() => setShowFileUpload(true)}
-                  />
-                  <Input
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
-                    placeholder="Message ALSA..."
-                    className="bg-transparent border-none flex-1 px-4 text-sm focus-visible:ring-0"
-                  />
-                  <Send
-                    className="w-5 h-5 text-black bg-white rounded-full p-1 cursor-pointer hover:scale-110 transition"
-                    onClick={() => handleSubmit()}
-                  />
-                </div>
-              </div>
+<div className="p-6 bg-gradient-to-t from-black via-black/80 to-transparent">
+  <div className="max-w-5xl mx-auto flex items-center bg-[#1a1a1a]/80 border border-white/10 rounded-2xl px-5 py-3 backdrop-blur-xl">
+    <Plus
+      className={`w-5 h-5 text-white/30 ${isTyping ? 'opacity-50 cursor-not-allowed' : 'hover:text-white cursor-pointer'}`}
+      onClick={() => !isTyping && setShowFileUpload(true)}
+    />
+    <Input
+      value={inputText}
+      disabled={isTyping} // <-- Jab AI type kar raha ho, tab input band ho jaye
+      onChange={(e) => setInputText(e.target.value)}
+      onKeyPress={(e) => e.key === 'Enter' && !isTyping && handleSubmit()}
+      placeholder={isTyping ? "ALSA is responding..." : "Message ALSA..."}
+      className="bg-transparent border-none flex-1 px-4 text-sm focus-visible:ring-0 disabled:opacity-50"
+    />
+    <Send
+      className={`w-5 h-5 rounded-full p-1 transition ${
+        isTyping 
+          ? 'bg-gray-500 cursor-not-allowed opacity-50' 
+          : 'text-black bg-white cursor-pointer hover:scale-110'
+      }`}
+      onClick={() => !isTyping && handleSubmit()}
+    />
+  </div>
+</div>
+        
             </>
           )}
         </div>
