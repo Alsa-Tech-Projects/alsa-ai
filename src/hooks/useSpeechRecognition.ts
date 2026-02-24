@@ -1,100 +1,84 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
   const [transcript, setTranscript] = useState('');
   const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<any>(null);
-  const isManualStop = useRef(true);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const isAISpeakingRef = useRef(isAISpeaking);
 
-  // Sync AI state with Ref to prevent closure bugs
+  // Vite specific way to get env variables
+  const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
+
   useEffect(() => {
     isAISpeakingRef.current = isAISpeaking;
-    if (isAISpeaking) {
-      // Logic: AI bolte hi mic ka gala ghot do (Abort)
-      recognitionRef.current?.abort();
-    } else if (!isManualStop.current) {
-      // AI chup hote hi 500ms baad mic on karo (Echo prevention)
-      setTimeout(() => {
-        if (!isManualStop.current) safeStart();
-      }, 500);
+    if (isAISpeaking && isListening) {
+      stopListening();
     }
-  }, [isAISpeaking]);
+  }, [isAISpeaking, isListening]);
 
-  const safeStart = () => {
-    try {
-      if (recognitionRef.current && !isAISpeakingRef.current) {
-        recognitionRef.current.start();
-      }
-    } catch (e) {
-      // Already running - ignore error
-    }
-  };
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      console.error("Browser doesn't support Speech Recognition");
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    
-    // Mobile Settings: Continuous true rakho par results interim false
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'en-IN';
-
-    recognition.onstart = () => setIsListening(true);
-    
-    recognition.onresult = (event: any) => {
-      // Echo Protection Check
-      if (isAISpeakingRef.current) return;
-
-      let current = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        current += event.results[i][0].transcript;
-      }
-      if (current) setTranscript(current);
-    };
-
-    recognition.onend = () => {
-      // Mobile Keep-Alive: Agar user ne stop nahi kiya, toh restart karo
-      if (!isManualStop.current && !isAISpeakingRef.current) {
-        safeStart();
-      } else {
-        setIsListening(false);
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      if (event.error === 'no-speech') return; // Ignore silent pauses
-      console.error("Speech Error:", event.error);
-      if (event.error === 'network') alert("Check Internet Connection!");
-    };
-
-    recognitionRef.current = recognition;
-
-    return () => {
-      isManualStop.current = true;
-      recognition.abort();
-    };
-  }, []);
-
-  const startListening = useCallback(() => {
-    isManualStop.current = false;
+  const startListening = useCallback(async () => {
     setTranscript('');
-    safeStart();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        if (audioChunksRef.current.length > 0) {
+          await sendToGroq(audioBlob);
+        }
+      };
+
+      mediaRecorder.start();
+      setIsListening(true);
+    } catch (err) {
+      console.error("Mic Access Error:", err);
+    }
   }, []);
 
   const stopListening = useCallback(() => {
-    isManualStop.current = true;
-    recognitionRef.current?.stop();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+    }
     setIsListening(false);
   }, []);
 
+  const sendToGroq = async (audioBlob: Blob) => {
+    if (!API_KEY) {
+      console.error("VITE_GROQ_API_KEY is missing!");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', audioBlob, 'audio.webm');
+    formData.append('model', 'whisper-large-v3');
+
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${API_KEY}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (data.text) {
+        setTranscript(data.text);
+      }
+    } catch (error) {
+      console.error("Groq API Error:", error);
+    }
+  };
+
   return { transcript, isListening, startListening, stopListening, setTranscript };
 };
-        
+  
