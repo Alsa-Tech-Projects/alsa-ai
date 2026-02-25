@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 
-export const useDeepgramLive = () => {
+export const useSpeechRecognition = () => {
   const [transcript, setTranscript] = useState('');
   const [isListening, setIsListening] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
