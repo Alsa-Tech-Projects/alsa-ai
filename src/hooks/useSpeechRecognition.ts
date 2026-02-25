@@ -27,24 +27,20 @@ export const useSpeechRecognition = () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      // Deepgram WebSocket URL with Auto-Detection (Hinglish/Indian English)
-      // 'tier=enhanced' gives best quality
+      // CHANGE HERE: language=hi-IN hatakar detect_language=true lagaya hai
       const socket = new WebSocket(
-        'wss://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&language=hi-IN&interim_results=true',
+        'wss://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&detect_language=true&interim_results=true',
         ['token', API_KEY]
       );
 
       socket.onopen = () => {
         const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
         mediaRecorderRef.current = mediaRecorder;
-
         mediaRecorder.ondataavailable = (event) => {
           if (event.data.size > 0 && socket.readyState === 1) {
             socket.send(event.data);
           }
         };
-
-        // Har 250ms mein data bhejta rahega (Real-time feel)
         mediaRecorder.start(250);
       };
 
@@ -52,25 +48,20 @@ export const useSpeechRecognition = () => {
         const data = JSON.parse(message.data);
         const receivedTranscript = data.channel?.alternatives[0]?.transcript;
         
-        if (receivedTranscript && data.is_final) {
-          // Jab sentence pura ho jaye
-          setTranscript(prev => prev + ' ' + receivedTranscript);
-        } else if (receivedTranscript) {
-          // Interim results (jo halka dikhta hai bolte waqt)
+        if (receivedTranscript) {
+          // Ye usi lipi mein aayega jo Deepgram ne detect ki hai
           setTranscript(receivedTranscript);
         }
       };
 
-      socket.onerror = (err) => console.error("WebSocket Error:", err);
-      socket.onclose = () => console.log("Deepgram Closed");
-      
       socketRef.current = socket;
-
     } catch (err) {
       console.error("Mic Error:", err);
       setIsListening(false);
     }
   }, [API_KEY]);
 
-  return { transcript, isListening, startListening, stopListening };
+  // Export as useSpeechRecognition so Chat.tsx build doesn't fail
+  return { transcript, isListening, startListening, stopListening, setTranscript };
 };
+      
