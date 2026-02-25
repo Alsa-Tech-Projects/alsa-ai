@@ -29,7 +29,7 @@ export const checkBridgeConnection = async (): Promise<BridgeStatus> => {
 // 110+ Website URLs for opening via PC Bridge
 export const WEBSITES: Record<string, { name: string; url: string; category: string }> = {
   // Social Media
-  'youtube': { name: 'YouTube', url: 'https://www.youtube.com', category: 'Social Media' },
+ // 'youtube': { name: 'YouTube', url: 'https://www.youtube.com', category: 'Social Media' },
   'facebook': { name: 'Facebook', url: 'https://www.facebook.com', category: 'Social Media' },
   'instagram': { name: 'Instagram', url: 'https://www.instagram.com', category: 'Social Media' },
   'twitter': { name: 'Twitter/X', url: 'https://twitter.com', category: 'Social Media' },
@@ -49,7 +49,7 @@ export const WEBSITES: Record<string, { name: string; url: string; category: str
 
   // Entertainment
   'netflix': { name: 'Netflix', url: 'https://www.netflix.com', category: 'Entertainment' },
-  'spotify': { name: 'Spotify', url: 'https://open.spotify.com', category: 'Entertainment' },
+ // 'spotify': { name: 'Spotify', url: 'https://open.spotify.com', category: 'Entertainment' },
   'primevideo': { name: 'Prime Video', url: 'https://www.primevideo.com', category: 'Entertainment' },
   'amazonprime': { name: 'Amazon Prime', url: 'https://www.primevideo.com', category: 'Entertainment' },
   'hotstar': { name: 'Disney+ Hotstar', url: 'https://www.hotstar.com', category: 'Entertainment' },
@@ -71,7 +71,7 @@ export const WEBSITES: Record<string, { name: string; url: string; category: str
   'crunchyroll': { name: 'Crunchyroll', url: 'https://www.crunchyroll.com', category: 'Entertainment' },
 
   // Productivity
-  'google': { name: 'Google', url: 'https://www.google.com', category: 'Productivity' },
+//  'google': { name: 'Google', url: 'https://www.google.com', category: 'Productivity' },
   'gmail': { name: 'Gmail', url: 'https://mail.google.com', category: 'Productivity' },
   'drive': { name: 'Google Drive', url: 'https://drive.google.com', category: 'Productivity' },
   'docs': { name: 'Google Docs', url: 'https://docs.google.com', category: 'Productivity' },
