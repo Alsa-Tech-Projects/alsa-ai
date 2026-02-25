@@ -5,17 +5,19 @@ export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
   const [isListening, setIsListening] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const isAISpeakingRef = useRef(isAISpeaking);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Vite specific way to get env variables
   const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 
-  useEffect(() => {
-    isAISpeakingRef.current = isAISpeaking;
-    if (isAISpeaking && isListening) {
-      stopListening();
+  // 1. Auto-send function
+  const handleStopAndSend = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      // Mic band karo aur tracks release karo
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      setIsListening(false);
     }
-  }, [isAISpeaking, isListening]);
+  }, []);
 
   const startListening = useCallback(async () => {
     setTranscript('');
@@ -38,25 +40,18 @@ export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
 
       mediaRecorder.start();
       setIsListening(true);
-    } catch (err) {
-      console.error("Mic Access Error:", err);
-    }
-  }, []);
 
-  const stopListening = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      // --- SILENCE DETECTION (Jugaad) ---
+      // Agar user 3 second tak kuch nahi bolta ya manual stop chahiye
+      // Production mein yahan 'Web Audio API' se volume check lagta hai
+      // Par abhi ke liye tu ek manual 'Done' button ya timer rakh sakta hai
+    } catch (err) {
+      console.error("Mic Error:", err);
     }
-    setIsListening(false);
   }, []);
 
   const sendToGroq = async (audioBlob: Blob) => {
-    if (!API_KEY) {
-      console.error("VITE_GROQ_API_KEY is missing!");
-      return;
-    }
-
+    setTranscript('Processing...'); // User ko lage ki kaam ho raha hai
     const formData = new FormData();
     formData.append('file', audioBlob, 'audio.webm');
     formData.append('model', 'whisper-large-v3');
@@ -64,21 +59,21 @@ export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
     try {
       const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${API_KEY}`,
-        },
+        headers: { 'Authorization': `Bearer ${API_KEY}` },
         body: formData,
       });
 
       const data = await response.json();
       if (data.text) {
         setTranscript(data.text);
+        // YAHAN SE DIRECT CHATBOT KO MESSAGE BHEJ DO
+        // sendMessageToAI(data.text); 
       }
     } catch (error) {
-      console.error("Groq API Error:", error);
+      console.error("Groq Error:", error);
+      setTranscript('');
     }
   };
 
-  return { transcript, isListening, startListening, stopListening, setTranscript };
+  return { transcript, isListening, startListening, stopListening: handleStopAndSend, setTranscript };
 };
-  
