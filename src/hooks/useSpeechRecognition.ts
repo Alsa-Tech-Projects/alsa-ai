@@ -30,7 +30,7 @@ export const useSpeechRecognition = () => {
       // Deepgram WebSocket URL with Auto-Detection (Hinglish/Indian English)
       // 'tier=enhanced' gives best quality
       const socket = new WebSocket(
-        'wss://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&language=en-IN&interim_results=true',
+        'wss://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&language=hi-IN&interim_results=true',
         ['token', API_KEY]
       );
 
