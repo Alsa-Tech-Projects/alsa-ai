@@ -1,67 +1,93 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
-export const useSpeechRecognition = () => {
+export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
   const [transcript, setTranscript] = useState('');
   const [isListening, setIsListening] = useState(false);
-  const socketRef = useRef<WebSocket | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const manualStopRef = useRef(true);
 
-  const API_KEY = import.meta.env.VITE_DEEPGRAM_API_KEY;
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
 
-  const stopListening = useCallback(() => {
-    if (socketRef.current) {
-      socketRef.current.close();
-      socketRef.current = null;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-IN';
+
+    recognition.onstart = () => {
+      console.log("Mic Started...");
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event: any) => {
+      if (isAISpeaking) return;
+
+      let current = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        current += event.results[i][0].transcript;
+      }
+      setTranscript(current);
+    };
+
+    recognition.onend = () => {
+      console.log("Mic Ended. ManualStop:", manualStopRef.current);
+      if (!manualStopRef.current && !isAISpeaking) {
+        try {
+          recognition.start();
+        } catch (e) {
+          console.error("Auto-restart failed:", e);
+        }
+      } else {
+        setIsListening(false);
+      }
+    };
+
+    recognitionRef.current = recognition;
+
+    return () => {
+      if (recognitionRef.current) recognitionRef.current.abort();
+    };
+  }, [isAISpeaking]);
+
+  useEffect(() => {
+    if (isAISpeaking) {
+      if (recognitionRef.current) recognitionRef.current.stop();
+    } else {
+      if (!manualStopRef.current && recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+        } catch (e) {}
+      }
     }
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+  }, [isAISpeaking]);
+
+  const startListening = useCallback(() => {
+    if (!recognitionRef.current) return;
+    
+    manualStopRef.current = false;
+    setTranscript('');
+    
+    try {
+      recognitionRef.current.start();
+    } catch (e) {
+      console.log("Mic is already active");
     }
-    setIsListening(false);
   }, []);
 
-  const startListening = useCallback(async () => {
-    setTranscript('');
-    setIsListening(true);
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      // CHANGE HERE: language=hi-IN hatakar detect_language=true lagaya hai
-      const socket = new WebSocket(
-        'wss://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&detect_language=true&interim_results=true',
-        ['token', API_KEY]
-      );
-
-      socket.onopen = () => {
-        const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-        mediaRecorderRef.current = mediaRecorder;
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0 && socket.readyState === 1) {
-            socket.send(event.data);
-          }
-        };
-        mediaRecorder.start(250);
-      };
-
-      socket.onmessage = (message) => {
-        const data = JSON.parse(message.data);
-        const receivedTranscript = data.channel?.alternatives[0]?.transcript;
-        
-        if (receivedTranscript) {
-          // Ye usi lipi mein aayega jo Deepgram ne detect ki hai
-          setTranscript(receivedTranscript);
-        }
-      };
-
-      socketRef.current = socket;
-    } catch (err) {
-      console.error("Mic Error:", err);
+  const stopListening = useCallback(() => {
+    manualStopRef.current = true;
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
       setIsListening(false);
     }
-  }, [API_KEY]);
+  }, []);
 
-  // Export as useSpeechRecognition so Chat.tsx build doesn't fail
-  return { transcript, isListening, startListening, stopListening, setTranscript };
+  const resetTranscript = useCallback(() => {
+    setTranscript('');
+  }, []);
+
+  return { transcript, isListening, startListening, stopListening, resetTranscript };
 };
-      
