@@ -1,107 +1,95 @@
-// Future Mai Api Key Use Karenge
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 export type VoiceGender = 'male' | 'female' | 'auto';
 
 export interface VoiceOptions {
   gender?: VoiceGender;
-  language?: string;
 }
 
-// ONLY English Male voices
-const MALE_VOICE_NAMES = [
-  'david', 'alex', 'google us english', 'microsoft david', 'en-us male'
-];
-
-// Female voices (Hindi + English)
-const FEMALE_VOICE_NAMES = [
-  'heera', 'priya', 'swara', 'neha', 'google हिन्दी', 'microsoft heera', 
-  'samantha', 'zira', 'google us english female'
-];
-
-const containsHindi = (text: string): boolean => /[\u0900-\u097F]/.test(text);
-
-const isHinglishContent = (text: string): boolean => {
-  if (containsHindi(text)) return true;
-  const keywords = ['kya', 'hai', 'aap', 'kaise', 'theek', 'nahi', 'karo', 'hai', 'hain', 'mein', 'tum', 'yeh', 'woh'];
-  const words = text.toLowerCase().split(/\s+/);
-  return words.some(word => keywords.includes(word));
+// Deepgram Aura Models (Fast & Human-like)
+const MODELS = {
+  male: 'aura-orpheus-en', 
+  female: 'aura-stella-en',
 };
 
 export const useTextToSpeech = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
+  
+  // Audio context aur source ko track karne ke liye refs
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const speak = useCallback((text: string, options?: VoiceOptions) => {
+  const stop = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      // Memory cleanup
+      if (audioRef.current.src) {
+        URL.revokeObjectURL(audioRef.current.src);
+      }
+    }
+    setIsSpeaking(false);
+  }, []);
+
+  const speak = useCallback(async (text: string, options?: VoiceOptions) => {
     if (!text) return;
 
     try {
-      window.speechSynthesis.cancel();
-      
-      // ==========================================
-      // CLEANING LOGIC (No Emojis, No Special Chars)
-      // ==========================================
+      // 1. Pehle se chal rahi audio ko stop karein
+      stop();
+
+      // 2. Text Cleaning (Aapki logic)
       const cleanedText = text
-        .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '') // Emojis saaf karega
-        .replace(/[*_#~`>|\[\]\(\)]/g, ' ') // Markdown symbols ko space se badlega
-        .replace(/[\\/=+^]/g, ' ') // Mathematics/Special symbols hata dega
-        .replace(/\s+/g, ' ') // Extra spaces saaf karega
+        .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+        .replace(/[*_#~`>|\[\]\(\)]/g, ' ')
+        .replace(/\s+/g, ' ')
         .trim();
 
       if (!cleanedText) return;
 
-      const utterance = new SpeechSynthesisUtterance(cleanedText);
-      const isHindiOrHinglish = isHinglishContent(cleanedText);
-      const requestedGender = options?.gender || 'auto';
-      const voices = window.speechSynthesis.getVoices();
+      setIsSpeaking(true);
 
-      let selectedVoice: SpeechSynthesisVoice | null = null;
+      // 3. Deepgram API Call
+      const model = options?.gender === 'male' ? MODELS.male : MODELS.female;
+      const apiKey = import.meta.env.VITE_DEEPGRAM_API_KEY;
 
-      // Logic: Male -> Only English, Female/Auto -> Hinglish/Hindi
-      if (requestedGender === 'male') {
-        selectedVoice = voices.find(v => 
-          v.lang.startsWith('en') && 
-          MALE_VOICE_NAMES.some(name => v.name.toLowerCase().includes(name))
-        );
-      } else {
-        if (isHindiOrHinglish) {
-          selectedVoice = voices.find(v => 
-            (v.lang.startsWith('hi') || v.lang.startsWith('en-IN')) && 
-            FEMALE_VOICE_NAMES.some(name => v.name.toLowerCase().includes(name))
-          );
+      const response = await fetch(
+        `https://api.deepgram.com/v1/speak?model=${model}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Token ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text: cleanedText }),
         }
-        
-        // Fallback for English Female
-        if (!selectedVoice) {
-          selectedVoice = voices.find(v => 
-            FEMALE_VOICE_NAMES.some(name => v.name.toLowerCase().includes(name))
-          );
-        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.err_msg || 'Deepgram API Error');
       }
 
-      // Voice setting
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
-        utterance.lang = selectedVoice.lang; 
-      } else {
-        utterance.lang = isHindiOrHinglish ? 'hi-IN' : 'en-US';
-      }
+      // 4. Audio Stream ko Blob mein convert karke play karein
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      
+      const audio = new Audio(url);
+      audioRef.current = audio;
 
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
+      audio.onplay = () => setIsSpeaking(true);
+      audio.onended = () => {
+        setIsSpeaking(false);
+        URL.revokeObjectURL(url);
+      };
+      audio.onerror = () => setIsSpeaking(false);
 
-      window.speechSynthesis.speak(utterance);
+      await audio.play();
+
     } catch (error) {
-      console.error("TTS Error:", error);
+      console.error("Deepgram TTS Error:", error);
       setIsSpeaking(false);
     }
-  }, []);
-
-  const stop = useCallback(() => {
-    window.speechSynthesis.cancel();
-    setIsSpeaking(false);
-  }, []);
+  }, [stop]);
 
   return { speak, stop, isSpeaking };
 };
