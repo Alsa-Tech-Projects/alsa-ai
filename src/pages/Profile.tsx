@@ -190,7 +190,11 @@ const Profile = () => {
             <div className="grid gap-6">
               <div className="space-y-2">
                 <Label className="text-cyan-500 text-xs uppercase tracking-widest">Your email (This was not changed)</Label>
-                <Input value={user?.email || ''} disabled className="bg-cyan-950/20 border-cyan-900 text-cyan-100" />
+                <Input
+                  value={user?.email || ''}
+                  disabled
+                  className="bg-cyan-950/20 border-cyan-900 text-white placeholder-white/70"
+                />
               </div>
 
               <div className="space-y-2">
@@ -199,7 +203,7 @@ const Profile = () => {
                   placeholder="Enter Alias..." 
                   value={displayName} 
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="bg-black/50 border-cyan-500/30 focus:border-cyan-400 transition-colors"
+                  className="bg-black/50 border-cyan-500/30 focus:border-cyan-400 transition-colors text-white placeholder-white/70"
                 />
               </div>
 
@@ -209,7 +213,7 @@ const Profile = () => {
                   placeholder="System credentials, skills, or status..." 
                   value={bio} 
                   onChange={(e) => setBio(e.target.value)}
-                  className="bg-black/50 border-cyan-500/30 focus:border-cyan-400 min-h-[100px]"
+                  className="bg-black/50 border-cyan-500/30 focus:border-cyan-400 min-h-[100px] text-white placeholder-white/70"
                 />
               </div>
             </div>
