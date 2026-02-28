@@ -535,31 +535,36 @@ const History = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      <div className="container max-w-6xl mx-auto p-6">
+    <div className="relative min-h-screen bg-gradient-to-br from-background via-primary/[0.04] to-background overflow-hidden">
+      {/* Background Glows */}
+      <div className="absolute top-[-15%] left-[-15%] w-[50%] h-[50%] bg-primary/20 rounded-full blur-[140px] animate-pulse-glow" />
+      <div className="absolute bottom-[-15%] right-[-15%] w-[50%] h-[50%] bg-primary-glow/20 rounded-full blur-[140px] animate-pulse-glow" />
+      <div className="absolute top-[20%] right-[-10%] w-[30%] h-[30%] bg-cyan-500/10 rounded-full blur-[100px] animate-pulse-glow" />
+
+      <div className="container relative z-10 max-w-6xl mx-auto p-4 md:p-6 animate-fade-in">
         <Button
           variant="ghost"
           onClick={() => navigate('/')}
-          className="mb-6"
+          className="mb-4 md:mb-6 hover:bg-primary/10 text-primary transition-all duration-300 group"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
+          <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
           Back to Chat
         </Button>
 
         <div className="space-y-6">
           <div>
-            <h1 className="text-3xl font-bold">Conversation History</h1>
-            <p className="text-muted-foreground mt-2">View, organize, and search through your past conversations</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-glow">Conversation History</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-2 opacity-80">View, organize, and search through your past conversations</p>
           </div>
 
           {/* Tag Filter */}
           {allTags.length > 0 && (
-            <div className="flex flex-wrap gap-2 items-center">
-              <TagIcon className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Filter by tag:</span>
+            <div className="flex flex-wrap gap-2 items-center bg-primary/5 backdrop-blur-md p-3 rounded-xl border border-primary/20 shadow-sm">
+              <TagIcon className="w-4 h-4 text-primary/70" />
+              <span className="text-sm font-medium text-primary/70 mr-1">Filter by tag:</span>
               <Badge
                 variant={selectedTag === null ? "default" : "outline"}
-                className="cursor-pointer"
+                className={`cursor-pointer transition-all duration-300 ${selectedTag === null ? 'bg-primary text-primary-foreground hover:glow-effect' : 'border-primary/20 hover:border-primary/50 hover:bg-primary/5'}`}
                 onClick={() => setSelectedTag(null)}
               >
                 All
@@ -568,7 +573,7 @@ const History = () => {
                 <Badge
                   key={tag}
                   variant={selectedTag === tag ? "default" : "outline"}
-                  className="cursor-pointer"
+                  className={`cursor-pointer transition-all duration-300 ${selectedTag === tag ? 'bg-primary text-primary-foreground hover:glow-effect' : 'border-primary/20 hover:border-primary/50 hover:bg-primary/5'}`}
                   onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
                 >
                   {tag}
@@ -578,27 +583,42 @@ const History = () => {
           )}
 
           <Tabs defaultValue="all" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="all">All Conversations</TabsTrigger>
-              <TabsTrigger value="favorites">Favorites</TabsTrigger>
-              <TabsTrigger value="search">Search Messages</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto sm:h-12 gap-1 sm:gap-0 bg-primary/5 backdrop-blur-md border border-primary/20 p-1 rounded-xl shadow-lg">
+              <TabsTrigger
+                value="all"
+                className="py-2.5 px-2 text-xs sm:text-sm data-[state=active]:bg-primary/20 data-[state=active]:text-primary transition-all duration-300"
+              >
+                All Conversations
+              </TabsTrigger>
+              <TabsTrigger
+                value="favorites"
+                className="py-2.5 px-2 text-xs sm:text-sm data-[state=active]:bg-primary/20 data-[state=active]:text-primary transition-all duration-300"
+              >
+                Favorites
+              </TabsTrigger>
+              <TabsTrigger
+                value="search"
+                className="py-2.5 px-2 text-xs sm:text-sm data-[state=active]:bg-primary/20 data-[state=active]:text-primary transition-all duration-300"
+              >
+                Search Messages
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="all" className="space-y-4 mt-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <div className="relative group">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-primary/60 group-focus-within:text-primary transition-colors" />
                 <Input
                   placeholder="Search conversations..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-primary/5 backdrop-blur-md border-primary/20 focus:border-primary/50 transition-all duration-300"
                 />
               </div>
 
               {filteredConversations.length === 0 ? (
-                <Card>
+                <Card className="bg-card/20 backdrop-blur-md border border-primary/10">
                   <CardContent className="flex flex-col items-center justify-center py-12">
-                    <MessageSquare className="w-12 h-12 text-muted-foreground mb-4" />
+                    <MessageSquare className="w-12 h-12 text-primary/40 mb-4 animate-pulse-glow" />
                     <p className="text-muted-foreground text-center">
                       {searchQuery || selectedTag ? 'No conversations found matching your filters.' : 'No conversations yet. Start chatting to build your history!'}
                     </p>
@@ -607,30 +627,35 @@ const History = () => {
               ) : (
                 <div className="grid gap-4">
                   {filteredConversations.map((conversation) => (
-                    <Card key={conversation.id} className="hover:border-primary/50 transition-colors">
-                      <CardHeader>
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
+                    <Card key={conversation.id} className="group relative bg-card/40 backdrop-blur-md border border-primary/20 hover:border-primary/50 hover:glow-effect transition-all duration-300 overflow-hidden">
+                      {/* Hover Accent */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                      <CardHeader className="p-4 sm:p-6 relative z-10">
+                        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0 w-full">
                             <div className="flex items-center gap-2 mb-2">
-                              <CardTitle className="text-lg truncate">{conversation.title}</CardTitle>
+                              <CardTitle className="text-base sm:text-lg truncate block font-semibold group-hover:text-primary transition-colors duration-300">
+                                {conversation.title}
+                              </CardTitle>
                               {conversation.isFavorite && (
-                                <Star className="w-4 h-4 text-accent fill-accent flex-shrink-0" />
+                                <Star className="w-4 h-4 text-accent fill-accent flex-shrink-0 drop-shadow-glow" />
                               )}
                             </div>
-                            <CardDescription className="mb-2">
-                              {conversation.message_count} messages • Last updated {format(new Date(conversation.updated_at), 'PPp')}
+                            <CardDescription className="mb-2 text-xs sm:text-sm opacity-70">
+                              {conversation.message_count} messages • {format(new Date(conversation.updated_at), 'MMM d, p')}
                             </CardDescription>
                             {conversation.tags && conversation.tags.length > 0 && (
                               <div className="flex flex-wrap gap-1">
                                 {conversation.tags.map(tag => (
-                                  <Badge key={tag} variant="secondary" className="text-xs">
+                                  <Badge key={tag} variant="secondary" className="bg-primary/20 text-primary border-primary/30 text-[10px] sm:text-xs py-0 px-2 h-5 sm:h-6 font-medium">
                                     {tag}
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         removeTag(conversation.id, tag);
                                       }}
-                                      className="ml-1 hover:text-destructive"
+                                      className="ml-1 hover:text-destructive transition-colors"
                                     >
                                       <X className="w-3 h-3" />
                                     </button>
@@ -639,25 +664,25 @@ const History = () => {
                               </div>
                             )}
                           </div>
-                          <div className="flex items-center gap-1 flex-shrink-0">
+                          <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap sm:flex-nowrap justify-start sm:justify-end w-full sm:w-auto">
                             <Button
                               variant="ghost"
                               size="icon"
-                              className={`hover:bg-primary/10 ${conversation.isFavorite ? 'text-accent' : ''}`}
+                              className={`h-8 w-8 sm:h-9 sm:w-9 hover:bg-primary/20 ${conversation.isFavorite ? 'text-accent' : 'text-muted-foreground hover:text-primary'} transition-all`}
                               onClick={() => toggleFavorite(conversation.id)}
                               title={conversation.isFavorite ? "Remove from favorites" : "Add to favorites"}
                             >
-                              <Star className={`w-4 h-4 ${conversation.isFavorite ? 'fill-accent' : ''}`} />
+                              <Star className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${conversation.isFavorite ? 'fill-accent' : ''}`} />
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="hover:bg-primary/10"
+                              className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-primary hover:bg-primary/20 transition-all"
                               onClick={() => autoTagConversation(conversation.id, conversation.title)}
                               disabled={autoTaggingConversation === conversation.id}
                               title="AI auto-tag conversation"
                             >
-                              <Sparkles className={`w-4 h-4 ${autoTaggingConversation === conversation.id ? 'animate-spin' : ''}`} />
+                              <Sparkles className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${autoTaggingConversation === conversation.id ? 'animate-spin' : ''}`} />
                             </Button>
                             <Dialog open={tagDialogOpen && currentConversationId === conversation.id} onOpenChange={(open) => {
                               setTagDialogOpen(open);
@@ -667,15 +692,15 @@ const History = () => {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="hover:bg-primary/10"
+                                  className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-primary hover:bg-primary/20 transition-all"
                                   title="Add tag manually"
                                 >
-                                  <Plus className="w-4 h-4" />
+                                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 </Button>
                               </DialogTrigger>
-                              <DialogContent>
+                              <DialogContent className="sm:max-w-md bg-background/95 backdrop-blur-xl border-primary/20">
                                 <DialogHeader>
-                                  <DialogTitle>Add Tag</DialogTitle>
+                                  <DialogTitle className="text-glow">Add Tag</DialogTitle>
                                   <DialogDescription>
                                     Add a tag to organize this conversation
                                   </DialogDescription>
@@ -686,57 +711,58 @@ const History = () => {
                                     value={newTag}
                                     onChange={(e) => setNewTag(e.target.value)}
                                     onKeyPress={(e) => e.key === 'Enter' && addTag()}
+                                    className="bg-background/50 border-primary/20 focus:border-primary/50"
                                   />
-                                  <Button onClick={addTag}>Add</Button>
+                                  <Button onClick={addTag} className="bg-primary hover:glow-effect text-primary-foreground">Add</Button>
                                 </div>
                               </DialogContent>
                             </Dialog>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="hover:bg-primary/10"
+                              className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-primary hover:bg-primary/20 transition-all"
                               onClick={() => resumeConversation(conversation.id)}
                               title="Resume conversation"
                             >
-                              <Play className="w-4 h-4" />
+                              <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="hover:bg-primary/10"
+                              className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-primary hover:bg-primary/20 transition-all"
                               onClick={() => exportToPDF(conversation.id, conversation.title)}
                               title="Export as PDF"
                             >
-                              <Download className="w-4 h-4" />
+                              <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="hover:bg-primary/10"
+                              className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-primary hover:bg-primary/20 transition-all"
                               onClick={() => exportToJSON(conversation.id, conversation.title)}
                               title="Export as JSON"
                             >
-                              <FileJson className="w-4 h-4" />
+                              <FileJson className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="hover:bg-destructive/10 hover:text-destructive"
+                                  className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 </Button>
                               </AlertDialogTrigger>
-                              <AlertDialogContent>
+                              <AlertDialogContent className="sm:max-w-md bg-background/95 backdrop-blur-xl border-destructive/20">
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Delete Conversation</AlertDialogTitle>
                                   <AlertDialogDescription>
                                     Are you sure you want to delete this conversation? This action cannot be undone.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                                  <AlertDialogCancel className="mt-0 bg-background/50 border-border">Cancel</AlertDialogCancel>
                                   <AlertDialogAction
                                     onClick={() => deleteConversation(conversation.id)}
                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -757,9 +783,9 @@ const History = () => {
 
             <TabsContent value="favorites" className="space-y-4 mt-4">
               {favoriteConversations.length === 0 ? (
-                <Card>
+                <Card className="bg-card/20 backdrop-blur-md border border-primary/10">
                   <CardContent className="flex flex-col items-center justify-center py-12">
-                    <Star className="w-12 h-12 text-muted-foreground mb-4" />
+                    <Star className="w-12 h-12 text-primary/40 mb-4 animate-pulse-glow" />
                     <p className="text-muted-foreground text-center">
                       No favorite conversations yet. Star important conversations to see them here!
                     </p>
@@ -768,36 +794,41 @@ const History = () => {
               ) : (
                 <div className="grid gap-4">
                   {favoriteConversations.map((conversation) => (
-                    <Card key={conversation.id} className="hover:border-primary/50 transition-colors border-accent/30">
-                      <CardHeader>
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
+                    <Card key={conversation.id} className="group relative bg-card/40 backdrop-blur-md border border-primary/20 hover:border-primary/50 hover:glow-effect transition-all duration-300 overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                      <CardHeader className="p-4 sm:p-6 relative z-10">
+                        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0 w-full">
                             <div className="flex items-center gap-2 mb-2">
-                              <CardTitle className="text-lg truncate">{conversation.title}</CardTitle>
-                              <Star className="w-4 h-4 text-accent fill-accent flex-shrink-0" />
+                              <CardTitle className="text-base sm:text-lg truncate block font-semibold group-hover:text-primary transition-colors duration-300">
+                                {conversation.title}
+                              </CardTitle>
+                              <Star className="w-4 h-4 text-accent fill-accent flex-shrink-0 drop-shadow-glow" />
                             </div>
-                            <CardDescription className="mb-2">
-                              {conversation.message_count} messages • Last updated {format(new Date(conversation.updated_at), 'PPp')}
+                            <CardDescription className="mb-2 text-xs sm:text-sm opacity-70">
+                              {conversation.message_count} messages • {format(new Date(conversation.updated_at), 'MMM d, p')}
                             </CardDescription>
                             {conversation.tags && conversation.tags.length > 0 && (
                               <div className="flex flex-wrap gap-1">
                                 {conversation.tags.map(tag => (
-                                  <Badge key={tag} variant="secondary" className="text-xs">
+                                  <Badge key={tag} variant="secondary" className="bg-primary/20 text-primary border-primary/30 text-[10px] sm:text-xs py-0 px-2 h-5 sm:h-6 font-medium">
                                     {tag}
                                   </Badge>
                                 ))}
                               </div>
                             )}
                           </div>
-                          <div className="flex items-center gap-1 flex-shrink-0">
+                          <div className="flex items-center gap-1 flex-shrink-0 justify-start sm:justify-end w-full sm:w-auto">
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="hover:bg-primary/10"
+                              className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-primary hover:bg-primary/20 transition-all font-semibold"
                               onClick={() => resumeConversation(conversation.id)}
                               title="Resume conversation"
                             >
-                              <Play className="w-4 h-4" />
+                              <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
+                              Open
                             </Button>
                           </div>
                         </div>
@@ -809,20 +840,20 @@ const History = () => {
             </TabsContent>
 
             <TabsContent value="search" className="space-y-4 mt-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <div className="relative group">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-primary/60 group-focus-within:text-primary transition-colors" />
                 <Input
                   placeholder="Search within messages..."
                   value={messageSearchQuery}
                   onChange={(e) => setMessageSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-background/20 backdrop-blur-md border-primary/20 focus:border-primary/50 transition-all duration-300"
                 />
               </div>
 
               {searchResults.length === 0 ? (
-                <Card>
+                <Card className="bg-card/20 backdrop-blur-md border border-primary/10">
                   <CardContent className="flex flex-col items-center justify-center py-12">
-                    <Search className="w-12 h-12 text-muted-foreground mb-4" />
+                    <Search className="w-12 h-12 text-primary/40 mb-4 animate-pulse-glow" />
                     <p className="text-muted-foreground text-center">
                       {messageSearchQuery ? 'No messages found matching your search.' : 'Enter a search term to find messages'}
                     </p>
@@ -831,24 +862,27 @@ const History = () => {
               ) : (
                 <div className="grid gap-4">
                   {searchResults.map((result) => (
-                    <Card key={result.id} className="hover:border-primary/50 transition-colors">
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <CardTitle className="text-sm text-muted-foreground">{result.conversations.title}</CardTitle>
-                            <CardDescription className="mt-2 text-foreground">
-                              <span className="font-semibold">{result.role === 'user' ? 'You' : 'ALSA'}:</span> {result.content.slice(0, 200)}{result.content.length > 200 ? '...' : ''}
+                    <Card key={result.id} className="group relative bg-card/40 backdrop-blur-md border border-primary/20 hover:border-primary/50 hover:glow-effect transition-all duration-300 overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                      <CardHeader className="p-4 sm:p-6 relative z-10">
+                        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="text-xs sm:text-sm text-primary/60 truncate font-medium group-hover:text-primary transition-colors">{result.conversations.title}</CardTitle>
+                            <CardDescription className="mt-2 text-foreground text-sm sm:text-base line-clamp-3 sm:line-clamp-2">
+                              <span className="font-semibold text-primary/80">{result.role === 'user' ? 'You' : 'ALSA'}:</span> {result.content}
                             </CardDescription>
-                            <p className="text-xs text-muted-foreground mt-2">
+                            <p className="text-[10px] sm:text-xs text-muted-foreground mt-2 opacity-70">
                               {format(new Date(result.created_at), 'PPp')}
                             </p>
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
+                            className="h-8 sm:h-9 text-xs sm:text-sm self-end sm:self-start hover:bg-primary/20 text-primary transition-all font-semibold"
                             onClick={() => resumeConversation(result.conversation_id)}
                           >
-                            <Play className="w-4 h-4 mr-2" />
+                            <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
                             Open
                           </Button>
                         </div>
