@@ -340,9 +340,27 @@ const Chat = () => {
     return () => clearInterval(interval);
   }, [systemData]);
 
-  // Voice command processing
+  // ==========================================================
+  // VOICE COMMAND PROCESSING (FIXED FOR ECHO/LOOP)
+  // ==========================================================
+  
+  // 1. Cleanup Effect: Jab AI bolna band kare, mic ka purana kachra saaf karo
   useEffect(() => {
-    if (!isListening) return;
+    if (!isSpeaking && isListening) {
+      // AI ke chup hote hi 300ms baad transcript saaf kar do
+      const timer = setTimeout(() => {
+        resetTranscript();
+        lastProcessedRef.current = ''; 
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isSpeaking, isListening, resetTranscript]);
+
+  // 2. Main Voice Logic: Control listening based on speaking state
+  useEffect(() => {
+    // GUARD: Agar mic off hai YA AI khud bol raha hai, to process mat karo
+    if (!isListening || isSpeaking) return;
+
     const currentText = transcript.trim();
     if (!currentText) return;
 
@@ -367,6 +385,9 @@ const Chat = () => {
     // Process full commands after 3 seconds of silence
     if (currentText.length > 5) {
       listeningTimeoutRef.current = setTimeout(() => {
+        // Double check again if speaking started during timeout
+        if (isSpeaking) return; 
+
         if (currentText === lastProcessedRef.current) return;
         lastProcessedRef.current = currentText;
 
@@ -379,16 +400,18 @@ const Chat = () => {
         }, 2000);
       }, 3000);
     }
-  }, [transcript, isListening, stopListening]);
+  }, [transcript, isListening, isSpeaking, stopListening, resetTranscript]);
 
-  const scrollToBottom = () => {
+  // Scroll to bottom logic
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
+  
   const saveConversation = async (userMsg: Message, assistantMsg: Message) => {
     if (!user) return; // Only save for logged-in users
 
