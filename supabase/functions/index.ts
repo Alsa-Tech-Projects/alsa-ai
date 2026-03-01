@@ -746,11 +746,11 @@ PERSONALITY MODE: ${ai_response_style || 'balanced'}
           } // While loop end
 
           // === TOOL EXECUTION START ===
-          if (toolCalls.length > 0) {
-            // Agar Gemini ne response mein text nahi bheja, toh ek chota status bhej do
-            if (!hasSentText) {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: "Thoda intezaar karein, main action le raha hoon... ⚙️\n" })}\n\n`));
-            }
+          // if (toolCalls.length > 0) {
+          //   // Agar Gemini ne response mein text nahi bheja, toh ek chota status bhej do
+          //   if (!hasSentText) {
+          //     controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: "Thoda intezaar karein, main action le raha hoon... ⚙️\n" })}\n\n`));
+          //   }
 
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'tool_start' })}\n\n`));
 
@@ -758,10 +758,13 @@ PERSONALITY MODE: ${ai_response_style || 'balanced'}
               const args = call.args;
 
               // 1. Wikipedia Search (Backend handle karta hai)
+              // if (call.name === 'search_wikipedia') {
+              //   const res = await searchWikipedia(args.query);
+              //   controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n\n📖 Wikipedia Result:\n${res}` })}\n\n`));
+              // }
               if (call.name === 'search_wikipedia') {
-                const res = await searchWikipedia(args.query);
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n\n📖 Wikipedia Result:\n${res}` })}\n\n`));
-              }
+  await searchWikipedia(args.query);
+}
 
               // 2. Weather (Backend handle karta hai)
               else if (call.name === 'get_weather') {
