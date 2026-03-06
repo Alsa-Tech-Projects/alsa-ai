@@ -29,24 +29,36 @@ const ChatMessage = memo(({ role, content }: { role: 'user' | 'assistant'; conte
 
   return (
     <div className={`flex gap-4 p-6 w-full ${role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2`}>
-      <div className={`flex gap-4 max-w-[85%] ${role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-        
+      {/* <div className={`flex gap-4 max-w-[85%] ${role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}> */}
+        {/* <div className={`flex flex-col sm:flex-row gap-3 max-w-[85%] ${
+  role === 'user' ? 'sm:flex-row-reverse items-end' : 'items-start'
+}`}> */}
+<div className="flex flex-col gap-2 max-w-[85%]">
+
         {/* Avatar Section */}
-        <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border ${
+        {/* <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border */}
+        <div className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center border self-start
+         ${
           role === 'assistant' ? 'bg-blue-600/10 border-blue-500/30' : 'bg-blue-600 border-transparent'
         }`}>
           {role === 'assistant' ? <Bot className="w-6 h-6 text-blue-400" /> : <User className="w-6 h-6 text-white" />}
         </div>
 
         {/* Message Bubble */}
-        <div className={`flex flex-col gap-2 ${role === 'user' ? 'items-end' : 'items-start'}`}>
-          <div className={`
+        {/* <div className={`flex flex-col gap-2 ${role === 'user' ? 'items-end' : 'items-start'}`}> */}
+        {/* <div className={`flex flex-col gap-2 w-full ${role === 'user' ? 'items-end' : 'items-start'}`}> */}
+        <div className="flex flex-col gap-2 w-full items-start lg:items-start">
+          {/* <div className={`
             p-5 rounded-[2rem] shadow-xl backdrop-blur-md border
             ${role === 'assistant' 
               ? 'bg-[#1a1a1a]/90 border-white/10 rounded-tl-none' 
               : 'bg-blue-600/20 border-blue-500/30 rounded-tr-none'}
           `}>
-            
+             */}
+          <div className={`
+  p-2 rounded-[2rem] shadow-xl backdrop-blur-md
+  bg-transparent border-none
+`}>
             {isEmpty && role === 'assistant' ? (
               <div className="flex items-center gap-3 py-1">
                 <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
