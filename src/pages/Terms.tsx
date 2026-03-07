@@ -42,13 +42,13 @@ const Terms = () => {
       content: [
         { heading: 'Subscription Plans', items: [
           'Free Trial: 3 days of limited features',
-          'Alsa Pro: ₹699/month - Full-stack coding and OS control',
-          'Alsa Elite: ₹1,200/month - All features including ADB control'
+          'Alsa Pro: ₹799month - Full-stack coding and OS control',
+          'Alsa Elite: ₹1,299/month - All features including ADB control'
         ]},
         { heading: 'Payment Terms', items: [
           'Payments are processed securely via Razorpay',
           'Subscriptions auto-renew unless cancelled',
-          'Refunds are provided within 7 days for valid reasons',
+          'No Refunds',
           'Prices may change with 30 days notice'
         ]},
         { heading: 'Trial Period', items: [
