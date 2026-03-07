@@ -435,6 +435,19 @@ const Pricing = () => {
             </Card>
           ))}
         </div>
+        {/* Pricing Cards Grid ke niche ise add karein */}
+<div className="mt-8 text-center">
+  <p className="text-white/40 text-sm">
+    Before buying our subscription, kindly check our{' '}
+    <button 
+      onClick={() => navigate('/terms')}
+      className="text-purple-400 hover:text-purple-300 underline underline-offset-4 transition-colors"
+    >
+      Terms and Conditions
+    </button>
+  </p>
+</div>
+        
 
         {/* Free Tier Info */}
         <div className="mt-16 text-center">
