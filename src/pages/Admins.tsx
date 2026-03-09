@@ -1,43 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { 
-  Shield, Users, MessageSquare, Bell, Mail, 
-  Lock, CheckCircle, Send, Eye, EyeOff, ArrowLeft,
-  Crown, Zap, Sparkles, Search, RefreshCw, AlertTriangle,
-  Gift, Trash2, Plus
-} from 'lucide-react';
-import alsaLogo from '@/assets/alsa-logo.png';
-
-interface PromoCode {
-  id: string;
-  code: string;
-  discount_percent: number;
-  is_active: boolean;
-  max_uses: number | null;
-  current_uses: number;
-  valid_until: string | null;
-}
-
-interface User {
-  user_id: string;
-  email: string | null;
-  display_name: string | null;
-  subscription_tier: string | null;
-  subscription_expires_at: string | null;
-  created_at: string;
-}
 
 interface ContactMessage {
-  id: string;
-  name: string;
+  id: ststring  nanamestring;
   email: string;
   subject: string | null;
   message: string;
