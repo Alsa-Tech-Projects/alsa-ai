@@ -750,7 +750,7 @@ const Admin = () => {
                     onClick={() => setNotificationTarget('all')}
                     className={notificationTarget === 'all' ? 'bg-blue-600' : 'border-white/10 text-white'}
                   >
-                    <Users className="w-4 h-4 mr-2" /> All Users
+                    <Users className="w-4 h-4 mr-2 bg-blue-500 text-black" /> All Users
                   </Button>
                   <Button
                     variant={notificationTarget === 'single' ? 'default' : 'outline'}
