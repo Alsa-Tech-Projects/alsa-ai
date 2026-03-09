@@ -615,28 +615,43 @@ const Admin = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="bg-slate-800/50 border border-white/10">
-            <TabsTrigger value="users" className="data-[state=active]:bg-white/10">
-              <Users className="w-4 h-4 mr-2" /> Users
-            </TabsTrigger>
-            <TabsTrigger value="messages" className="data-[state=active]:bg-white/10">
-              <Mail className="w-4 h-4 mr-2" /> Contact Messages
-              {stats.unreadContacts > 0 && (
-                <Badge className="ml-2 bg-red-500 text-white text-xs">{stats.unreadContacts}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="data-[state=active]:bg-white/10">
-              <Bell className="w-4 h-4 mr-2" /> Send Notifications
-            </TabsTrigger>
-            <TabsTrigger value="promocodes" className="data-[state=active]:bg-white/10">
-              <Gift className="w-4 h-4 mr-2" /> Promo Codes
-            </TabsTrigger>
-            <TabsTrigger value="pre_profiles" className="data-[state=active]:bg-white/10">
-              <Trash2 className="w-4 h-4 mr-2" /> Pre-Profiles
-            </TabsTrigger>
-          </TabsList>
+          <TabsList className="bg-slate-900/80 border border-white/10 p-1 w-full flex overflow-x-auto justify-start h-auto">
+  <TabsTrigger 
+    value="users" 
+    className="text-white/60 data-[state=active]:text-white data-[state=active]:bg-white/10 transition-all whitespace-nowrap"
+  >
+    <Users className="w-4 h-4 mr-2" /> Users
+  </TabsTrigger>
+  
+  <TabsTrigger 
+    value="messages" 
+    className="text-white/60 data-[state=active]:text-white data-[state=active]:bg-white/10 transition-all whitespace-nowrap"
+  >
+    <Mail className="w-4 h-4 mr-2" /> Contact Messages
+  </TabsTrigger>
 
-          {/* Users Tab */}
+  <TabsTrigger 
+    value="notifications" 
+    className="text-white/60 data-[state=active]:text-white data-[state=active]:bg-white/10 transition-all whitespace-nowrap"
+  >
+    <Bell className="w-4 h-4 mr-2" /> Notifications
+  </TabsTrigger>
+
+  <TabsTrigger 
+    value="promocodes" 
+    className="text-white/60 data-[state=active]:text-white data-[state=active]:bg-white/10 transition-all whitespace-nowrap"
+  >
+    <Gift className="w-4 h-4 mr-2" /> Promo Codes
+  </TabsTrigger>
+
+  <TabsTrigger 
+    value="pre_profiles" 
+    className="text-white/60 data-[state=active]:text-white data-[state=active]:bg-white/10 transition-all whitespace-nowrap"
+  >
+    <Trash2 className="w-4 h-4 mr-2" /> Pre-Profiles
+  </TabsTrigger>
+</TabsList>
+st          {/* Users Tab */}
           <TabsContent value="users">
             <Card className="bg-slate-900/50 border-white/5">
               <CardHeader>
