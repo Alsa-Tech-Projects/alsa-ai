@@ -738,8 +738,8 @@ const Admin = () => {
           </TabsContent>
 
           {/* Notifications Tab */}
-          <TabsContent value="notifications">
-            <Card className="bg-slate-900/50 border-white/5">
+          <TabsContent value="users" className="bg-transparent border-none p-0 outline-none">
+             <Card className="bg-slate-900/50 border-white/5 text-white">
               <CardHeader>
                 <CardTitle className="text-white">Send Notifications</CardTitle>
               </CardHeader>
