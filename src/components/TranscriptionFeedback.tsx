@@ -34,18 +34,18 @@ const TranscriptionFeedback = ({ transcript, isListening }: TranscriptionFeedbac
           </div>
           <div className="flex-1 min-h-[24px]">
             {transcript ? (
-              <p className="text-foreground font-medium">
+              <p className="text-white font-medium">
                 {transcript}
                 <span className="text-primary animate-pulse">|</span>
               </p>
             ) : (
-              <p className="text-muted-foreground italic">
+              <p className="text-white italic">
                 Listening{dots}
               </p>
             )}
           </div>
         </div>
-        <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+        <p className="text-xs text-white mt-2 flex items-center gap-1">
           <kbd className="px-1.5 py-0.5 bg-secondary rounded text-[10px] font-mono">Alt</kbd>
           <span>+</span>
           <kbd className="px-1.5 py-0.5 bg-secondary rounded text-[10px] font-mono">V</kbd>

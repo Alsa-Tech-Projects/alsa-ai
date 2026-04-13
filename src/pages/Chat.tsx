@@ -1214,7 +1214,7 @@ const Chat = () => {
         }
       }}
       placeholder={isTyping ? "Typing..." : "Message ALSA..."}
-      className="flex-1 bg-white/5 border-white/10 text-white text-[11px] resize-none overflow-y-auto max-h-[150px] min-h-[40px]"
+      className="flex-1 bg-white/10 border-white/10 text-white text-sm resize-none overflow-y-auto max-h-[150px] min-h-[40px]"
       rows={1}
     />
     <Button
@@ -1390,7 +1390,7 @@ const Chat = () => {
         }
       }}
       placeholder={isTyping ? "ALSA is responding..." : "Message ALSA..."}
-      className="bg-transparent border-none flex-1 px-4 text-[11px] focus-visible:ring-0 disabled:opacity-50 resize-none overflow-y-auto max-h-[150px] min-h-[40px]"
+      className="bg-transparent border-none flex-1 px-4 text-sm focus-visible:ring-0 disabled:opacity-50 resize-none overflow-y-auto max-h-[150px] min-h-[40px]"
       rows={1}
     />
     <Send
