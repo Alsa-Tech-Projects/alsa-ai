@@ -2,12 +2,13 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Mic, Send, Settings, Plus, ImageIcon, Paperclip, Menu, X, Video, Camera, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
-import { checkBridgeConnection, executeSystemCommand, scanSystem, SystemScanResult, captureScreenshot, startScreenRecording, stopScreenRecording, parseNaturalLanguage, WEBSITES, createProject, createPowerPoint, createExcel, createDatabase, executePythonFile, executeCmdCommand, runCommand, checkInstallation, sendCommand, adbConnect, adbCommand, closeWindow, openFolder, runProject, createFolder, createTextFile, openWebsiteWithSearch, openCustomApp, sendTelegramMsg, sendWhatsAppMsg } from '@/utils/pcBridge';
+import { checkBridgeConnection, executeSystemCommand, scanSystem, SystemScanResult, startScreenRecording, stopScreenRecording, parseNaturalLanguage, WEBSITES, createProject, createPowerPoint, createExcel, createDatabase, executePythonFile, executeCmdCommand, runCommand, checkInstallation, sendCommand, adbConnect, adbCommand, closeWindow, openFolder, runProject, createFolder, createTextFile, openWebsiteWithSearch, openCustomApp, sendTelegramMsg, sendWhatsAppMsg } from '@/utils/pcBridge';
 import ChatMessage from '@/components/ChatMessage';
 import MemoryManager from '@/components/MemoryManager';
 import TranscriptionFeedback from '@/components/TranscriptionFeedback';
@@ -164,9 +165,9 @@ ${bullets.join('\n\n')}
     }
   }, [ttsSpeak]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const listeningTimeoutRef = useRef<NodeJS.Timeout>();
+  const listeningTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const lastProcessedRef = useRef<string>('');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Toggle PC Bridge connection
   const toggleBridgeConnection = useCallback(async () => {
@@ -1305,17 +1306,27 @@ lastMsg.content = finalText;
     >
       <Paperclip className="w-4 h-4" />
     </Button>
-    <Input
+    <Textarea
       value={inputText}
-      disabled={isTyping} // Disable typing
-      onChange={(e) => setInputText(e.target.value)}
-      onKeyPress={(e) => e.key === 'Enter' && !isTyping && handleSubmit()}
+      disabled={isTyping}
+      onChange={(e) => {
+        setInputText(e.target.value);
+        e.target.style.height = 'auto';
+        e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+      }}
+      onKeyPress={(e) => {
+        if (e.key === 'Enter' && !e.shiftKey && !isTyping) {
+          e.preventDefault();
+          handleSubmit();
+        }
+      }}
       placeholder={isTyping ? "Typing..." : "Message ALSA..."}
-      className="flex-1 bg-white/5 border-white/10 text-white text-sm"
+      className="flex-1 bg-white/5 border-white/10 text-white text-[11px] resize-none overflow-y-auto max-h-[150px] min-h-[40px]"
+      rows={1}
     />
     <Button
       size="icon"
-      disabled={isTyping} // Disable Send button
+      disabled={isTyping}
       onClick={() => handleSubmit()}
       className={isTyping ? "bg-gray-700" : "bg-blue-600 hover:bg-blue-700"}
     >
@@ -1419,13 +1430,23 @@ lastMsg.content = finalText;
 
               <div className="mt-14 w-full max-w-2xl">
                 <div className="flex items-center bg-black/50 border border-white/10 rounded-2xl px-6 py-4 backdrop-blur-xl">
-                  <Input
+                  <Textarea
                     ref={inputRef}
                     value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+                    onChange={(e) => {
+                      setInputText(e.target.value);
+                      e.target.style.height = 'auto';
+                      e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                    }}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSubmit();
+                      }
+                    }}
                     placeholder="Enter Command..."
-                    className="bg-transparent border-none text-white text-xl flex-1 focus-visible:ring-0"
+                    className="bg-transparent border-none text-white text-sm flex-1 focus-visible:ring-0 resize-none overflow-y-auto max-h-[150px] min-h-[40px]"
+                    rows={1}
                   />
                   <Send
                     className="w-6 h-6 cursor-pointer hover:text-blue-400 transition-colors"
@@ -1456,21 +1477,31 @@ lastMsg.content = finalText;
 
               {/* INPUT BAR (DURING CHAT) */}
 <div className="p-6 bg-gradient-to-t from-black via-black/80 to-transparent">
-  <div className="max-w-5xl mx-auto flex items-center bg-[#1a1a1a]/80 border border-white/10 rounded-2xl px-5 py-3 backdrop-blur-xl">
+  <div className="max-w-5xl mx-auto flex items-center gap-3 bg-[#1a1a1a]/80 border border-white/10 rounded-2xl px-5 py-3 backdrop-blur-xl">
     <Plus
-      className={`w-5 h-5 text-white/30 ${isTyping ? 'opacity-50 cursor-not-allowed' : 'hover:text-white cursor-pointer'}`}
+      className={`w-5 h-5 text-white/30 flex-shrink-0 ${isTyping ? 'opacity-50 cursor-not-allowed' : 'hover:text-white cursor-pointer'}`}
       onClick={() => !isTyping && setShowFileUpload(true)}
     />
-    <Input
+    <Textarea
       value={inputText}
-      disabled={isTyping} // <-- Jab AI type kar raha ho, tab input band ho jaye
-      onChange={(e) => setInputText(e.target.value)}
-      onKeyPress={(e) => e.key === 'Enter' && !isTyping && handleSubmit()}
+      disabled={isTyping}
+      onChange={(e) => {
+        setInputText(e.target.value);
+        e.target.style.height = 'auto';
+        e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+      }}
+      onKeyPress={(e) => {
+        if (e.key === 'Enter' && !e.shiftKey && !isTyping) {
+          e.preventDefault();
+          handleSubmit();
+        }
+      }}
       placeholder={isTyping ? "ALSA is responding..." : "Message ALSA..."}
-      className="bg-transparent border-none flex-1 px-4 text-sm focus-visible:ring-0 disabled:opacity-50"
+      className="bg-transparent border-none flex-1 px-4 text-[11px] focus-visible:ring-0 disabled:opacity-50 resize-none overflow-y-auto max-h-[150px] min-h-[40px]"
+      rows={1}
     />
     <Send
-      className={`w-5 h-5 rounded-full p-1 transition ${
+      className={`w-5 h-5 rounded-full p-1 transition flex-shrink-0 ${
         isTyping 
           ? 'bg-gray-500 cursor-not-allowed opacity-50' 
           : 'text-black bg-white cursor-pointer hover:scale-110'
