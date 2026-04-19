@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ConversationSidebar } from "@/components/chat/ConversationSidebar";
-import { ChatComposer } from "@/components/chat/ChatComposer";
-import { MessageBubble, ChatMessage } from "@/components/chat/MessageBubble";
+import { ConversationSidebar } from "@/components/ConversationSidebar";
+import { ChatComposer } from "@/components/ChatComposer";
+import { MessageBubble, ChatMessage } from "@/components/MessageBubble";
 import { Button } from "@/components/ui/button";
 import { Menu, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -17,7 +17,7 @@ const SUGGESTIONS = [
 
 const FUNCTION_NAME = "mobile-chat";
 
-export default function Chat() {
+export default function Chats() {
   const { user } = useAuth();
   const [activeConvo, setActiveConvo] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
