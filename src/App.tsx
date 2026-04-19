@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 // Lazy load all pages for better performance
 const Landing = lazy(() => import("./pages/Landing"));
 const Chat = lazy(() => import("./pages/Chat"));
+const Chats = lazy(() => import("./pages/Chats"));
 const Settings = lazy(() => import("./pages/Settings"));
 const History = lazy(() => import("./pages/History"));
 const Ratings = lazy(() => import("./pages/Ratings"));
@@ -55,6 +56,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/Chat" element={<Chat />} />
+            <Route path="/Chats" element={<Chats />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/ratings" element={<Ratings />} />
             <Route path="/bridge-setup" element={<BridgeSetup />} />
