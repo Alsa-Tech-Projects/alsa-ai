@@ -123,7 +123,7 @@ const AvatarChat = () => {
     resetTranscript();
 
     try {
-      const { data, error } = await supabase.functions.invoke('avatar-chat', {
+      const { data, error } = await supabase.functions.invoke('avtar-chat', {
         body: { message: text, history: newHistory.slice(0, -1) },
       });
       if (error) throw error;
