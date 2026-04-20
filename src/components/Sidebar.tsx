@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Wifi, WifiOff, MessageSquare, BarChart3, Lightbulb, 
   Database, User as UserIcon, ChevronDown, ChevronRight, 
-  Edit, Share2, Trash2, Settings, MoreVertical, Crown, Sparkles, Zap 
+  Edit, Share2, Trash2, Settings, MoreVertical, Crown, Sparkles, Zap, UserCircle2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -214,6 +214,8 @@ const Sidebar = ({ bridgeConnected, onNewChat, onOpenMemory, onToggleBridge, cur
                 
                 {[
                     { icon: BarChart3, label: 'Analytics', path: '/analytics' },
+                    { icon: UserCircle2, label: 'Avatar Chat', path: '/avatar-chat' },
+                    { icon: Sparkles, label: 'Image Chat', path: '/image-chat' },
                     { icon: Lightbulb, label: 'Creative Hub', path: '/history' },
                     { icon: Database, label: 'Neural Memory', action: onOpenMemory },
                 ].map((item, idx) => (
