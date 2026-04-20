@@ -1233,7 +1233,9 @@ lastMsg.content = finalText;
   // Mobile UI
   if (isMobile) {
     return (
-      <div className="flex flex-col h-screen w-screen bg-[#0d0d0d] text-white overflow-hidden">
+      // <div className="flex flex-col h-screen w-screen bg-[#0d0d0d] text-white overflow-hidden">
+      <div className="flex flex-col h-screen w-screen bg-[#0d0d0d] text-white overflow-hidden max-w-full">
+
         {/* Scheduled Message Checker - Background Component */}
         <ScheduledMessageChecker userId={user?.id || null} />
         {/* Mobile Top Bar */}
@@ -1258,8 +1260,11 @@ lastMsg.content = finalText;
         </div>
 
         {/* Chat Area */}
-        <ScrollArea className="flex-1">
-          <div className="p-4 space-y-4">
+        {/* <ScrollArea className="flex-1"> */}
+          {/* <div className="p-4 space-y-4"> */}
+
+          <ScrollArea className="flex-1 overflow-x-hidden">
+  <div className="p-4 space-y-4 overflow-x-hidden max-w-full">
             {!hasMessages && (
               <div className="flex flex-col items-center justify-center h-[60vh]">
                 <h1 className="text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20">
