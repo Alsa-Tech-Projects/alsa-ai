@@ -23,6 +23,8 @@ const BridgeSetup = lazy(() => import("./pages/BridgeSetup"));
 const SharedConversation = lazy(() => import("./pages/SharedConversation"));
 const Admin = lazy(() => import("./pages/Admin"));
 const FAQ = lazy(() => import("./pages/FAQ"));
+const ImageChat = lazy(() => import("./pages/ImageChat"));
+const AvatarChat = lazy(() => import("./pages/AvatarChat"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -70,6 +72,8 @@ const App = () => (
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/faq" element={<FAQ />} />
+            <Route path="/image-chat" element={<ImageChat />} />
+            <Route path="/avatar-chat" element={<AvatarChat />} />
             <Route path="/share/:shareToken" element={<SharedConversation />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="*" element={<NotFound />} />

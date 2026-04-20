@@ -197,21 +197,3 @@ All colors MUST be HSL.
     transform: translateY(0);
   }
 }
-
-/* Mobile overflow fix - global */
-* {
-  box-sizing: border-box;
-}
-
-/* @media (max-width: 768px) { */
-  pre {
-    white-space: pre-wrap !important;
-    word-break: break-all !important;
-    overflow-x: hidden !important;
-  }
-  
-  code {
-    white-space: pre-wrap !important;
-    word-break: break-all !important;
-  }
-/* } */
