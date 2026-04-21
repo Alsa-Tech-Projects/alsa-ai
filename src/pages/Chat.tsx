@@ -1291,6 +1291,13 @@ lastMsg.content = finalText;
 
         {/* Mobile Input */}
         <div className="p-3 border-t border-white/5 bg-black/60 backdrop-blur-xl">
+          {/* Voice Feedback - Top Left */}
+          {isListening && (
+            <div className="mb-2">
+              <TranscriptionFeedback transcript={transcript} isListening={isListening} />
+            </div>
+          )}
+
           {uploadedFiles.length > 0 && (
             <div className="flex gap-2 mb-2 flex-wrap">
               {uploadedFiles.map((f, i) => (
@@ -1325,7 +1332,7 @@ lastMsg.content = finalText;
           handleSubmit();
         }
       }}
-      placeholder={isTyping ? "Typing..." : "Message ALSA..."}
+      placeholder={isListening ? "Listening... Please Speak" : isTyping ? "Typing..." : "Message ALSA..."}
       className="flex-1 bg-white/10 border-white/10 text-white text-sm resize-none overflow-y-auto max-h-[150px] min-h-[40px]"
       rows={1}
     />
@@ -1391,12 +1398,6 @@ lastMsg.content = finalText;
           </DialogContent>
         </Dialog>
 
-        {isListening && (
-          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50">
-            <TranscriptionFeedback transcript={transcript} isListening={isListening} />
-          </div>
-        )}
-
         <MusicPlayer song={currentSong} onClose={() => setCurrentSong(null)} />
         <GameLauncher game={currentGame as any} onClose={() => setCurrentGame(null)} />
       </div>
@@ -1449,7 +1450,7 @@ lastMsg.content = finalText;
                         handleSubmit();
                       }
                     }}
-                    placeholder="Enter Command..."
+                    placeholder={isListening ? "Listening... Please Speak" : "Enter Command..."}
                     className="bg-transparent border-none text-white text-sm flex-1 focus-visible:ring-0 resize-none overflow-y-auto max-h-[150px] min-h-[40px]"
                     rows={1}
                   />
@@ -1480,6 +1481,13 @@ lastMsg.content = finalText;
                 </div>
               </ScrollArea>
 
+              {/* VOICE FEEDBACK - TOP LEFT OF CHAT */}
+              {isListening && (
+                <div className="px-6 pt-2 pb-2">
+                  <TranscriptionFeedback transcript={transcript} isListening={isListening} />
+                </div>
+              )}
+
               {/* INPUT BAR (DURING CHAT) */}
 <div className="p-6 bg-gradient-to-t from-black via-black/80 to-transparent">
   <div className="max-w-5xl mx-auto flex items-center gap-3 bg-[#1a1a1a]/80 border border-white/10 rounded-2xl px-5 py-3 backdrop-blur-xl">
@@ -1501,7 +1509,7 @@ lastMsg.content = finalText;
           handleSubmit();
         }
       }}
-      placeholder={isTyping ? "ALSA is responding..." : "Message ALSA..."}
+      placeholder={isListening ? "Listening... Please Speak" : isTyping ? "ALSA is responding..." : "Message ALSA..."}
       className="bg-transparent border-none flex-1 px-4 text-sm focus-visible:ring-0 disabled:opacity-50 resize-none overflow-y-auto max-h-[150px] min-h-[40px]"
       rows={1}
     />
@@ -1563,13 +1571,6 @@ lastMsg.content = finalText;
 
       {/* Reminder Notification System */}
       <ReminderNotification userId={user?.id || null} />
-
-      {/* Voice Overlay */}
-      {isListening && (
-        <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-50">
-          <TranscriptionFeedback transcript={transcript} isListening={isListening} />
-        </div>
-      )}
     </div>
   );
 

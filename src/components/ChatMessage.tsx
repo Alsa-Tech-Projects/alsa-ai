@@ -223,8 +223,8 @@ const ChatMessage = memo(({ role, content }: { role: 'user' | 'assistant'; conte
           background: isUser ? 'rgba(37,99,235,0.25)' : '#1a1a1a',
           border: isUser ? '1px solid rgba(59,130,246,0.35)' : '1px solid rgba(255,255,255,0.08)',
           color: 'white',
-          fontSize: '13px',
-          lineHeight: '1.6',
+          fontSize: '14px',
+          lineHeight: '1.7',
           wordBreak: 'break-word',
           overflowWrap: 'anywhere',
         }}
@@ -270,17 +270,17 @@ const ChatMessage = memo(({ role, content }: { role: 'user' | 'assistant'; conte
                 th: ({ node, ...props }) => (
                   <th
                     {...props}
-                    style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.1)', textAlign: 'left', fontSize: '12px', color: '#93c5fd', fontWeight: 600 }}
+                    style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.1)', textAlign: 'left', fontSize: '13px', color: '#93c5fd', fontWeight: 600 }}
                   />
                 ),
                 td: ({ node, ...props }) => (
                   <td
                     {...props}
-                    style={{ padding: '8px 12px', fontSize: '12px', borderTop: '1px solid rgba(255,255,255,0.05)' }}
+                    style={{ padding: '10px 14px', fontSize: '13px', borderTop: '1px solid rgba(255,255,255,0.05)' }}
                   />
                 ),
                 p: ({ node, ...props }) => (
-                  <p {...props} style={{ margin: '4px 0', lineHeight: 1.6 }} />
+                  <p {...props} style={{ margin: '6px 0', lineHeight: 1.7, fontSize: '14px' }} />
                 ),
                 ul: ({ node, ...props }) => (
                   <ul {...props} style={{ paddingLeft: '18px', margin: '6px 0' }} />
@@ -289,11 +289,11 @@ const ChatMessage = memo(({ role, content }: { role: 'user' | 'assistant'; conte
                   <ol {...props} style={{ paddingLeft: '18px', margin: '6px 0' }} />
                 ),
                 li: ({ node, ...props }) => (
-                  <li {...props} style={{ margin: '3px 0', fontSize: '13px' }} />
+                  <li {...props} style={{ margin: '4px 0', fontSize: '14px' }} />
                 ),
-                h1: ({ node, ...props }) => <h1 {...props} style={{ fontSize: '18px', fontWeight: 700, margin: '10px 0 6px' }} />,
-                h2: ({ node, ...props }) => <h2 {...props} style={{ fontSize: '16px', fontWeight: 600, margin: '10px 0 4px' }} />,
-                h3: ({ node, ...props }) => <h3 {...props} style={{ fontSize: '14px', fontWeight: 600, margin: '8px 0 4px' }} />,
+                h1: ({ node, ...props }) => <h1 {...props} style={{ fontSize: '20px', fontWeight: 700, margin: '12px 0 8px' }} />,
+                h2: ({ node, ...props }) => <h2 {...props} style={{ fontSize: '18px', fontWeight: 600, margin: '10px 0 6px' }} />,
+                h3: ({ node, ...props }) => <h3 {...props} style={{ fontSize: '16px', fontWeight: 600, margin: '8px 0 4px' }} />,
                 code({ node, inline, className, children, ...props }: any) {
                   const match = /language-(\w+)/.exec(className || '');
                   const language = match ? match[1] : '';
