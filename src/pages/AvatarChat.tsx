@@ -7,9 +7,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { isAdminEmail } from '@/utils/adminConfig';
-import mouthClosed from '@/assets/mira-mouth-closed.webp';
-import mouthHalf from '@/assets/mira-mouth-half.webp';
-import mouthOpen from '@/assets/mira-mouth-open.webp';
+import miraSilent from '@/assets/mira-silent.gif';
+import miraSpeaking from '@/assets/mira-speaking.gif';
 
 interface Turn {
   role: 'user' | 'assistant';
@@ -123,7 +122,7 @@ const AvatarChat = () => {
     resetTranscript();
 
     try {
-      const { data, error } = await supabase.functions.invoke('avtar-chat', {
+      const { data, error } = await supabase.functions.invoke('avatar-chat', {
         body: { message: text, history: newHistory.slice(0, -1) },
       });
       if (error) throw error;
@@ -260,23 +259,6 @@ const MiraAvatar = ({
   thinking: boolean;
   blink: boolean;
 }) => {
-  const [frame, setFrame] = useState<0 | 1 | 2>(0);
-
-  // Lip-sync: cycle through 3 mouth frames while speaking
-  useEffect(() => {
-    if (!isSpeaking) {
-      setFrame(0);
-      return;
-    }
-    const sequence: (0 | 1 | 2)[] = [0, 1, 2, 1, 0, 1, 2, 2, 1];
-    let i = 0;
-    const id = window.setInterval(() => {
-      setFrame(sequence[i % sequence.length]);
-      i++;
-    }, 110);
-    return () => window.clearInterval(id);
-  }, [isSpeaking]);
-
   const ringColor = isSpeaking
     ? 'from-purple-500 via-pink-500 to-purple-500'
     : isListening
@@ -285,7 +267,7 @@ const MiraAvatar = ({
     ? 'from-amber-500 via-orange-500 to-amber-500'
     : 'from-white/10 via-white/20 to-white/10';
 
-  const src = frame === 0 ? mouthClosed : frame === 1 ? mouthHalf : mouthOpen;
+  const src = isSpeaking ? miraSpeaking : miraSilent;
 
   return (
     <div className="relative w-[min(280px,75vw)] sm:w-[min(340px,50vw)] md:w-[380px] aspect-square">
@@ -304,29 +286,16 @@ const MiraAvatar = ({
         }`}
         style={{ animation: 'breathe 4s ease-in-out infinite' }}
       >
-        {/* Preload all frames so swap is instant */}
-        <img src={mouthClosed} alt="" className="hidden" aria-hidden />
-        <img src={mouthHalf} alt="" className="hidden" aria-hidden />
-        <img src={mouthOpen} alt="" className="hidden" aria-hidden />
+        {/* Preload both gifs so swap is instant */}
+        <img src={miraSilent} alt="" className="hidden" aria-hidden />
+        <img src={miraSpeaking} alt="" className="hidden" aria-hidden />
 
         <img
           src={src}
           alt="Mira"
-          className="w-full h-full object-cover select-none transition-opacity duration-75"
+          className="w-full h-full object-cover select-none"
           draggable={false}
         />
-
-        {/* Blink overlay — covers eye region briefly */}
-        {blink && (
-          <div
-            className="absolute left-0 right-0 bg-[#0a0a0a]/0 pointer-events-none"
-            style={{
-              top: '38%',
-              height: '8%',
-              background: 'linear-gradient(to bottom, transparent 0%, rgba(20,15,12,0.9) 30%, rgba(20,15,12,0.9) 70%, transparent 100%)',
-            }}
-          />
-        )}
       </div>
 
       <style>{`
@@ -342,3 +311,5 @@ const MiraAvatar = ({
     </div>
   );
 };
+
+    
