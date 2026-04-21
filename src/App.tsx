@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 // Lazy load all pages for better performance
 const Landing = lazy(() => import("./pages/Landing"));
 const Chat = lazy(() => import("./pages/Chat"));
+const Chats = lazy(() => import("./pages/Chats"));
 const Settings = lazy(() => import("./pages/Settings"));
 const History = lazy(() => import("./pages/History"));
 const Ratings = lazy(() => import("./pages/Ratings"));
@@ -22,6 +23,8 @@ const BridgeSetup = lazy(() => import("./pages/BridgeSetup"));
 const SharedConversation = lazy(() => import("./pages/SharedConversation"));
 const Admin = lazy(() => import("./pages/Admin"));
 const FAQ = lazy(() => import("./pages/FAQ"));
+const ImageChat = lazy(() => import("./pages/ImageChat"));
+const AvatarChat = lazy(() => import("./pages/AvatarChat"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -55,6 +58,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/Chat" element={<Chat />} />
+            <Route path="/Chats" element={<Chats />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/ratings" element={<Ratings />} />
             <Route path="/bridge-setup" element={<BridgeSetup />} />
@@ -68,6 +72,8 @@ const App = () => (
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/faq" element={<FAQ />} />
+            <Route path="/image-chat" element={<ImageChat />} />
+            <Route path="/avatar-chat" element={<AvatarChat />} />
             <Route path="/share/:shareToken" element={<SharedConversation />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="*" element={<NotFound />} />

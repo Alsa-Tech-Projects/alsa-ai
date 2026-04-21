@@ -69,6 +69,82 @@ const Chat = () => {
   const [recordingSavedPath, setRecordingSavedPath] = useState<string | null>(null);
   // const [screenshotPending, setScreenshotPending] = useState(false);
 
+
+//   const formatWikipedia = (text: string, query: string) => {
+//   if (!text) return "";
+
+//   return `
+// ## 📖 ${query.toUpperCase()}
+
+// ${text
+//   .replace("📖 Wikipedia Result:", "")
+//   .split('. ')
+//   .slice(0, 6)
+//   .map(line => `- ${line.trim()}`)
+//   .join('\n\n')}
+// `;
+// };
+// const formatWikipedia = (text: string, query: string) => {
+//   return `
+// ##  ${query.toUpperCase()}
+
+// ${text
+//   .replace("📖 Wikipedia Result:", "")
+//   .replace("Thoda intezaar karein, main action le raha hoon..", "")
+//   .replace("⚙️", "")
+//   .split(/\. |\n/)
+//   .map(line => line.trim())
+//   .filter(line => line.length > 20) // choti/gandi lines hatao
+// .map(line => {
+//   let clean = line.trim();
+//   if (!clean.endsWith('.')) clean += '.';
+//   return clean;
+// })
+//   .join('\n\n')}
+// `;
+// };
+const formatWikipedia = (text: string, query: string) => {
+  const cleaned = text
+    .replace("📖 Wikipedia Result:", "")
+    .replace("Thoda intezaar karein, main action le raha hoon..", "")
+    .replace("⚙️", "");
+
+  const lines = cleaned
+    .split(/\. |\n/)
+    .map(line => line.trim())
+    .filter(line => line.length > 25);
+
+  // First line = intro paragraph
+  const intro = lines[0] ? (lines[0].endsWith('.') ? lines[0] : lines[0] + '.') : "";
+
+  // Remaining = bullets
+  const bullets = lines.slice(1, 6).map(line => {
+    if (!line.endsWith('.')) line += '.';
+    return `• ${line}`;
+  });
+
+  return `
+## ${query}
+
+${intro}
+
+${bullets.join('\n\n')}
+`;
+};
+
+// const formatWikipedia = (text: string, query: string) => {
+//   const cleaned = text
+//     .replace("📖 Wikipedia Result:", "")
+//     .replace("Thoda intezaar karein, main action le raha hoon..", "")
+//     .replace("⚙️", "")
+//     .trim();
+
+//   return `
+// ## ${query}
+
+// ${cleaned}
+// `;
+// };
   // Subscription hook for free tier restrictions
   const subscription = useSubscription();
   const { toast } = useToast();
@@ -341,9 +417,27 @@ const Chat = () => {
     return () => clearInterval(interval);
   }, [systemData]);
 
-  // Voice command processing
+  // ==========================================================
+  // VOICE COMMAND PROCESSING (FIXED FOR ECHO/LOOP)
+  // ==========================================================
+  
+  // 1. Cleanup Effect: Jab AI bolna band kare, mic ka purana kachra saaf karo
   useEffect(() => {
-    if (!isListening) return;
+    if (!isSpeaking && isListening) {
+      // AI ke chup hote hi 300ms baad transcript saaf kar do
+      const timer = setTimeout(() => {
+        resetTranscript();
+        lastProcessedRef.current = ''; 
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isSpeaking, isListening, resetTranscript]);
+
+  // 2. Main Voice Logic: Control listening based on speaking state
+  useEffect(() => {
+    // GUARD: Agar mic off hai YA AI khud bol raha hai, to process mat karo
+    if (!isListening || isSpeaking) return;
+
     const currentText = transcript.trim();
     if (!currentText) return;
 
@@ -368,6 +462,9 @@ const Chat = () => {
     // Process full commands after 3 seconds of silence
     if (currentText.length > 5) {
       listeningTimeoutRef.current = setTimeout(() => {
+        // Double check again if speaking started during timeout
+        if (isSpeaking) return; 
+
         if (currentText === lastProcessedRef.current) return;
         lastProcessedRef.current = currentText;
 
@@ -380,16 +477,18 @@ const Chat = () => {
         }, 2000);
       }, 3000);
     }
-  }, [transcript, isListening, stopListening]);
+  }, [transcript, isListening, isSpeaking, stopListening, resetTranscript]);
 
-  const scrollToBottom = () => {
+  // Scroll to bottom logic
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
+  
   const saveConversation = async (userMsg: Message, assistantMsg: Message) => {
     if (!user) return; // Only save for logged-in users
 
@@ -715,7 +814,15 @@ const Chat = () => {
                 const newMessages = [...prev];
                 const lastMsg = newMessages[newMessages.length - 1];
                 if (lastMsg?.role === 'assistant') {
-                  lastMsg.content = accumulatedText;
+                  // lastMsg.content = accumulatedText;
+                  const isWikipedia = accumulatedText.includes("Wikipedia") || accumulatedText.length > 200;
+                  // const isWikipedia = accumulatedText.toLowerCase().includes("wikipedia result");
+
+const finalText = isWikipedia
+  ? formatWikipedia(accumulatedText, userMessage.content)
+  : accumulatedText;
+
+lastMsg.content = finalText;
                 }
                 return newMessages;
               });
@@ -1126,7 +1233,9 @@ const Chat = () => {
   // Mobile UI
   if (isMobile) {
     return (
-      <div className="flex flex-col h-screen w-screen bg-[#0d0d0d] text-white overflow-hidden">
+      // <div className="flex flex-col h-screen w-screen bg-[#0d0d0d] text-white overflow-hidden">
+      <div className="flex flex-col h-screen w-screen bg-[#0d0d0d] text-white overflow-hidden max-w-full">
+
         {/* Scheduled Message Checker - Background Component */}
         <ScheduledMessageChecker userId={user?.id || null} />
         {/* Mobile Top Bar */}
@@ -1151,8 +1260,11 @@ const Chat = () => {
         </div>
 
         {/* Chat Area */}
-        <ScrollArea className="flex-1">
-          <div className="p-4 space-y-4">
+        {/* <ScrollArea className="flex-1"> */}
+          {/* <div className="p-4 space-y-4"> */}
+
+          <ScrollArea className="flex-1 overflow-x-hidden">
+  <div className="p-4 space-y-4 overflow-x-hidden max-w-full">
             {!hasMessages && (
               <div className="flex flex-col items-center justify-center h-[60vh]">
                 <h1 className="text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20">

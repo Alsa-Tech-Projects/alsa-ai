@@ -750,20 +750,14 @@ const Admin = () => {
                     onClick={() => setNotificationTarget('all')}
                     className={notificationTarget === 'all' ? 'bg-blue-600' : 'border-white/10 text-white'}
                   >
-                    <div style={{ backgroundColor: 'blue', color: 'black' }} className="flex items-center">
-                      <Users className="w-4 h-4 mr-2" /> All Users
-                    </div>
-
+                    <Users className="w-4 h-4 mr-2 bg-blue-500 text-black" /> All Users
                   </Button>
                   <Button
                     variant={notificationTarget === 'single' ? 'default' : 'outline'}
                     onClick={() => setNotificationTarget('single')}
                     className={notificationTarget === 'single' ? 'bg-blue-600' : 'border-white/10 text-white'}
                   >
-                    <div style={{ backgroundColor: 'blue', color: 'black' }} className="flex items-center">
-                      <Mail className="w-4 h-4 mr-2" /> Single User
-                    </div>
-
+                    <Mail className="w-4 h-4 mr-2" /> Single User
                   </Button>
                 </div>
 
