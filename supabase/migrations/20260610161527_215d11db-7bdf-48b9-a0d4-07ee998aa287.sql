@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Service manages image usage" ON public.image_chat_usage;

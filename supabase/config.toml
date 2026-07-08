@@ -1,0 +1,7 @@
+project_id = "dqrlnmxabgabendzkvwx"
+
+[functions.avatar-chat]
+verify_jwt = false
+
+[functions.admin-send-notification]
+verify_jwt = false
