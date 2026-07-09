@@ -171,7 +171,7 @@ const Auth = () => {
       if (isSignup) localStorage.setItem('alsa_new_signup', '1');
       const result = await lovableAuth.signInWithOAuth('google', {
         // Must be a public same-origin URL (Lovable OAuth requirement)
-        redirect_uri: `${window.location.origin}/auth`,
+        redirect_uri: `${window.location.origin}/`,
         extraParams: {
           prompt: 'select_account',
         },
