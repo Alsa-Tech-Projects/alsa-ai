@@ -1651,12 +1651,22 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
   const openApp = input.match(/open\s+app\s+([\w\.]+)/i);
   if (openApp) return { action: 'app-open', params: { package: openApp[1] }, label: `open app ${openApp[1]}` };
 
-  // Media
+    // Media Commands (Yeh pehle se tha)
   if (/\b(pause|ruk|band karo)\s*(music|song|media|gana)/i.test(input)) return { action: 'media', params: { action: 'pause' }, label: 'pause media' };
   if (/\b(play)\s*(music|song|media|gana)/i.test(input)) return { action: 'media', params: { action: 'play' }, label: 'play media' };
   if (/\b(next)\s*(song|track|gana)/i.test(input)) return { action: 'media', params: { action: 'next' }, label: 'next track' };
   if (/\b(previous|prev|pichla)\s*(song|track|gana)/i.test(input)) return { action: 'media', params: { action: 'previous' }, label: 'previous track' };
 
+  // ── Smart App Open Selector ──
+  // Matches: "open youtube", "launch whatsapp", "instagram chalu karo", "open app settings"
+  const openAppPattern = input.match(/(?:open|launch|start|chalu\s+karo|open\s+app)\s+([\w\.\-]+)/i)
+                      || input.match(/([\w\.\-]+)\s+(?:open\s+karo|chalu\s+karo|start\s+karo)/i);
+                      
+  if (openAppPattern) {
+    const appName = openAppPattern[1].trim().toLowerCase();
+    return { action: 'app-open', params: { package: appName }, label: `open app ${appName}` };
+  }
+  
   return null;
 };
 
