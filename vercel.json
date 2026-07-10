@@ -1,5 +1,9 @@
 {
   "rewrites": [
+    {
+      "source": "/~oauth/:path*",
+      "destination": "https://oauth.lovable.app/:path*"
+    },
     { "source": "/:path*", "destination": "/index.html" }
   ],
   "headers": [
@@ -13,10 +17,6 @@
         { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
         { "key": "X-XSS-Protection", "value": "1; mode=block" }
       ]
-    },
-    {
-      "source": "/:path*(git|env|log|bak|sql)*",
-      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
     }
   ]
 }
