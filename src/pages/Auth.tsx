@@ -166,36 +166,39 @@ const Auth = () => {
   };
 
   const handleGoogleLogin = async (isSignup = false) => {
-    try {
-      setLoading(true);
-      if (isSignup) localStorage.setItem('alsa_new_signup', '1');
-      const result = await lovableAuth.signInWithOAuth('google', {
-        // Must be a public same-origin URL (Lovable OAuth requirement)
-        redirect_uri: `${window.location.origin}/`,
-        extraParams: {
+  try {
+    setLoading(true);
+    // Jab user Sign Up tab se Google use karega tabhi ye trigger hoga
+    if (isSignup) localStorage.setItem('alsa_new_signup', '1');
+    
+    // Lovable wrapper ko bypass karke seedhe Native Supabase SDK ka use karein
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        // Redirection hamesha main domain root par rakhein taaki 404 na aaye
+        redirectTo: `${window.location.origin}/`,
+        queryParams: {
           prompt: 'select_account',
         },
-      });
+      },
+    });
 
-      if (result.redirected) return;
-      if (result.error) throw result.error;
+    if (error) throw error;
 
-      await supabase.auth.setSession(result.tokens);
-      toast({
-        title: "Welcome to ALSA AI!",
-        description: "Google sign-in successful.",
-      });
-      // Auth state listener will navigate
-    } catch (error: any) {
-      toast({
-        title: "Google Sign in failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    toast({
+      title: "Redirecting...",
+      description: "Google sign-in page par bheja ja raha hai.",
+    });
+  } catch (error: any) {
+    toast({
+      title: "Google Sign in failed",
+      description: error.message,
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
