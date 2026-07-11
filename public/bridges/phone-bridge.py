@@ -60,7 +60,6 @@ Endpoints (all JSON POST unless noted):
 
 Port: 5002  (different from PC Bridge's 5001)
 """
-
 import subprocess
 import json
 import base64
@@ -81,9 +80,79 @@ CONTACTS_FILE = os.path.join(HOME, "alsa_contacts.json")
 # Prefer real Android media folders (via termux-setup-storage). Fallback: HOME.
 _SHARED = os.path.join(HOME, "storage", "shared")
 _HAS_SHARED = os.path.isdir(_SHARED)
-YTDLP_VIDEO_DIR = os.path.join(_SHARED, "DCIM", "Videos") if _HAS_SHARED else os.path.join(HOME, "Videos")
+YTDLP_VIDEO_DIR = os.path.join(_SHARED, "DCIM", "Snapchat") if _HAS_SHARED else os.path.join(HOME, "Videos")
 YTDLP_AUDIO_DIR = os.path.join(_SHARED, "Music")           if _HAS_SHARED else os.path.join(HOME, "Music")
 YTDLP_DEFAULT_DIR = YTDLP_VIDEO_DIR  # legacy alias
+
+APPS_DATABASE = {
+    "youtube": "com.google.android.youtube/.app.honeycomb.Shell$HomeActivity",
+    "whatsapp": "com.whatsapp/.Main",
+    "whatsapp_business": "com.whatsapp.w4b/com.whatsapp.Main",
+    "instagram": "com.instagram.android/.activity.MainTabActivity",
+    "instagram_lite": "com.instagram.basel/.mainactivity.BaselActivity",
+    "facebook": "com.facebook.katana/.LoginActivity",
+    "facebook_pages": "com.facebook.pages.app/.auth.PagesManagerLoginActivity",
+    "messenger_lite": "com.facebook.stella/com.facebook.wearable.companion.silverstone.main.view.SilverstoneMainActivity",
+    "telegram": "org.telegram.messenger/.DefaultIcon",
+    "upi": "com.naviapp/.home.compose.activity.HomePageActivity",
+    "chatgpt": "com.openai.chatgpt/.MainActivity",
+    "gpay": "com.google.android.apps.nbu.paisa.user/com.google.nbu.paisa.flutter.gpay.app.LauncherActivity",
+    "inshot": "com.camerasideas.instashot/.MainActivity",
+    "google": "com.google.android.googlequicksearchbox/.SearchActivity",
+    "assistant": "com.google.android.apps.googleassistant/.AssistantActivity",
+    "chrome": "com.android.chrome/com.google.android.apps.chrome.Main",
+    "gmail": "com.google.android.gm/.ConversationListActivityGmail",
+    "maps": "com.google.android.apps.maps/com.google.android.maps.MapsActivity",
+    "photos": "com.google.android.apps.photos/.home.HomeActivity",
+    "drive": "com.google.android.apps.docs/.app.NewMainProxyActivity",
+    "duo": "com.google.android.apps.tachyon/.MainActivity",
+    "files": "com.google.android.apps.nbu.files/.home.HomeActivity",
+    "contacts": "com.google.android.contacts/com.android.contacts.activities.PeopleActivity",
+    "dialer": "com.google.android.dialer/.extensions.GoogleDialtactsActivity",
+    "messages": "com.google.android.apps.messaging/.ui.ConversationListActivity",
+    "tasks": "com.google.android.apps.tasks/.ui.TaskListsActivity",
+    "list": "com.google.android.keep/.activities.BrowseActivity",
+    "calendar": "com.google.android.calendar/com.android.calendar.AllInOneActivity",
+    "playstore": "com.android.vending/.AssetBrowserActivity",
+    "lens": "com.google.ar.lens/com.google.vr.apps.ornament.app.lens.LensLauncherActivity",
+    "pubg": "com.activision.callofduty.shooter/com.tencent.tmgp.cod.CODMPrivatePermissionActivity",
+    "flipkart": "com.flipkart.android/.GoatSaleIconAlias",
+    "reddit": "com.reddit.frontpage/launcher.default",
+    "zoho_mail": "com.zoho.mail/.android.activities.Login",
+    "pinterest": "com.pinterest/.activity.PinterestActivity",
+    "hotstar": "in.startv.hotstar/com.hotstar.MainActivity",
+    "protonvpn": "ch.protonvpn.android/.RoutingActivity",
+    "razorpay": "com.razorpay.payments.app/.MainActivity",
+    "threads": "com.instagram.barcelona/.mainactivity.BarcelonaActivity",
+    "mx_player": "com.mxtech.videoplayer.ad/.ActivityWelcomeMX",
+    "twitter": "com.twitter.android/com.x.android.main.MainActivity",
+    "pydroid": "ru.iiec.pydroid3/ru.iiec.pydroid.MainActivity",
+    "real_cricket": "com.nautilus.realcricket/.IconAlias0",
+    "myjio": "com.jio.myjio/.dashboard.activities.SplashActivity",
+    "indian_bikes": "com.Rohit.IndianBikes/com.unity3d.player.UnityPlayerActivity",
+    "linkedin": "com.linkedin.android/.authenticator.LaunchActivityDefault",
+    "canva": "com.canva.editor/com.canva.app.editor.splash.SplashActivity",
+    "snapchat": "com.snapchat.android/.LandingPageActivity",
+    "zarchiver": "ru.zdevs.zarchiver/.ZArchiver",
+    "termux": "com.termux/.app.TermuxActivity",
+    "termux_api": "com.termux.api/.activities.TermuxAPILauncherActivity",
+    "settings": "com.android.settings/.Settings",
+    "camera": "com.oppo.camera/.Camera",
+    "calculator": "com.coloros.calculator/com.android.calculator2.Calculator",
+    "file_manager": "com.coloros.filemanager/com.oplus.filemanager.main.ui.SplashActivity",
+    "video_player": "com.coloros.video/com.oplus.video.SplashActivity",
+    "gallery": "com.coloros.gallery3d/.app.MainActivity",
+    "sound_recorder": "com.coloros.soundrecorder/oppo.multimedia.soundrecorder.filebrowser.BrowseFile",
+    "clock": "com.coloros.alarmclock/.AlarmClock",
+    "weather": "com.coloros.weather2/com.coloros.weather.main.view.WeatherMainActivity",
+    "compass": "com.coloros.compass2/com.coloros.compass.flat.FlatCompass",
+    "theme_store": "com.heytap.themestore/com.nearme.themespace.activities.ThemeActivity",
+    "browser": "com.heytap.browser/com.android.browser.BrowserActivity",
+    "cloud": "com.heytap.cloud/.home.ui.CloudLauncherActivity",
+    "fm_radio": "com.android.fmradio/.FmMainActivity",
+    "pixellab": "com.imaginstudio.imagetools.pixellab/.MainActivity",
+    "justdial": "com.justdial.search/.SplashScreenNewActivity"
+}
 
 
 def run(cmd, timeout=30, input_data=None):
@@ -306,18 +375,48 @@ def camera_info():
 
 
 # ─────────────────────────── Apps / Intents ──────────────────
+#@app.route("/app/open", methods=["POST"])
+#def app_open():
+#    d = request.get_json(force=True) or {}
+#    pkg = d.get("package")
+#    if not pkg:
+#        return jsonify({"ok": False, "error": "package required"}), 400
+#    ok, out, _ = run(["am", "start", "-n", pkg + "/.MainActivity"])
+#    if not ok:
+#        # fallback via monkey
+#        ok, out, _ = run(["monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"])
+#    return jsonify({"ok": ok, "output": out})
+
+# ─────────────────────────── Apps / Intents ──────────────────
 @app.route("/app/open", methods=["POST"])
 def app_open():
     d = request.get_json(force=True) or {}
     pkg = d.get("package")
     if not pkg:
         return jsonify({"ok": False, "error": "package required"}), 400
-    ok, out, _ = run(["am", "start", "-n", pkg + "/.MainActivity"])
-    if not ok:
-        # fallback via monkey
-        ok, out, _ = run(["monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"])
-    return jsonify({"ok": ok, "output": out})
+    
+    pkg_clean = pkg.strip().lower()
+    
+    # 1. Pehle check karo ki kya yeh naam humare APPS_DATABASE mein hai
+    if pkg_clean in APPS_DATABASE:
+        target_path = APPS_DATABASE[pkg_clean]
+    # 2. Agar user ne direct package name bheja hai (jaise com.whatsapp), toh database mein value search karo
+    elif pkg in APPS_DATABASE.values():
+        target_path = pkg
+    else:
+        # 3. Agar database mein nahi mila, toh safe side ke liye default format banao
+        target_path = f"{pkg}/.MainActivity"
 
+    # Perfect execution using: am start --user 0 -n {target_path}
+    ok, out, _ = run(["am", "start", "--user", "0", "-n", target_path])
+    
+    # Agar kisi wajah se fail ho jaye (jaise custom component name galat ho), tabhi monkey fallback chalega
+    if not ok:
+        # Agar shortcut name tha (jaise 'whatsapp'), toh real package name extract karo fallback ke liye
+        fallback_pkg = target_path.split('/')[0] if '/' in target_path else pkg
+        ok, out, _ = run(["monkey", "-p", fallback_pkg, "-c", "android.intent.category.LAUNCHER", "1"])
+        
+    return jsonify({"ok": ok, "output": out, "target_used": target_path})
 
 @app.route("/app/list", methods=["POST"])
 def app_list():
@@ -616,6 +715,46 @@ def ytdlp_download():
         "log_tail": (out or "")[-1500:],
     })
 
+# Function: Voice command se direct link browser mein kholna
+def open_alsa_chat():
+    print("🚀 'Hey Alsa' detected! Opening Chat Dashboard...")
+    # Termux ka use karke Android browser mein direct URL open karna
+    subprocess.run(["termux-open", "https://www.alsa-ai.in/Chat"])
+
+# Simple Voice Wake-word Listener Loop
+def start_wake_word_listener():
+    # Note: Iske liye 'pip install SpeechRecognition' zaroori hai
+    import speech_recognition as sr
+    
+    r = sr.Recognizer()
+    # Background mic ko optimize karne ke liye settings
+    r.dynamic_energy_threshold = True 
+    
+    print("🎙️ Wake-word engine active... Listening for 'Hey Alsa' or 'Ok Alsa'")
+    
+    with sr.Microphone() as source:
+        while True:
+            try:
+                # Chhoti-chhoti audio clips sunega background mein
+                audio = r.listen(source, timeout=None, phrase_time_limit=3)
+                text = r.recognize_google(audio, language="en-IN").lower()
+                
+                print(f"Heard: {text}") # Debugging ke liye ke kya suna
+                
+                # Agar wake word match hota hai
+                if "hey alsa" in text or "ok alsa" in text or "alsa" in text:
+                    open_alsa_chat()
+                    time.sleep(3) # Multi-triggering rokne ke liye break
+                    
+            except sr.UnknownValueError:
+                # Jab background noise ho aur clear word na samajh aaye
+                continue
+            except Exception as e:
+                # Koi aur error aaye toh loop tute na
+                time.sleep(1)
+                continue
+
+
 
 if __name__ == "__main__":
     print(f"📱 Alsa AI Phone Bridge running on http://0.0.0.0:{PORT}")
@@ -629,5 +768,7 @@ if __name__ == "__main__":
             print(f"⚠️  Contacts cache skipped: {pathc}")
     except Exception as e:
         print(f"⚠️  Contacts cache error: {e}")
-    app.run(host="0.0.0.0", port=PORT, debug=False)
+    import threading
+    threading.Thread(target=start_wake_word_listener, daemon=True).start()
+    app.run(host="0.0.0.0", port=PORT, debug=True)
 
