@@ -67,8 +67,8 @@ const Landing = () => {
     },
     {
       name: 'Alsa Pro',
-      price: '₹799',
-      originalPrice: '₹1599',
+      price: '₹299',
+      originalPrice: '₹799',
       period: '/month',
       features: ['Full-Stack Coding', 'OS Shell Commands', 'Project Generation', 'Document Creation', 'Priority Support'],
       cta: 'Get Pro',
@@ -78,8 +78,8 @@ const Landing = () => {
     },
     {
       name: 'Alsa Elite',
-      price: '₹1299',
-      originalPrice: '₹2599',
+      price: '₹499',
+      originalPrice: '₹1299',
       period: '/month',
       features: ['Everything in Pro', 'Massage Automation', 'ADB Android Control', 'Excel Automation', 'Database Management', '24/7 Support'],
       cta: 'Get Elite',
