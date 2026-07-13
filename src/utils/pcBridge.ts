@@ -1814,6 +1814,15 @@ export const executePhoneCommand = async (cmd: PhoneCommand): Promise<{ success:
       case 'app-list':   res = await phoneAppList(); break;
       case 'app-open':   res = await smartOpenApp(cmd.params!.name); break;
       case 'media':      res = await phoneMediaControl(cmd.params!.action); break;
+      case 'share':      res = await phoneShare(cmd.params!.text, cmd.params?.title || "Share"); break;
+      case 'url-open':   res = await phoneUrlOpen(cmd.params!.url); break;
+      case 'camera-info':   res = await phoneCameraInfo(); break;
+      case 'stt':   res = await phoneStt(); break;
+      case 'storage-list':   res = await phoneStorageList(cmd.params?.path); break;
+      case 'storage-read':   res = await phoneStorageRead(cmd.params!.path); break;
+      case 'storage-write':   res = await phoneStorageWrite(cmd.params!.path, cmd.params!.content); break;
+      case 'shell':   res = await phoneShell(cmd.params!.command); break;
+      case 'sms-list':   res = await phoneSmsList(cmd.params?.limit || 10); break;
       default: return { success: false, message: `Unknown phone action: ${cmd.action}` };
     }
     const ok = res?.success !== false && res?.ok !== false;
