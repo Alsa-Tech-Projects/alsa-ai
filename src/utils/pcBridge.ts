@@ -1514,6 +1514,69 @@ export const phoneYtdlpDownload = (opts: {
   output_dir?: string;
 }) => phonePost('/ytdlp/download', opts);
 
+// ============================
+// 📱 Smart App Aliases
+// ============================
+
+const APP_ALIASES: Record<string, string> = {
+  fb: "facebook",
+  facebookapp: "facebook",
+
+  yt: "youtube",
+  youtubeapp: "youtube",
+
+  insta: "instagram",
+  ig: "instagram",
+
+  wa: "whatsapp",
+  whatsappapp: "whatsapp",
+
+  chromebrowser: "chrome",
+
+  playstore: "play store",
+  play: "play store",
+
+  mapsapp: "maps",
+  gps: "maps",
+
+  galleryapp: "gallery",
+  photos: "gallery",
+
+  cam: "camera",
+
+  settingsapp: "settings",
+
+  calc: "calculator",
+
+  contactsapp: "contacts",
+
+  filesapp: "files",
+
+  filemanager: "files",
+
+  musicplayer: "music",
+
+  videoplayer: "video",
+
+  gmailapp: "gmail",
+
+  googlemail: "gmail",
+
+  driveapp: "drive",
+
+  googlephotos: "photos",
+
+  playmusic: "youtube music"
+};
+
+function normalizeAppName(name: string): string {
+  const key = name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "");
+
+  return APP_ALIASES[key] || name.toLowerCase().trim();
+}
 
 // ── Phone natural-language parser + executor ────────────────────────────────
 export interface PhoneCommand {
@@ -1657,18 +1720,67 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
   if (/\b(next)\s*(song|track|gana)/i.test(input)) return { action: 'media', params: { action: 'next' }, label: 'next track' };
   if (/\b(previous|prev|pichla)\s*(song|track|gana)/i.test(input)) return { action: 'media', params: { action: 'previous' }, label: 'previous track' };
 
-  // ── Smart App Open Selector ──
-  // Matches: "open youtube", "launch whatsapp", "instagram chalu karo", "open app settings"
-  const openAppPattern = input.match(/(?:open|launch|start|chalu\s+karo|open\s+app)\s+([\w\.\-]+)/i)
-                      || input.match(/([\w\.\-]+)\s+(?:open\s+karo|chalu\s+karo|start\s+karo)/i);
-                      
-  if (openAppPattern) {
-    const appName = openAppPattern[1].trim().toLowerCase();
-    return { action: 'app-open', params: { package: appName }, label: `open app ${appName}` };
+  // ── Smart App Open Selector ───────────────────────────────
+
+const openAppPattern =
+  input.match(/(?:open|launch|start|run|chalu\s*karo|khol|kholo|open\s+app)\s+(.+)/i) ||
+  input.match(/(.+?)\s+(?:open\s*karo|chalu\s*karo|start\s*karo|khol|kholo)/i);
+
+if (openAppPattern) {
+
+  let appName = openAppPattern[1]
+    .trim()
+    .replace(/[.!?]$/, "");
+
+  appName = normalizeAppName(appName);
+
+  return {
+    action: "app-open",
+    params: {
+      name: appName
+    },
+    label: `open ${appName}`
+  };
+
+ async function smartOpenApp(appName: string) {
+  // Pehle direct try
+  let res = await phoneAppOpen(appName);
+
+  if (res?.ok || res?.success) {
+    return res;
   }
-  
-  return null;
-};
+
+  // Agar bridge app list support karta hai to installed apps se search karo
+  const list = await phoneAppList();
+
+  const apps = list?.data || list?.apps || [];
+
+  if (!Array.isArray(apps)) {
+    return res;
+  }
+
+  const target = appName.toLowerCase();
+
+  const match = apps.find((app: any) => {
+    const label = (app.label || app.name || "").toLowerCase();
+    const pkg = (app.package || "").toLowerCase();
+
+    return (
+      label.includes(target) ||
+      pkg.includes(target)
+    );
+  });
+
+  if (!match) {
+    return {
+      ok: false,
+      success: false,
+      message: `App "${appName}" not found`
+    };
+  }
+
+  return phoneAppOpen(match.package);
+}                                                                                                                 }
 
 export const executePhoneCommand = async (cmd: PhoneCommand): Promise<{ success: boolean; message: string; data?: any }> => {
   try {
@@ -1700,7 +1812,7 @@ export const executePhoneCommand = async (cmd: PhoneCommand): Promise<{ success:
       case 'whatsapp-name': res = await phoneWhatsappSendByName(cmd.params!.name, cmd.params!.text); break;
       case 'ytdlp':         res = await phoneYtdlpDownload(cmd.params as any); break;
       case 'app-list':   res = await phoneAppList(); break;
-      case 'app-open':   res = await phoneAppOpen(cmd.params!.package); break;
+      case 'app-open':   res = await smartOpenApp(cmd.params!.name); break;
       case 'media':      res = await phoneMediaControl(cmd.params!.action); break;
       default: return { success: false, message: `Unknown phone action: ${cmd.action}` };
     }
