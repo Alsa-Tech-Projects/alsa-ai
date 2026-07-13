@@ -64,6 +64,7 @@ const App = () => (
           <ApiKeyOnboarding />
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/landing" element={<Navigate to="/" replace />} />
             <Route path="/Chat" element={<FaceAuthGate><Chat /></FaceAuthGate>} />
             <Route path="/Chats" element={<Navigate to="/Chat" replace />} />
             <Route path="/pricing" element={<Pricing />} />
