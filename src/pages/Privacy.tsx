@@ -112,6 +112,7 @@ const Privacy = () => {
         <title>Privacy Policy - ALSA AI | Data Protection & Security</title>
         <meta name="description" content="ALSA AI Privacy Policy. Learn how we collect, use, and protect your data. We prioritize your privacy with encrypted data transmission, secure authentication, and local PC Bridge execution." />
         <meta name="keywords" content="ALSA AI privacy, data protection, AI assistant privacy policy, PC automation security, user data rights, GDPR compliance, data encryption" />
+        <meta name="robots" content="index, follow" />
         <meta property="og:title" content="Privacy Policy - ALSA AI" />
         <meta property="og:description" content="Learn how ALSA AI protects your privacy and handles your data securely." />
         <link rel="canonical" href="https://www.alsa-ai.in/privacy" />
