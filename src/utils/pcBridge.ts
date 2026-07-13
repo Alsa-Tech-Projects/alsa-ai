@@ -1784,8 +1784,7 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
   if (/\b(next)\s*(song|track|gana)/i.test(input)) return { action: 'media', params: { action: 'next' }, label: 'next track' };
   if (/\b(previous|prev|pichla)\s*(song|track|gana)/i.test(input)) return { action: 'media', params: { action: 'previous' }, label: 'previous track' };
 
-  // ── Smart App Open Selector ───────────────────────────────
-
+  // Smart App Open Selector
 const openAppPattern =
   input.match(/(?:open|launch|start|run|chalu\s*karo|khol|kholo|open\s+app)\s+(.+)/i) ||
   input.match(/(.+?)\s+(?:open\s*karo|chalu\s*karo|start\s*karo|khol|kholo)/i);
@@ -1805,18 +1804,23 @@ if (openAppPattern) {
     },
     label: `open ${appName}`
   };
+}
 
- async function smartOpenApp(appName: string) {
-  // Pehle direct try
+return null;
+};
+
+// ======================================
+// smartOpenApp()
+// ======================================
+
+async function smartOpenApp(appName: string) {
   let res = await phoneAppOpen(appName);
 
   if (res?.ok || res?.success) {
     return res;
   }
 
-  // Agar bridge app list support karta hai to installed apps se search karo
   const list = await phoneAppList();
-
   const apps = list?.data || list?.apps || [];
 
   if (!Array.isArray(apps)) {
@@ -1844,8 +1848,12 @@ if (openAppPattern) {
   }
 
   return phoneAppOpen(match.package);
-}                                                                                                                 }
+}
 
+// ======================================
+// executePhoneCommand()
+// ======================================
+  
 export const executePhoneCommand = async (cmd: PhoneCommand): Promise<{ success: boolean; message: string; data?: any }> => {
   try {
     let res: any;
