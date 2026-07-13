@@ -1578,6 +1578,70 @@ function normalizeAppName(name: string): string {
   return APP_ALIASES[key] || name.toLowerCase().trim();
 }
 
+const INTENTS = {
+
+torch: [
+
+"torch",
+
+"flash",
+
+"flashlight"
+
+],
+
+battery: [
+
+"battery",
+
+"battry",
+
+"batri"
+
+],
+
+wifi: [
+
+"wifi",
+
+"wi-fi"
+
+],
+
+bluetooth: [
+
+"bluetooth",
+
+"bt"
+
+],
+
+camera: [
+
+"camera",
+
+"photo",
+
+"picture",
+
+"selfie"
+
+],
+
+music: [
+
+"music",
+
+"song",
+
+"media",
+
+"gana"
+
+]
+
+};
+
 // ── Phone natural-language parser + executor ────────────────────────────────
 export interface PhoneCommand {
   action: string;
