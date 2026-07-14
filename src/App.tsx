@@ -12,6 +12,7 @@ const Chat = lazy(() => import("./pages/Chat"));
 const FaceAuthGate = lazy(() => import("./components/FaceAuthGate"));
 
 const Settings = lazy(() => import("./pages/Settings"));
+const WakeAlsaSmart = lazy(() => import("./pages/WakeAlsaSmart"));
 const History = lazy(() => import("./pages/History"));
 const Ratings = lazy(() => import("./pages/Ratings"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -67,6 +68,7 @@ const App = () => (
             <Route path="/landing" element={<Navigate to="/" replace />} />
             <Route path="/Chat" element={<FaceAuthGate><Chat /></FaceAuthGate>} />
             <Route path="/Chats" element={<Navigate to="/Chat" replace />} />
+            <Route path="/wake-alsa-smart" element={<WakeAlsaSmart />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/ratings" element={<Ratings />} />
             <Route path="/bridge-setup" element={<BridgeSetup />} />
