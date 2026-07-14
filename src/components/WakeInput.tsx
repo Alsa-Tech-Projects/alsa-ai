@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { Mic, ChevronUp } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { Mic, ChevronUp, Keyboard } from "lucide-react";
 
 interface WakeInputProps {
   transcript: string;
@@ -7,118 +7,109 @@ interface WakeInputProps {
   onExpand: () => void;
 }
 
-const DRAG_DISTANCE = 80;
+const DRAG_THRESHOLD = 70;
 
-const WakeInput = ({
+const WakeInput: React.FC<WakeInputProps> = ({
   transcript,
   isListening,
   onExpand,
-}: WakeInputProps) => {
+}) => {
   const startY = useRef<number | null>(null);
+  const [dragOffset, setDragOffset] = useState<number>(0);
 
-  const [offset, setOffset] = useState(0);
-
-  const begin = (y: number) => {
-    startY.current = y;
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startY.current = e.touches[0].clientY;
   };
 
-  const move = (y: number) => {
+  const handleTouchMove = (e: React.TouchEvent) => {
     if (startY.current === null) return;
-
-    const diff = startY.current - y;
-
+    const currentY = e.touches[0].clientY;
+    const diff = startY.current - currentY;
+    
+    // Only allow upward drag tracking
     if (diff > 0) {
-      setOffset(Math.min(diff, 120));
+      setDragOffset(Math.min(diff, 110));
     }
   };
 
-  const end = () => {
-    if (offset > DRAG_DISTANCE) {
+  const handleTouchEnd = () => {
+    if (dragOffset > DRAG_THRESHOLD) {
       onExpand();
     }
-
     startY.current = null;
-    setOffset(0);
+    setDragOffset(0);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    startY.current = e.clientY;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (startY.current === null) return;
+    const diff = startY.current - e.clientY;
+    if (diff > 0) {
+      setDragOffset(Math.min(diff, 110));
+    }
+  };
+
+  const handleMouseUpOrLeave = () => {
+    if (dragOffset > DRAG_THRESHOLD) {
+      onExpand();
+    }
+    startY.current = null;
+    setDragOffset(0);
   };
 
   return (
     <div
-      className="fixed bottom-8 left-0 right-0 z-[99999] flex justify-center px-6"
+      className="w-full max-w-xl mx-auto px-4 select-none cursor-grab active:cursor-grabbing z-30"
       style={{
-        transform: `translateY(${-offset}px)`,
-        transition: startY.current ? "none" : "transform .25s ease",
+        transform: `translateY(${-dragOffset}px)`,
+        transition: startY.current ? "none" : "transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)",
       }}
-      onTouchStart={(e) => begin(e.touches[0].clientY)}
-      onTouchMove={(e) => move(e.touches[0].clientY)}
-      onTouchEnd={end}
-      onMouseDown={(e) => begin(e.clientY)}
-      onMouseMove={(e) => {
-        if (startY.current !== null) {
-          move(e.clientY);
-        }
-      }}
-      onMouseUp={end}
-      onMouseLeave={end}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUpOrLeave}
+      onMouseLeave={handleMouseUpOrLeave}
     >
-      <div
-        className="
-          w-full
-          max-w-xl
-          rounded-full
-          border
-          border-cyan-500/30
-          bg-slate-900/70
-          backdrop-blur-2xl
-          shadow-2xl
-          px-5
-          py-4
-          flex
-          items-center
-          gap-4
-          select-none
-        "
-      >
-        <div
-          className={`
-            h-12
-            w-12
-            rounded-full
-            flex
-            items-center
-            justify-center
-            bg-cyan-500/20
-            ${
-              isListening
-                ? "animate-pulse"
-                : ""
-            }
-          `}
+      <div className="relative w-full rounded-full border border-white/10 bg-black/40 backdrop-blur-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] hover:border-blue-500/30 transition-colors duration-300 p-3.5 flex items-center justify-between gap-4">
+        
+        {/* Decorative Inner Outer Glow Ring for Mic */}
+        <div className="relative flex items-center justify-center">
+          <div className={`absolute inset-0 rounded-full blur-md transition-opacity duration-500 ${
+            isListening ? "bg-sky-500/30 opacity-100" : "bg-transparent opacity-0"
+          }`} />
+          <div className={`h-11 w-11 rounded-full flex items-center justify-center border border-white/10 bg-white/5 transition-transform duration-300 ${
+            isListening ? "scale-105 border-sky-400/30 text-sky-400" : "text-gray-400"
+          }`}>
+            <Mic className={`h-5 w-5 ${isListening ? "animate-pulse" : ""}`} />
+          </div>
+        </div>
+
+        {/* Informative Drag and Text Status Center */}
+        <div className="flex-1 flex flex-col justify-center overflow-hidden">
+          <span className="text-sm font-medium text-white/90 truncate leading-snug">
+            {transcript || "Ask Alsa anything..."}
+          </span>
+          <span className="text-[10px] font-semibold tracking-wider text-sky-400/60 uppercase mt-0.5 flex items-center gap-1">
+            <ChevronUp className={`h-3 w-3 ${dragOffset > 20 ? "animate-bounce" : ""}`} /> 
+            Swipe up for full chat workspace
+          </span>
+        </div>
+
+        {/* Quick Keyboard Input Toggle Action */}
+        <button
+          type="button"
+          onClick={onExpand}
+          className="h-11 w-11 rounded-full flex items-center justify-center border border-white/5 bg-white/[0.02] text-gray-400 hover:text-white hover:bg-white/10 active:scale-95 transition-all"
+          aria-label="Open text layout input"
         >
-          <Mic className="h-6 w-6 text-cyan-400" />
-        </div>
+          <Keyboard className="h-4 w-4" />
+        </button>
 
-        <div className="flex-1 overflow-hidden">
-          <p className="text-white text-base truncate">
-            {transcript || "Say something..."}
-          </p>
-
-          <p className="text-xs text-gray-400 mt-1">
-            Swipe up to open full chat
-          </p>
-        </div>
-
-        <ChevronUp
-          className={`
-            h-7
-            w-7
-            text-cyan-400
-            ${
-              offset > 20
-                ? "animate-bounce"
-                : ""
-            }
-          `}
-        />
       </div>
     </div>
   );

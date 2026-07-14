@@ -1,0 +1,50 @@
+/* Custom smooth backdrop blur configurations for premium glassmorphism */
+.alsa-wake-mode-wrapper {
+  perspective: 1000px;
+  will-change: transform, opacity;
+  animation: wakeFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Keyframe animations for initialization layer */
+@keyframes wakeFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+  }
+}
+
+/* High-fidelity text-shadow states for premium glowing typography */
+.text-shadow-sm {
+  text-shadow: 0 2px 12px rgba(255, 255, 255, 0.15);
+}
+
+.text-shadow-glow {
+  text-shadow: 0 0 12px rgba(56, 189, 248, 0.4), 
+               0 0 24px rgba(59, 130, 246, 0.2);
+}
+
+/* Performance optimization hooks for hardware-accelerated rendering */
+.will-animate-glow {
+  will-change: filter, transform, opacity;
+  transform: translateZ(0);
+}
+
+/* Non-interactive backdrop masks to ensure flawless layout selection behavior */
+.select-none {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Scroll and drag behavior overrides for standard web containers */
+.cursor-grab:active {
+  cursor: grabbing;
+}
