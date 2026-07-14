@@ -79,6 +79,23 @@ const Chat = () => {
       }
     } catch { /* ignore */ }
   }, []);
+  useEffect(() => {
+    if (location.state && typeof location.state === 'object') {
+      const targetState = location.state as { autoOpenFromWake?: boolean; wakeTranscript?: string };
+      
+      if (targetState.autoOpenFromWake && targetState.wakeTranscript) {
+        // Spoken text ko seedhe input me set karega
+        setInputText(targetState.wakeTranscript);
+        
+        // History state clear karega taaki page refresh par loop na ho
+        try {
+          window.history.replaceState({}, document.title);
+        } catch (e) {
+          console.warn("Failed to clear navigation history state safely:", e);
+        }
+      }
+    }
+  }, [location.state]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [backupKeyActive, setBackupKeyActive] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
