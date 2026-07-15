@@ -179,7 +179,7 @@ const RightPanel = ({
         <div className="p-4 space-y-4">
           {/* User Info */}
           <div className="space-y-1 text-center">
-            <p className="text-[8px] font-black text-blue-500 uppercase tracking-[0.4em]">Biometric Active</p>
+            <p className="text-[8px] font-black text-blue-500 uppercase tracking-[0.4em]">Alsa Ai</p>
             <p className="text-[9px] text-white/20 uppercase tracking-widest">User: {(user?.email as string | undefined)?.split('@')[0] || 'Authorized'}</p>
             
             {backupKeyActive && (
@@ -200,7 +200,8 @@ const RightPanel = ({
           <div className="bg-white/5 rounded-xl p-3 border border-white/5">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[9px] font-bold uppercase tracking-widest text-white/40 flex items-center gap-1">
-                <Cloud className="w-3 h-3" /> Weather Forecast
+                <Cloud className="w-3 h-3" /> Weather Dashboard
+
               </span>
               <button onClick={fetchWeather} className="text-[8px] text-blue-400 hover:text-blue-300">Refresh</button>
             </div>
@@ -254,7 +255,7 @@ const RightPanel = ({
           {/* System Stats */}
           <div className="space-y-2">
             <div className="flex justify-between text-[9px] font-mono text-white/30 px-1">
-              <span>NEURAL LOAD</span>
+              <span>Active</span>
               <span>{bridgeConnected ? '24%' : '0%'}</span>
             </div>
             <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
@@ -271,10 +272,11 @@ const RightPanel = ({
           className="w-full border-white/5 bg-white/[0.02] hover:bg-white/5 text-[9px] py-4 rounded-xl tracking-widest font-bold text-white/40 group"
           onClick={onOpenMemory}
         >
-          <span className="group-hover:text-white transition-colors">ACCESS NEURAL MEMORY</span>
+          <span className="group-hover:text-white transition-colors">Edit Or Add New Memory</span>
         </Button>
         <div className="flex justify-center">
-          <Settings className="w-4 h-4 text-white/10 hover:text-white transition-colors cursor-pointer" onClick={() => navigate('/settings')} />
+          <Settings  className="w-4 h-4 text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.7)] hover:opacity-80 transition-all cursor-pointer" onClick={() => navigate('/settings')} />
+
         </div>
       </div>
     </div>

@@ -324,7 +324,7 @@ const FaceAuth = ({ onSuccess, forceMode }: Props) => {
         )}
 
         <p className="text-[11px] text-muted-foreground text-center">
-          On-device · No images uploaded · Liveness + anti-spoof enabled
+          Your Images Data Is 100% Safe & Store In Encrypted Form
         </p>
       </CardContent>
     </Card>
