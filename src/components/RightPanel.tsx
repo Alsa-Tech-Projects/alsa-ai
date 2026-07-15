@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Settings, Cloud, Droplets, Wind, MapPin, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import CircularSiriWave from '@/components/CircularSiriWave';
+import CircularSiriWaveV2 from '@/components/CircularSiriWaveV2'; // 👈 Updated Import
 
 interface RightPanelProps {
   user: Record<string, unknown>;
@@ -57,7 +57,7 @@ const RightPanel = ({
 
     const id = window.setInterval(() => {
       fetchWeather();
-    }, 10 * 60 * 1000); // Refresh every 10 mins
+    }, 10 * 60 * 1000);
 
     return () => window.clearInterval(id);
   }, []);
@@ -73,13 +73,7 @@ const RightPanel = ({
     }
   };
 
-  const saveTodos = (items: string[]) => {
-    localStorage.setItem('alsa_todos', JSON.stringify(items));
-    setTodoItems(items);
-  };
-
   const weatherCodeToText = (code: number): string => {
-    // Open-Meteo weather codes
     if ([0].includes(code)) return 'clear sky';
     if ([1, 2, 3].includes(code)) return 'partly cloudy';
     if ([45, 48].includes(code)) return 'fog';
@@ -95,7 +89,6 @@ const RightPanel = ({
 
   const fetchWeather = async () => {
     setLoadingWeather(true);
-
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -108,7 +101,6 @@ const RightPanel = ({
       setLocationDenied(false);
       const { latitude, longitude } = position.coords;
 
-      // Open-Meteo: no API key needed
       const res = await fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=7`
       );
@@ -141,7 +133,6 @@ const RightPanel = ({
     }
   };
 
-  // Collapsed state - show only toggle button
   if (isCollapsed) {
     return (
       <div className="h-full flex items-center justify-center p-2 bg-[#0a0a0a] border-l border-white/5">
@@ -160,7 +151,6 @@ const RightPanel = ({
 
   return (
     <div className="w-full h-full border-l border-white/5 flex flex-col bg-[#0a0a0a]">
-      {/* Collapse Toggle Button */}
       {onToggleCollapse && (
         <div className="p-2 border-b border-white/5 flex justify-end">
           <Button
@@ -177,7 +167,6 @@ const RightPanel = ({
       
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4">
-          {/* User Info */}
           <div className="space-y-1 text-center">
             <p className="text-[8px] font-black text-blue-500 uppercase tracking-[0.4em]">Alsa Ai</p>
             <p className="text-[9px] text-white/20 uppercase tracking-widest">User: {(user?.email as string | undefined)?.split('@')[0] || 'Authorized'}</p>
@@ -193,7 +182,7 @@ const RightPanel = ({
           {/* Voice Orb */}
           <div className="relative group cursor-pointer flex justify-center" onClick={toggleVoice}>
             <div className={`absolute inset-0 rounded-full blur-3xl transition-all duration-700 ${isListening ? 'bg-blue-600/20 opacity-100' : 'opacity-0'}`}></div>
-            <CircularSiriWave isSpeaking={isSpeaking} isListening={isListening} size={180} />
+            <CircularSiriWaveV2 isSpeaking={isSpeaking} isListening={isListening} size={180} /> {/* 👈 Updated Component */}
           </div>
 
           {/* Weather Widget */}
@@ -201,7 +190,6 @@ const RightPanel = ({
             <div className="flex items-center justify-between mb-2">
               <span className="text-[9px] font-bold uppercase tracking-widest text-white/40 flex items-center gap-1">
                 <Cloud className="w-3 h-3" /> Weather Dashboard
-
               </span>
               <button onClick={fetchWeather} className="text-[8px] text-blue-400 hover:text-blue-300">Refresh</button>
             </div>
@@ -252,6 +240,7 @@ const RightPanel = ({
               <p className="text-[10px] text-white/40">Weather data offline</p>
             )}
           </div>
+
           {/* System Stats */}
           <div className="space-y-2">
             <div className="flex justify-between text-[9px] font-mono text-white/30 px-1">
@@ -265,7 +254,6 @@ const RightPanel = ({
         </div>
       </ScrollArea>
 
-      {/* Footer Actions */}
       <div className="p-3 border-t border-white/5 space-y-2">
         <Button
           variant="outline"
@@ -275,8 +263,7 @@ const RightPanel = ({
           <span className="group-hover:text-white transition-colors">Edit Or Add New Memory</span>
         </Button>
         <div className="flex justify-center">
-          <Settings  className="w-4 h-4 text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.7)] hover:opacity-80 transition-all cursor-pointer" onClick={() => navigate('/settings')} />
-
+          <Settings className="w-4 h-4 text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.7)] hover:opacity-80 transition-all cursor-pointer" onClick={() => navigate('/settings')} />
         </div>
       </div>
     </div>
