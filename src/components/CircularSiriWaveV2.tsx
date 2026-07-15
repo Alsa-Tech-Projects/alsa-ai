@@ -198,7 +198,7 @@ const CircularSiriWaveV2: React.FC<CircularSiriWaveProps> = ({
                 display: 'block',
                 background: 'transparent',
                 pointerEvents: 'auto' // Prevent blocking clicks
-                cursor: 'pointer'
+                cursor: 'pointer',
             }}
         />
     );
