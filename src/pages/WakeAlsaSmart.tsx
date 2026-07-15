@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+// src/pages/WakeAlsaSmart.tsx
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import CircularSiriWaveV2 from "@/components/CircularSiriWaveV2";
@@ -14,18 +15,31 @@ import "@/styles/wake.css";
 
 const WakeAlsaSmart = () => {
   const navigate = useNavigate();
+  const [orbSize, setOrbSize] = useState(300);
 
   const {
     transcript,
     isListening,
     isSpeaking,
-    aiState, // 'idle' | 'listening' | 'thinking' | 'processing' | 'speaking'
-    closeWakeMode
+    aiState,
+    closeWakeMode,
+    toggleListening // ⚡ Added click toggler
   } = useWakeVoice();
 
   const { waveProps } = useWakeAnimation(aiState);
 
-  // Morph to full chat exactly like Gemini Live
+  // ⚡ Mobile Responsive Size calculation
+  useEffect(() => {
+    const handleResize = () => {
+      // Screen ki width ka 80% lega, max 380px limit tak
+      setOrbSize(Math.min(window.innerWidth * 0.8, 380));
+    };
+    
+    handleResize(); // First load par set karega
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const handleExpandToChat = () => {
     navigate("/Chat", { 
       state: { 
@@ -37,7 +51,6 @@ const WakeAlsaSmart = () => {
 
   const handleClose = () => {
     closeWakeMode();
-    // Return to previous route (or fallback to /Chat)
     navigate(-1);
   };
 
@@ -45,7 +58,6 @@ const WakeAlsaSmart = () => {
     <WakeGestureHandler onSwipeUp={handleExpandToChat} onSwipeDown={handleClose}>
       <div className="fixed inset-0 z-[99999] flex flex-col justify-between overflow-hidden bg-black/40 backdrop-blur-3xl alsa-wake-mode-wrapper select-none">
         
-        {/* Ambient Cosmic Blue Glow (Subtle Center Bloom) */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div
             className={`w-[450px] h-[450px] rounded-full blur-[120px] transition-all duration-1000 ${
@@ -58,20 +70,21 @@ const WakeAlsaSmart = () => {
           />
         </div>
 
-        {/* Top: Settings, Battery, Connection UI */}
         <WakeTopBar onClose={handleClose} />
 
-        {/* Center: Particle AI Representation */}
-        <div className="flex-1 flex flex-col items-center justify-center relative z-10 w-full h-full">
+        {/* ⚡ Wrapped in a clickable div for touch interaction */}
+        <div 
+          className="flex-1 flex flex-col items-center justify-center relative z-10 w-full h-full cursor-pointer active:scale-95 transition-transform"
+          onClick={toggleListening}
+        >
           <CircularSiriWaveV2
             isListening={isListening || aiState === 'listening'}
             isSpeaking={isSpeaking || aiState === 'speaking'}
-            size={380}
+            size={orbSize}
             {...waveProps}
           />
         </div>
 
-        {/* Bottom: Transcript and Draggable Input */}
         <div className="relative z-20 w-full flex flex-col items-center pb-10 px-6 gap-8 bg-gradient-to-t from-black/80 via-black/30 to-transparent">
           <WakeTranscript transcript={transcript} aiState={aiState} />
           <WakeInput
