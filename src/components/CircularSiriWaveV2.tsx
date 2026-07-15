@@ -5,14 +5,12 @@ export interface CircularSiriWaveProps {
     isListening: boolean;
     isSpeaking: boolean;
     size?: number;
-    onClick?: () => void;
 }
 
 // Cosmic Blue Theme
 const COLORS = ['#3B82F6', '#60A5FA', '#93C5FD', '#38BDF8'];
-const PARTICLE_COUNT = 1200;
+const PARTICLE_COUNT = 400; // ⚡ Mobile-optimized count (1200 was freezing the main thread)
 
-// Utility for Gaussian-like distribution (concentrates particles in the center of the ring)
 const randomGaussian = () => {
     let rand = 0;
     for (let i = 0; i < 6; i += 1) rand += Math.random();
@@ -28,10 +26,13 @@ class Particle {
     alpha: number;
     wobbleSpeed: number;
     wobbleOffset: number;
+    // ⚡ Pre-calculated RGB variables to avoid runtime processing
+    r: number;
+    g: number;
+    b: number;
 
     constructor(ringThickness: number) {
         this.angle = Math.random() * Math.PI * 2;
-        // Concentrate most particles near the core radius, some trailing off
         this.baseRadiusOffset = randomGaussian() * ringThickness;
         this.size = Math.random() * 1.5 + 0.5;
         this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
@@ -39,6 +40,12 @@ class Particle {
         this.alpha = Math.random() * 0.5 + 0.1;
         this.wobbleSpeed = Math.random() * 0.002 + 0.001;
         this.wobbleOffset = Math.random() * Math.PI * 2;
+
+        // ⚡ Hex to RGB parsing done ONLY ONCE during initialization
+        const hex = this.color.replace('#', '');
+        this.r = parseInt(hex.substring(0, 2), 16);
+        this.g = parseInt(hex.substring(2, 4), 16);
+        this.b = parseInt(hex.substring(4, 6), 16);
     }
 
     update(
@@ -48,21 +55,16 @@ class Particle {
         breathingScale: number,
         pulseScale: number
     ) {
-        // Base rotation speed affected by energy (Speaking)
         this.angle += this.speed * (1 + energy * 4);
 
-        // Calculate dynamic radius
-        // Wobble adds an organic feeling to individual particles without breaking the circle
         const wobble = Math.sin(time * this.wobbleSpeed + this.wobbleOffset) * (3 * energy + 1);
-        
-        // Combine all scale factors
         const activeRadius = baseRadius * breathingScale * pulseScale;
         const currentRadius = activeRadius + (this.baseRadiusOffset * (1 + energy)) + wobble;
 
         return {
             x: Math.cos(this.angle) * currentRadius,
             y: Math.sin(this.angle) * currentRadius,
-            alpha: this.alpha * (0.5 + energy * 0.5) // Brighter when active
+            alpha: this.alpha * (0.5 + energy * 0.5)
         };
     }
 }
@@ -81,7 +83,6 @@ const CircularSiriWaveV2: React.FC<CircularSiriWaveProps> = ({
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Handle high-DPI displays for crisp rendering
         const dpr = window.devicePixelRatio || 1;
         canvas.width = size * dpr;
         canvas.height = size * dpr;
@@ -93,44 +94,34 @@ const CircularSiriWaveV2: React.FC<CircularSiriWaveProps> = ({
         const baseRadius = size * 0.28; 
         const ringThickness = size * 0.15;
 
-        // Initialize particles
         const particles: Particle[] = [];
         for (let i = 0; i < PARTICLE_COUNT; i++) {
             particles.push(new Particle(ringThickness));
         }
 
-        // Animation state variables
         let animationFrameId: number;
         let currentEnergy = 0;
         let targetEnergy = 0;
         
-        // Smooth transitions using Lerp
         const lerp = (start: number, end: number, factor: number) => {
             return start + (end - start) * factor;
         };
 
         const render = (time: number) => {
-            // 1. Determine target state
             if (isSpeaking) {
                 targetEnergy = 1.0;
             } else if (isListening) {
                 targetEnergy = 0.5;
             } else {
-                targetEnergy = 0.1; // Idle state
+                targetEnergy = 0.1;
             }
 
-            // Smoothly interpolate energy
             currentEnergy = lerp(currentEnergy, targetEnergy, 0.05);
 
-            // 2. Clear canvas with pure transparency
             ctx.clearRect(0, 0, size, size);
-
-            // Set blend mode for glowing bloom effect without heavy shadowBlur calculations
             ctx.globalCompositeOperation = 'lighter';
 
-            // 3. Draw Center Radial Glow (Energy Core)
             const coreGradient = ctx.createRadialGradient(center, center, 0, center, center, baseRadius * 1.5);
-            // Core opacity scales with energy
             const coreAlpha = 0.05 + (currentEnergy * 0.1);
             coreGradient.addColorStop(0, `rgba(59, 130, 246, ${coreAlpha})`);
             coreGradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
@@ -140,18 +131,12 @@ const CircularSiriWaveV2: React.FC<CircularSiriWaveProps> = ({
             ctx.fillStyle = coreGradient;
             ctx.fill();
 
-            // 4. Calculate Animation Modifiers
-            // Breathing modifier (4-6 seconds = ~5000ms cycle)
-            // Sine wave ranges from -1 to 1. 
             const breathingCycle = Math.sin(time / 800); 
-            // Scale expands and contracts slightly during listening mode
             const listeningScale = isListening && !isSpeaking ? 1 + (breathingCycle * 0.08) : 1;
             
-            // Speaking pulse modifier (faster, more aggressive)
             const pulseCycle = Math.sin(time / 150);
             const speakingScale = isSpeaking ? 1 + (pulseCycle * 0.05) : 1;
 
-            // 5. Update and Draw Particles
             particles.forEach((particle) => {
                 const pos = particle.update(
                     time,
@@ -164,22 +149,14 @@ const CircularSiriWaveV2: React.FC<CircularSiriWaveProps> = ({
                 ctx.beginPath();
                 ctx.arc(center + pos.x, center + pos.y, particle.size + (currentEnergy * 0.5), 0, Math.PI * 2);
                 
-                // Opacity pulses slightly with the particle's own wobble and overall energy
                 const drawAlpha = Math.max(0, Math.min(1, pos.alpha));
                 
-                // Convert hex to rgba for dynamic alpha
-                const hex = particle.color.replace('#', '');
-                const r = parseInt(hex.substring(0, 2), 16);
-                const g = parseInt(hex.substring(2, 4), 16);
-                const b = parseInt(hex.substring(4, 6), 16);
-                
-                ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${drawAlpha})`;
+                // ⚡ Pure numeric injection, zero string overhead inside the loop
+                ctx.fillStyle = `rgba(${particle.r}, ${particle.g}, ${particle.b}, ${drawAlpha})`;
                 ctx.fill();
             });
 
-            // Reset blend mode for next frame clear
             ctx.globalCompositeOperation = 'source-over';
-
             animationFrameId = requestAnimationFrame(render);
         };
 
@@ -188,17 +165,15 @@ const CircularSiriWaveV2: React.FC<CircularSiriWaveProps> = ({
         return () => {
             cancelAnimationFrame(animationFrameId);
         };
-    }, [size, isListening, isSpeaking]); // Re-bind if props change to update target states
+    }, [size, isListening, isSpeaking]);
 
     return (
         <canvas
             ref={canvasRef}
-            onClick={onClick}
             style={{
                 display: 'block',
                 background: 'transparent',
-                pointerEvents: 'auto', // Prevent blocking clicks
-                cursor: 'pointer',
+                pointerEvents: 'none'
             }}
         />
     );
