@@ -8,7 +8,6 @@ export const useWakeVoice = () => {
   const [aiState, setAiState] = useState<AIState>("listening");
   const [transcript, setTranscript] = useState<string>("");
 
-  // Reuse existing core ALSA hook systems
   const { 
     listening, 
     transcript: partialTranscript, 
@@ -16,13 +15,19 @@ export const useWakeVoice = () => {
     stopListening 
   } = useSpeechRecognition();
   
-  const { 
-    speaking: isTTSSpeaking, 
-    speak, 
-    stop: stopTTS 
-  } = useTextToSpeech();
+  const { speaking: isTTSSpeaking, stop: stopTTS } = useTextToSpeech();
 
-  // Sync lower-level states into our unified presentation state
+  // 🔥 1. AUTO START ON MOUNT (Yeh missing tha)
+  useEffect(() => {
+    // Page open hote hi mic chalu karne ki koshish karega
+    startListening();
+    
+    return () => {
+      stopListening();
+    };
+  }, [startListening, stopListening]);
+
+  // Sync lower-level states
   useEffect(() => {
     if (isTTSSpeaking) {
       setAiState("speaking");
@@ -33,14 +38,12 @@ export const useWakeVoice = () => {
     }
   }, [listening, isTTSSpeaking, transcript]);
 
-  // Keep streaming transcript synced to the local state for real-time visualization
   useEffect(() => {
     if (partialTranscript) {
       setTranscript(partialTranscript);
     }
   }, [partialTranscript]);
 
-  // Handle manual or automatic session teardown safely
   const closeWakeMode = useCallback(() => {
     stopListening();
     stopTTS();
@@ -48,23 +51,16 @@ export const useWakeVoice = () => {
     setAiState("idle");
   }, [stopListening, stopTTS]);
 
-  // Function to process voice queries through existing backend logic
-  const sendVoiceQueryToBackend = useCallback(async (queryText: string) => {
-    if (!queryText.trim()) return;
-    
-    setAiState("thinking");
-    
-    try {
-      // Simulate/Bridge to existing chat function logic pipeline
-      setAiState("processing");
-      
-      // Hook into existing prompt pipeline safely here when combined with Chat.tsx
-      // For now, it manages state updates smoothly to animate the core ring
-    } catch (error) {
-      console.error("Wake voice processing failed:", error);
+  // 🔥 2. MANUAL RE-TRIGGER (Agar browser auto-start block kare toh user tap kar sake)
+  const toggleListening = useCallback(() => {
+    if (listening) {
+      stopListening();
       setAiState("idle");
+    } else {
+      startListening();
+      setAiState("listening");
     }
-  }, []);
+  }, [listening, startListening, stopListening]);
 
   return {
     transcript,
@@ -73,6 +69,6 @@ export const useWakeVoice = () => {
     aiState,
     setAiState,
     closeWakeMode,
-    sendVoiceQueryToBackend
+    toggleListening // Isko return kiya taaki Orb par click kaam kare
   };
 };

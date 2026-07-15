@@ -5,6 +5,7 @@ export interface CircularSiriWaveProps {
     isListening: boolean;
     isSpeaking: boolean;
     size?: number;
+    onClick?: () => void;
 }
 
 // Cosmic Blue Theme
@@ -192,10 +193,12 @@ const CircularSiriWaveV2: React.FC<CircularSiriWaveProps> = ({
     return (
         <canvas
             ref={canvasRef}
+            onClick={onClick}
             style={{
                 display: 'block',
                 background: 'transparent',
-                pointerEvents: 'none' // Prevent blocking clicks
+                pointerEvents: 'auto' // Prevent blocking clicks
+                cursor: 'pointer'
             }}
         />
     );
