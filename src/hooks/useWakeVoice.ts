@@ -1,3 +1,4 @@
+// src/hooks/useWakeVoice.ts
 import { useState, useEffect, useCallback } from "react";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
@@ -17,15 +18,22 @@ export const useWakeVoice = () => {
   
   const { speaking: isTTSSpeaking, stop: stopTTS } = useTextToSpeech();
 
-  // 🔥 1. AUTO START ON MOUNT (Yeh missing tha)
+  // 🔥 1. AUTO START ON MOUNT (Fixed: Empty dependency array prevents infinite loops)
   useEffect(() => {
-    // Page open hote hi mic chalu karne ki koshish karega
-    startListening();
+    try {
+      startListening();
+    } catch (e) {
+      console.error("Auto-start mic failed:", e);
+    }
     
     return () => {
-      stopListening();
+      try {
+        stopListening();
+      } catch (e) {
+        console.warn("Failed to clean up mic on unmount:", e);
+      }
     };
-  }, [startListening, stopListening]);
+  }, []); // 👈 KHALI ARRAY: Page load par sirf ek baar chalega aur thread freeze nahi hoga.
 
   // Sync lower-level states
   useEffect(() => {
@@ -36,7 +44,7 @@ export const useWakeVoice = () => {
     } else if (transcript && aiState !== "thinking" && aiState !== "processing") {
       setAiState("idle");
     }
-  }, [listening, isTTSSpeaking, transcript]);
+  }, [listening, isTTSSpeaking, transcript, aiState]);
 
   useEffect(() => {
     if (partialTranscript) {
@@ -45,19 +53,19 @@ export const useWakeVoice = () => {
   }, [partialTranscript]);
 
   const closeWakeMode = useCallback(() => {
-    stopListening();
-    stopTTS();
+    try { stopListening(); } catch {}
+    try { stopTTS(); } catch {}
     setTranscript("");
     setAiState("idle");
   }, [stopListening, stopTTS]);
 
-  // 🔥 2. MANUAL RE-TRIGGER (Agar browser auto-start block kare toh user tap kar sake)
+  // 🔥 2. MANUAL RE-TRIGGER (Orb tap behavior)
   const toggleListening = useCallback(() => {
     if (listening) {
-      stopListening();
+      try { stopListening(); } catch {}
       setAiState("idle");
     } else {
-      startListening();
+      try { startListening(); } catch {}
       setAiState("listening");
     }
   }, [listening, startListening, stopListening]);
@@ -69,6 +77,6 @@ export const useWakeVoice = () => {
     aiState,
     setAiState,
     closeWakeMode,
-    toggleListening // Isko return kiya taaki Orb par click kaam kare
+    toggleListening
   };
 };
