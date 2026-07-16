@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Moon, Sun, FolderOpen, Key, Plus, Trash2, MessageSquare, Mail, Monitor, Type, ShieldCheck, Mic, Globe, Terminal, Sparkles, AppWindow, FileCode, Keyboard } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, FolderOpen, Key, Plus, Trash2, MessageSquare, Mail, Monitor, Type, ShieldCheck, Mic, Globe, Terminal, Sparkles, AppWindow, FileCode, Keyboard, Upload } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -102,6 +102,57 @@ const Settings = () => {
   const [newTgName, setNewTgName] = useState('');
   const [newTgLink, setNewTgLink] = useState('');
 
+    // File input ko reference karne ke liye
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // CSV handle karne ka function
+  const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const lines = text.split('\n');
+      const newContacts: Contact[] = [];
+
+      // CSV ki har line ko parse karenge
+      lines.forEach((line, index) => {
+        // Maan kar chal rahe hain format "Name,Number" hai
+        const [name, number] = line.split(',').map(item => item?.trim());
+        
+        // Header row ("Contacts_Name") aur empty lines ko ignore karne ke liye
+        if (name && number && name.toLowerCase() !== 'contacts_name') {
+          newContacts.push({
+            id: Date.now().toString() + index, // Unique ID
+            name: name,
+            value: number
+          });
+        }
+      });
+
+      if (newContacts.length > 0) {
+        // State update karte hi UI me live dikhne lagega
+        setWhatsappContacts(prev => [...prev, ...newContacts]);
+        toast({ 
+          title: "CSV Uploaded", 
+          description: `${newContacts.length} contacts successfully add ho gaye!` 
+        });
+      } else {
+        toast({ 
+          title: "Error", 
+          description: "CSV me koi valid contacts nahi mile.", 
+          variant: "destructive" 
+        });
+      }
+      
+      // Input ko reset kar do taaki same file dobara upload ho sake
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+    
+    reader.readAsText(file);
+  };
+  
   // Custom apps state
   const [customApps, setCustomApps] = useState<CustomApp[]>([]);
   const [newAppName, setNewAppName] = useState('');
@@ -905,6 +956,71 @@ const Settings = () => {
                 </div>
 
                 <div className="border-t border-border my-4" />
+
+                                {/* WhatsApp Section */}
+                <div className="space-y-4">
+                  <Label className="text-primary font-bold text-lg">📱 WhatsApp Contacts</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Add contacts with their phone numbers (with country code like 91xxxxxxxxxx)
+                  </p>
+                  
+                  {whatsappContacts.length > 0 && (
+                    <div className="space-y-2">
+                      {whatsappContacts.map((c) => (
+                        <div key={c.id} className="flex gap-2 items-center p-3 bg-secondary/30 rounded-lg">
+                          <div className="flex-1">
+                            <p className="font-medium">{c.name}</p>
+                            <p className="text-xs text-muted-foreground">{c.value}</p>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => setWhatsappContacts(whatsappContacts.filter(i => i.id !== c.id))}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <div className="flex flex-col sm:flex-row gap-2 bg-secondary/20 p-3 rounded-lg min-w-0">
+                    <Input 
+                      placeholder="Name (e.g., Rahul)" 
+                      value={newWpName} 
+                      onChange={e => setNewWpName(e.target.value)} 
+                      className="flex-1 min-w-0"
+                    />
+                    <Input 
+                      placeholder="Phone (e.g., 919876543210)" 
+                      value={newWpNum} 
+                      onChange={e => setNewWpNum(e.target.value)}
+                      className="flex-1 min-w-0" 
+                    />
+                    <Button onClick={addWhatsappContact} size="icon" className="self-end sm:self-auto">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  {/* CSV Upload Section Yaha Add Hua Hai */}
+                  <div className="pt-2">
+                    <input
+                      type="file"
+                      accept=".csv"
+                      ref={fileInputRef}
+                      onChange={handleCsvUpload}
+                      className="hidden" // UI me hide rakha hai
+                    />
+                    <Button 
+                      variant="outline" 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full sm:w-auto"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload CSV
+                    </Button>
+                  </div>
+                </div>
 
                 {/* Telegram Section */}
                 <div className="space-y-4">
