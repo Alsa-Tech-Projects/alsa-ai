@@ -1496,6 +1496,11 @@ export const phoneWhatsappSend       = (number: string, text: string) => phonePo
 export const phoneWhatsappSendByName = (name: string, text: string, first = true) =>
   phonePost('/whatsapp/send-by-name', { name, text, first });
 
+// Telegram automation
+export const phoneTelegramSend = (username: string, text: string) => phonePost('/telegram/send', { username, text });
+export const phoneTelegramSendByName = (name: string, text: string) => phonePost('/telegram/send-by-name', { name, text });
+
+
 // Contacts
 export const phoneContactsRefresh = () => phonePost('/contacts/refresh');
 export const phoneContactsSearch  = (query: string) => phonePost('/contacts/search', { query });
@@ -1748,8 +1753,18 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
   if (waNameM && !/\d/.test(waNameM[1])) {
     return { action: 'whatsapp-name', params: { name: waNameM[1].trim(), text: waNameM[2].trim() }, label: `WhatsApp to ${waNameM[1].trim()}` };
   }
-
-  // YT-DLP on phone
+  
+    // Telegram via phone bridge
+  const tgUserM = input.match(/telegram\s+(?:msg|message|send|bhejo|karo)?\s*(?:to\s+)?@([a-zA-Z0-9_]+)\s*[:,\-]?\s*["']?(.+?)["']?$/i);
+  if (tgUserM) {
+    return { action: 'telegram-user', params: { username: tgUserM[1].trim(), text: tgUserM[2].trim() }, label: `Telegram to @${tgUserM[1]}` };
+  }
+  const tgNameM = input.match(/telegram\s+(?:msg|message|send|bhejo|karo)?\s*(?:to\s+)?([a-zA-Z][a-zA-Z\s]{1,30}?)\s*[:,\-]\s*["']?(.+?)["']?$/i);
+  if (tgNameM && !/\d/.test(tgNameM[1])) {
+    return { action: 'telegram-name', params: { name: tgNameM[1].trim(), text: tgNameM[2].trim() }, label: `Telegram to ${tgNameM[1].trim()}` };
+  }
+  
+  //YT-DLP on phone
   const ytM = input.match(/(https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com)\/\S+)/i);
   if (ytM && /\b(download|save|mp3|mp4|audio|video|yt-?dlp|playlist)\b/i.test(input)) {
     const audio = /\b(mp3|audio|song|music)\b/i.test(input);
@@ -1880,8 +1895,28 @@ export const executePhoneCommand = async (cmd: PhoneCommand): Promise<{ success:
       case 'contacts':   res = await phoneContacts(); break;
       case 'contacts-refresh': res = await phoneContactsRefresh(); break;
       case 'contact-search':   res = await phoneContactsSearch(cmd.params!.query); break;
-      case 'whatsapp-num':  res = await phoneWhatsappSend(cmd.params!.number, cmd.params!.text); break;
-      case 'whatsapp-name': res = await phoneWhatsappSendByName(cmd.params!.name, cmd.params!.text); break;
+            case 'whatsapp-num':  res = await phoneWhatsappSend(cmd.params!.number, cmd.params!.text); break;
+      case 'whatsapp-name': 
+        // Pehle phoneContactsSearch se verify karenge
+        const waContact = await phoneContactsSearch(cmd.params!.name);
+        if (waContact?.error || (waContact?.data && waContact.data.length === 0)) {
+          return { success: false, message: `Error: Contact '${cmd.params!.name}' device me nahi mila.` };
+        }
+        res = await phoneWhatsappSendByName(cmd.params!.name, cmd.params!.text); 
+        break;
+      
+      case 'telegram-user': 
+        res = await phoneTelegramSend(cmd.params!.username, cmd.params!.text); 
+        break;
+      case 'telegram-name': 
+        // Pehle phoneContactsSearch se verify karenge
+        const tgContact = await phoneContactsSearch(cmd.params!.name);
+        if (tgContact?.error || (tgContact?.data && tgContact.data.length === 0)) {
+          return { success: false, message: `Error: Contact '${cmd.params!.name}' device me nahi mila.` };
+        }
+        res = await phoneTelegramSendByName(cmd.params!.name, cmd.params!.text); 
+        break;
+
       case 'ytdlp':         res = await phoneYtdlpDownload(cmd.params as any); break;
       case 'app-list':   res = await phoneAppList(); break;
       case 'app-open':   res = await smartOpenApp(cmd.params!.name); break;
