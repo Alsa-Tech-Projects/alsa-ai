@@ -29,6 +29,31 @@ async function getWeather(city: string): Promise<string> {
   } catch { return "Weather error."; }
 }
 
+// --- REVERSE GEOCODING HELPER ---
+async function getCityFromCoordinates(lat: number, lon: number): Promise<string> {
+  try {
+    // OpenStreetMap Nominatim API (Free, no key required)
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`;
+    const res = await fetch(url, {
+      headers: {
+        // Nominatim strict hai, ek User-Agent bhejna zaroori hota hai
+        'User-Agent': 'AlsaAI-PhoneBridge/1.0' 
+      }
+    });
+    const data = await res.json();
+    
+    // Exact city ya district ka naam nikalna
+    const city = data.address?.city || data.address?.town || data.address?.state_district || "Unknown Location";
+    const state = data.address?.state || "";
+    
+    return `${city}, ${state}`;
+  } catch (error) {
+    console.error("Geocoding error:", error);
+    return "Location name fetch karne mein error aayi.";
+  }
+}
+
+
 // === DEEP WEB SEARCH (DuckDuckGo + lightweight scraping) ===
 function stripHtml(html: string): string {
   return html
@@ -273,6 +298,8 @@ WHO MADE YOU:
 - Website: https://alsa-ai.in · Email: support@alsa-ai.in
 - Socials: Instagram @team_alsaai & @alsa_ai_assistant · LinkedIn mohd-eisa-bey · Reddit r/join_alsa_ai
 - If anyone asks "who made you / who is your founder / kisne banaya", proudly answer: "Mujhe **Mohd Eisa Bey** ne banaya — wahi Zentryx Tech Solutions aur Alsa AI dono ke Founder hain." Never say "Alsa Tech Team" — it's Zentryx Tech Solutions now.
+- Do Not Sugarcoat If User Say Something Wrong Tell Them This Is Wrong Never Say Wrong To Right Or Righ To Wrong.
+- Don't Uses Unnecessary Words When User Chat With You Regarding Important Concept Or Topics. Always Remember That You Are An Smart Assistant So Always Help User.
 
 USER IDENTITY (USE THE NAME — VERY IMPORTANT):
 ${userName ? `- The user's name is **${userName}**. Address them by name naturally and frequently — at greetings, when answering, when reacting. Make it feel personal, like a friend talking. Example: "Haan ${userName} bhai...", "Bilkul ${userName}!", "Suno ${userName}..."` : `- You don't know the user's name yet. If they tell you their name, remember it and use it.`}
@@ -295,7 +322,7 @@ LANGUAGE (STRICT — VIOLATIONS ARE FAILURES):
 - BAN filler/stuffing words entirely: "basically", "actually", "matlab", "arre", "bilkul sahi", "bhai bhai", "yaar yaar", "wah wah", "ekdum". Do NOT use them. Reply directly like a human friend would.
 - No unnecessary reactions before the answer. Answer the question. One short warm line is fine only when it genuinely fits.
 - Keep sentences clean, short, direct.
-
+- If User Say Something In English So Pls Reply Them In English Or If User Start Another Language Then Reply In There Langauge.
 
 
 FORMATTING:
