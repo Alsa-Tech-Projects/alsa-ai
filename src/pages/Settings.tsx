@@ -908,56 +908,9 @@ const Settings = () => {
               </CardHeader>
               <CardContent className="space-y-6">
 
-                {/* WhatsApp Section */}
-                <div className="space-y-4">
-                  <Label className="text-primary font-bold text-lg">📱 WhatsApp Contacts</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Add contacts with their phone numbers (with country code like 91xxxxxxxxxx)
-                  </p>
-                  
-                  {whatsappContacts.length > 0 && (
-                    <div className="space-y-2">
-                      {whatsappContacts.map((c) => (
-                        <div key={c.id} className="flex gap-2 items-center p-3 bg-secondary/30 rounded-lg">
-                          <div className="flex-1">
-                            <p className="font-medium">{c.name}</p>
-                            <p className="text-xs text-muted-foreground">{c.value}</p>
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => setWhatsappContacts(whatsappContacts.filter(i => i.id !== c.id))}
-                          >
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {/* <div className="flex gap-2 bg-secondary/20 p-3 rounded-lg"> */}
-                  <div className="flex flex-col sm:flex-row gap-2 bg-secondary/20 p-3 rounded-lg min-w-0">
-                    <Input 
-                      placeholder="Name (e.g., Rahul)" 
-                      value={newWpName} 
-                      onChange={e => setNewWpName(e.target.value)} 
-                      className="flex-1 min-w-0"
-                    />
-                    <Input 
-                      placeholder="Phone (e.g., 919876543210)" 
-                      value={newWpNum} 
-                      onChange={e => setNewWpNum(e.target.value)}
-                      className="flex-1 min-w-0" 
-                    />
-                    <Button onClick={addWhatsappContact} size="icon" className="self-end sm:self-auto">
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="border-t border-border my-4" />
-
-                                {/* WhatsApp Section */}
+    
+                
+              {/* WhatsApp Section */}
                 <div className="space-y-4">
                   <Label className="text-primary font-bold text-lg">📱 WhatsApp Contacts</Label>
                   <p className="text-xs text-muted-foreground">
