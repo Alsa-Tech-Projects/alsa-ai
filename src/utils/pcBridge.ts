@@ -1895,7 +1895,7 @@ export const executePhoneCommand = async (cmd: PhoneCommand): Promise<{ success:
       case 'contacts':   res = await phoneContacts(); break;
       case 'contacts-refresh': res = await phoneContactsRefresh(); break;
       case 'contact-search':   res = await phoneContactsSearch(cmd.params!.query); break;
-            case 'whatsapp-num':  res = await phoneWhatsappSend(cmd.params!.number, cmd.params!.text); break;
+      case 'whatsapp-num':  res = await phoneWhatsappSend(cmd.params!.number, cmd.params!.text); break;
       case 'whatsapp-name': 
         // Pehle phoneContactsSearch se verify karenge
         const waContact = await phoneContactsSearch(cmd.params!.name);
