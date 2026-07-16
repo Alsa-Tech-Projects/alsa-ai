@@ -1433,6 +1433,26 @@ export const checkPhoneBridgeConnection = async (): Promise<BridgeStatus> => {
   }
 };
 
+// --- REVERSE GEOCODING HELPER ---
+async function getCityFromCoordinates(lat: number, lon: number): Promise<string> {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`;
+    const res = await fetch(url, {
+      headers: { 'Accept-Language': 'en-US,en' } // Returns location in English
+    });
+    const data = await res.json();
+    
+    const city = data.address?.city || data.address?.town || data.address?.state_district || "Unknown Location";
+    const state = data.address?.state || "";
+    
+    return `${city}, ${state}`;
+  } catch (error) {
+    console.error("Geocoding error:", error);
+    return "";
+  }
+  }
+        
+
 // Basic
 export const phoneNotify   = (title: string, content: string) => phonePost('/notify', { title, content });
 export const phoneToast    = (text: string) => phonePost('/toast', { text });
@@ -1878,7 +1898,23 @@ export const executePhoneCommand = async (cmd: PhoneCommand): Promise<{ success:
       case 'battery':    res = await phoneBattery(); break;
       case 'brightness': res = await phoneBrightness(cmd.params!.level); break;
       case 'volume':     res = await phoneVolume(cmd.params!.stream, cmd.params!.level); break;
-      case 'location':   res = await phoneLocation(); break;
+      case 'location':   res = await phoneLocation(); 
+  // Agar location sahi se mil gayi
+        if (res?.success && (res?.data?.latitude || res?.latitude)) {
+        const lat = res.data?.latitude || res.latitude;
+        const lon = res.data?.longitude || res.longitude;
+    
+    // Coordinates ko city name mein convert karo
+    const cityName = await getCityFromCoordinates(lat, lon);
+    
+    // Response modify kar do taaki AI / User ko city ka naam dikhe
+    if (cityName) {
+      res.message = `Location: ${cityName} (Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)})`;
+      res.cityName = cityName; 
+    }
+  }
+  break;
+
       case 'wifi':       res = await phoneWifiToggle(cmd.params!.on); break;
       case 'wifi-info':  res = await phoneWifiInfo(); break;
       case 'clip-get':   res = await phoneClipboardGet(); break;
