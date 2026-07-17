@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from './supabaseClient'; // Apni supabase client file ka path dena
-
+import { supabase } from '@/integrations/supabase/client';
 export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
   const [transcript, setTranscript] = useState('');
   const [isListening, setIsListening] = useState(false);
