@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+
 export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
   const [transcript, setTranscript] = useState('');
   const [isListening, setIsListening] = useState(false);
@@ -8,19 +8,27 @@ export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
   const audioChunksRef = useRef<Blob[]>([]);
   const manualStopRef = useRef(true);
 
-  // Audio ko Supabase Edge Function bhej kar transcript laane ka function
+  // Naye Supabase Project ka Edge Function URL
+  // Isme apni naye project ki ID daal dena
+  const EDGE_FUNCTION_URL = 'https://vzfkokgkwbvdxvfqzeko.supabase.co/functions/v1/transcribe';
+
   const processAudioChunk = async (audioBlob: Blob) => {
     try {
       const formData = new FormData();
-      // Whisper ko webm format chal jata hai
       formData.append('file', audioBlob, 'recording.webm');
 
-      // 'transcribe' naam ka function hum Supabase mein banayenge
-      const { data, error } = await supabase.functions.invoke('transcribe', {
+      // Direct HTTP request to your external Edge Function
+      const response = await fetch(EDGE_FUNCTION_URL, {
+        method: 'POST',
         body: formData,
+        // --no-verify-jwt use kiya hai backend par, isliye Authorization header ki zaroorat nahi
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
       
       if (data?.text) {
         setTranscript((prev) => (prev ? prev + ' ' + data.text : data.text));
@@ -34,7 +42,6 @@ export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
     if (isAISpeaking) return;
 
     try {
-      // Mic ki permission lena aur stream start karna
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       
@@ -42,26 +49,20 @@ export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
       audioChunksRef.current = [];
       manualStopRef.current = false;
 
-      // Jab user bol raha ho tab data chunks save karna
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
 
-      // Jab recording stop ho, tab audio process karna
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         
         setIsListening(false);
-        // Tracks stop karna zaroori hai warna browser tab mein red dot dikhta rahega
         stream.getTracks().forEach(track => track.stop());
 
-        // Audio backend par bhej do
         await processAudioChunk(audioBlob);
 
-        // Agar manual stop nahi kiya tha (yani continuous flow chahiye tha), toh wapas start karo
-        // (Dhyan rakhna Whisper ke sath continuous thoda slow feel ho sakta hai browser api ke comparison mein)
         if (!manualStopRef.current && !isAISpeaking) {
            startListening();
         }
@@ -87,7 +88,6 @@ export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
     setTranscript('');
   }, []);
 
-  // Handle AI speaking interruption
   useEffect(() => {
     if (isAISpeaking && isListening) {
       stopListening();
