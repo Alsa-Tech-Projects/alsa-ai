@@ -7,9 +7,12 @@ export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const manualStopRef = useRef(true);
+  
+  // Refs for tracking audio levels and cleaning up
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
-  // Naye Supabase Project ka Edge Function URL
-  // Isme apni naye project ki ID daal dena
+  // Supabase Edge Function URL
   const EDGE_FUNCTION_URL = 'https://vzfkokgkwbvdxvfqzeko.supabase.co/functions/v1/transcribe';
 
   const processAudioChunk = async (audioBlob: Blob) => {
@@ -17,11 +20,9 @@ export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
       const formData = new FormData();
       formData.append('file', audioBlob, 'recording.webm');
 
-      // Direct HTTP request to your external Edge Function
       const response = await fetch(EDGE_FUNCTION_URL, {
         method: 'POST',
         body: formData,
-        // --no-verify-jwt use kiya hai backend par, isliye Authorization header ki zaroorat nahi
       });
 
       if (!response.ok) {
@@ -49,6 +50,45 @@ export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
       audioChunksRef.current = [];
       manualStopRef.current = false;
 
+      // --- Voice Activity Detection (VAD) Logic ---
+      const audioContext = new window.AudioContext();
+      audioContextRef.current = audioContext;
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.minDecibels = -50; // Threshold for silence
+      source.connect(analyser);
+
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+      let hasSpoken = false;
+      let silenceStart = Date.now();
+      const SILENCE_TIMEOUT = 2500; // Wait 2.5 seconds of silence before processing
+
+      const checkAudioLevel = () => {
+        if (manualStopRef.current || mediaRecorder.state === 'inactive') return;
+
+        analyser.getByteFrequencyData(dataArray);
+        const averageVolume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+
+        if (averageVolume > 10) { 
+          // User is actively speaking
+          hasSpoken = true;
+          silenceStart = Date.now(); // Reset silence timer
+        } else {
+          // User is silent
+          if (hasSpoken && (Date.now() - silenceStart > SILENCE_TIMEOUT)) {
+            // User spoke, and has now been silent for 2.5s -> Process it
+            mediaRecorder.stop();
+            return; // Stop checking until mic restarts
+          }
+        }
+        
+        animationFrameRef.current = requestAnimationFrame(checkAudioLevel);
+      };
+
+      checkAudioLevel(); // Start the volume monitoring loop
+      // -------------------------------------------
+
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
@@ -61,8 +101,20 @@ export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
         setIsListening(false);
         stream.getTracks().forEach(track => track.stop());
 
-        await processAudioChunk(audioBlob);
+        // Cleanup AudioContext
+        if (audioContextRef.current?.state !== 'closed') {
+          audioContextRef.current?.close();
+        }
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+        }
 
+        // Only send to Supabase if they actually said something
+        if (hasSpoken) {
+          await processAudioChunk(audioBlob);
+        }
+
+        // Auto-restart if not manually stopped and AI isn't speaking
         if (!manualStopRef.current && !isAISpeaking) {
            startListening();
         }
@@ -70,7 +122,7 @@ export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
 
       mediaRecorder.start();
       setIsListening(true);
-      console.log("Mic Started (MediaRecorder)...");
+      console.log("Mic Started (Waiting for speech)...");
     } catch (err) {
       console.error("Mic access denied or failed:", err);
       setIsListening(false);
@@ -81,6 +133,12 @@ export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
     manualStopRef.current = true;
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
+    }
+    if (audioContextRef.current?.state !== 'closed') {
+      audioContextRef.current?.close();
+    }
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
     }
   }, []);
 
