@@ -18,10 +18,11 @@ export const useWakeVoice = () => {
   } = useSpeechRecognition();
   
   const { 
-    speaking: isTTSSpeaking, 
+    isSpeaking: isTTSSpeaking, 
     speak, 
     stop: stopTTS 
   } = useTextToSpeech();
+
 
   // Edge Function Request Handler
   const sendVoiceQueryToBackend = useCallback(async (queryText: string) => {

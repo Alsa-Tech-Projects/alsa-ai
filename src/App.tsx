@@ -30,7 +30,7 @@ const FAQ = lazy(() => import("./pages/FAQ"));
 const ImageChat = lazy(() => import("./pages/ImageChat"));
 const Vibecoding = lazy(() => import("./pages/Vibecoding"));
 const AvatarChat = lazy(() => import("./pages/AvatarChat"));
-const Changelog = lazy(() => import("./pages/Changelog"));
+const UpdateHistory = lazy(() => import("./pages/UpdateHistory"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ApiKeyOnboarding = lazy(() => import("./components/ApiKeyOnboarding"));
 
@@ -86,7 +86,8 @@ const App = () => (
             <Route path="/image-chat" element={<ImageChat />} />
             <Route path="/vibecoding" element={<Vibecoding />} />
             <Route path="/avatar-chat" element={<AvatarChat />} />
-            <Route path="/changelog" element={<Changelog />} />
+            <Route path="/update-history" element={<UpdateHistory />} />
+            <Route path="/changelog" element={<UpdateHistory />} />
             <Route path="/share/:shareToken" element={<SharedConversation />} />
             {/* Obfuscated admin path — protected by auth + role check inside */}
             <Route path="/zx-control-9k2" element={<ProtectedRoute redirectTo="/auth"><Admin /></ProtectedRoute>} />

@@ -191,13 +191,16 @@ ${bullets.join('\n\n')}
   } = useSpeechRecognition();
   const { speak: ttsSpeak, stop, isSpeaking } = useTextToSpeech();
 
-  // Wrapper for speak that checks if voice is enabled
+  // Wrapper for speak — TTS is temporarily DISABLED (voice output off in this build)
+  const TTS_ENABLED = false;
   const speak = useCallback((text: string) => {
+    if (!TTS_ENABLED) return;
     const voiceEnabled = localStorage.getItem('alsa_voice_enabled') !== 'false';
     if (voiceEnabled) {
       ttsSpeak(text);
     }
   }, [ttsSpeak]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const listeningTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const lastProcessedRef = useRef<string>('');
@@ -246,29 +249,17 @@ ${bullets.join('\n\n')}
     }
   }, [phoneBridgeConnected, toast]);
 
-  // Toggle voice with callback - stays open until manually closed
-  // DISABLED FOR FREE TIER USERS
+  // Toggle voice — sabhi users ke liye available (mic input)
   const toggleVoice = useCallback(() => {
-    if (subscription.isFree) {
-      toast({
-        title: 'Premium Feature',
-        description: 'Voice commands require Pro or Elite subscription',
-        variant: 'destructive'
-      });
-      navigate('/pricing');
-      return;
-    }
-
     if (isListening) {
       stopListening();
-      speak('Voice input disabled');
-      toast({ title: 'Voice Off', description: 'Press Alt+V to activate again' });
+      toast({ title: '🎙️ Mic Off', description: 'Voice input stopped' });
     } else {
       startListening();
-      speak('Voice input is now active. Speak your full command.');
-      toast({ title: 'Voice Active', description: 'Listening continuously' });
+      toast({ title: '🎙️ Listening...', description: 'Bolna shuru karo — 2.5s chup rehne par message chala jaayega' });
     }
-  }, [isListening, startListening, stopListening, speak, toast, subscription.isFree, navigate]);
+  }, [isListening, startListening, stopListening, toast]);
+
 
   // New conversation handler
   const handleNewConversation = useCallback(() => {
@@ -482,66 +473,47 @@ ${bullets.join('\n\n')}
   }, [systemData]);
 
   // ==========================================================
-  // VOICE COMMAND PROCESSING (FIXED FOR ECHO/LOOP)
+  // VOICE COMMAND PROCESSING
+  // Hook khud 2.5s silence detect karke transcript deta hai,
+  // yahan sirf usko input me daal ke turant bhej dete hain.
   // ==========================================================
-  
-  // 1. Cleanup Effect: Jab AI bolna band kare, mic ka purana kachra saaf karo
   useEffect(() => {
-    if (!isSpeaking && isListening) {
-      // AI ke chup hote hi 300ms baad transcript saaf kar do
-      const timer = setTimeout(() => {
-        resetTranscript();
-        lastProcessedRef.current = ''; 
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [isSpeaking, isListening, resetTranscript]);
-
-  // 2. Main Voice Logic: Control listening based on speaking state
-  useEffect(() => {
-    // GUARD: Agar mic off hai YA AI khud bol raha hai, to process mat karo
-    if (!isListening || isSpeaking) return;
+    if (!isListening) return;
 
     const currentText = transcript.trim();
     if (!currentText) return;
 
     setInputText(currentText);
 
-    if (listeningTimeoutRef.current) {
-      clearTimeout(listeningTimeoutRef.current);
-    }
+    if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current);
 
     const lowerText = currentText.toLowerCase();
 
     // Voice control commands
-    if (lowerText === 'stop listening' || lowerText === 'voice off') {
-      listeningTimeoutRef.current = setTimeout(() => {
-        speak('Voice input disabled');
-        stopListening();
-        setInputText('');
-      }, 500);
+    if (lowerText === 'stop listening' || lowerText === 'voice off' || lowerText === 'mic off') {
+      stopListening();
+      resetTranscript();
+      setInputText('');
       return;
     }
 
-    // Process full commands after 3 seconds of silence
-    if (currentText.length > 5) {
-      listeningTimeoutRef.current = setTimeout(() => {
-        // Double check again if speaking started during timeout
-        if (isSpeaking) return; 
+    // Transcript aa gaya matlab user chup ho chuka hai -> turant send
+    listeningTimeoutRef.current = setTimeout(() => {
+      if (currentText === lastProcessedRef.current) return;
+      lastProcessedRef.current = currentText;
 
-        if (currentText === lastProcessedRef.current) return;
-        lastProcessedRef.current = currentText;
+      handleSubmit(currentText);
+      setInputText('');
+      resetTranscript();
 
-        handleSubmit(currentText);
-        setInputText('');
-        resetTranscript();
+      setTimeout(() => { lastProcessedRef.current = ''; }, 1500);
+    }, 400);
 
-        setTimeout(() => {
-          lastProcessedRef.current = '';
-        }, 2000);
-      }, 3000);
-    }
-  }, [transcript, isListening, isSpeaking, stopListening, resetTranscript]);
+    return () => {
+      if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current);
+    };
+  }, [transcript, isListening, stopListening, resetTranscript]);
+
 
   // Scroll to bottom logic
   const scrollToBottom = useCallback(() => {
@@ -1738,7 +1710,7 @@ lastMsg.content = finalText;
                   ALSA AI
                 </h1>
                 <p className="text-blue-500/50 font-mono text-[8px] uppercase tracking-[0.3em] mt-2">
-                  AIsa AI From Chat To Execution 4.0
+                  Alsa AI From Chat To Execution 5.0
                 </p>
               </div>
             )}
@@ -1935,7 +1907,7 @@ lastMsg.content = finalText;
                 ALSA AI
               </h1>
               <p className="mt-3 text-blue-500/50 font-mono text-[10px] tracking-[0.5em] uppercase">
-                AIsa AI From Chat To Execution 4.0
+                Alsa AI From Chat To Execution 5.0
               </p>
 
               <div className="mt-14 w-full max-w-2xl">
@@ -2191,10 +2163,10 @@ lastMsg.content = finalText;
               onClick={() => {
                 try { localStorage.setItem('alsa_seen_update_v4', '1'); } catch {}
                 setShow40Update(false);
-                navigate('/changelog');
+                navigate('/update-history');
               }}
             >
-              See full changelog →
+              See full update history →
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -340,8 +340,8 @@ const Landing = () => {
             ))}
           </div>
           <div className="text-center mt-10">
-            <Button onClick={() => navigate('/changelog')} variant="outline" className="border-white/20 hover:bg-white/10">
-              Read Full Changelog <ArrowRight className="ml-2 w-4 h-4" />
+            <Button onClick={() => navigate('/update-history')} variant="outline" className="border-white/20 hover:bg-white/10">
+              Read Update History <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
           </div>
         </div>

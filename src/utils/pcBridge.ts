@@ -1,5 +1,8 @@
 // pcBridge.ts - Full PC Control Bridge with Natural Language Support
+import { syncContactsToDb, searchContacts } from '@/utils/contactsStore';
+
 const BRIDGE_URL = 'http://127.0.0.1:5001';
+
 
 const getHeaders = () => ({
   'Content-Type': 'application/json',
@@ -1433,24 +1436,30 @@ export const checkPhoneBridgeConnection = async (): Promise<BridgeStatus> => {
   }
 };
 
-// --- REVERSE GEOCODING HELPER ---
+// --- REVERSE GEOCODING HELPER (exact address: colony, area, city, state) ---
 async function getCityFromCoordinates(lat: number, lon: number): Promise<string> {
   try {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`;
-    const res = await fetch(url, {
-      headers: { 'Accept-Language': 'en-US,en' } // Returns location in English
-    });
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&zoom=18&addressdetails=1&lat=${lat}&lon=${lon}`;
+    const res = await fetch(url, { headers: { 'Accept-Language': 'en-US,en' } });
     const data = await res.json();
-    
-    const city = data.address?.city || data.address?.town || data.address?.state_district || "Unknown Location";
-    const state = data.address?.state || "";
-    
-    return `${city}, ${state}`;
+    const a = data?.address || {};
+
+    const parts = [
+      a.neighbourhood || a.residential || a.hamlet,   // colony
+      a.suburb || a.village || a.town_district,        // area
+      a.city || a.town || a.municipality || a.city_district || a.state_district,
+      a.state,
+      a.postcode,
+    ].filter(Boolean);
+
+    const unique = parts.filter((p, i) => parts.indexOf(p) === i);
+    return unique.length ? unique.join(', ') : (data?.display_name || '');
   } catch (error) {
-    console.error("Geocoding error:", error);
-    return "";
+    console.error('Geocoding error:', error);
+    return '';
   }
-  }
+}
+
         
 
 // Basic
@@ -1888,6 +1897,123 @@ async function smartOpenApp(appName: string) {
 // ======================================
 // executePhoneCommand()
 // ======================================
+
+/**
+ * Raw JSON ko simple insaani bhasha me convert karta hai —
+ * user ko kabhi bhi kaccha JSON nahi dikhna chahiye.
+ */
+function formatPhoneResult(cmd: PhoneCommand, res: any): string {
+  const d = res?.data ?? res ?? {};
+  const p: any = cmd.params || {};
+
+  switch (cmd.action) {
+    case 'torch':
+      return p.on ? '🔦 Torch ON kar diya.' : '🔦 Torch OFF kar diya.';
+    case 'vibrate':
+      return `📳 Phone vibrate kar diya (${p.duration}ms).`;
+    case 'battery': {
+      const lvl = d.percentage ?? d.level ?? d.battery ?? d.percent;
+      const status = d.status ?? d.plugged ?? '';
+      const temp = d.temperature ?? d.temp;
+      return `🔋 Battery ${lvl != null ? lvl + '%' : 'status'}${status ? ` — ${status}` : ''}${temp ? ` · ${temp}°C` : ''}`;
+    }
+    case 'brightness':
+      return `☀️ Brightness set kar di (${Math.round((p.level / 255) * 100)}%).`;
+    case 'volume':
+      return `🔊 ${p.stream} volume ${p.level} par set kar diya.`;
+    case 'location':
+      return res?.place
+        ? `📍 Aap yahan ho: ${res.place}${res.coords ? ` (${res.coords})` : ''}`
+        : '📍 Location nahi mil paayi — GPS on hai kya?';
+    case 'wifi':
+      return p.on ? '📶 Wi-Fi ON kar diya.' : '📶 Wi-Fi OFF kar diya.';
+    case 'wifi-info': {
+      const ssid = d.ssid || d.SSID;
+      const ip = d.ip || d.ip_address;
+      return `📶 Wi-Fi${ssid ? `: ${ssid}` : ''}${ip ? ` · IP ${ip}` : ''}`;
+    }
+    case 'clip-get':
+      return `📋 Clipboard: ${d.text ?? d.clipboard ?? '(khaali hai)'}`;
+    case 'clip-set':
+      return '📋 Clipboard me copy kar diya.';
+    case 'sms':
+      return `✉️ SMS bhej diya ${p.number} ko.`;
+    case 'sms-list': {
+      const list = Array.isArray(d) ? d : d.messages || d.sms || [];
+      if (!list.length) return '✉️ Koi SMS nahi mila.';
+      return `✉️ Latest SMS:\n` + list.slice(0, 10)
+        .map((m: any, i: number) => `${i + 1}. ${m.number || m.address || 'Unknown'} — ${m.body || m.text || ''}`)
+        .join('\n');
+    }
+    case 'call':
+      return `📞 Call laga raha hoon ${p.number} par.`;
+    case 'call-name':
+      return `📞 ${p.name} ko call laga raha hoon.`;
+    case 'call-end':
+      return '📞 Call cut kar di.';
+    case 'photo':
+      return `📸 Photo le li (${p.camera || 'back'} camera).`;
+    case 'toast':
+      return '💬 Toast phone par dikha diya.';
+    case 'notify':
+      return '🔔 Notification bhej di.';
+    case 'sensors': {
+      const keys = Object.keys(d || {}).slice(0, 8);
+      if (!keys.length) return '📡 Sensor data nahi mila.';
+      return '📡 Sensors:\n' + keys.map((k) => `• ${k}: ${JSON.stringify((d as any)[k])}`).join('\n');
+    }
+    case 'contacts': {
+      const list = Array.isArray(d) ? d : d.contacts || [];
+      return `👤 ${list.length} contacts mile aur database me save ho gaye.`;
+    }
+    case 'contacts-refresh':
+      return '👤 Contacts refresh karke database me sync kar diye.';
+    case 'contact-search': {
+      const list = Array.isArray(d) ? d : d.contacts || d.results || [];
+      if (!list.length) return `👤 "${p.query}" naam ka koi contact nahi mila.`;
+      return '👤 Mile contacts:\n' + list.slice(0, 8)
+        .map((c: any) => `• ${c.name || c.display_name} — ${c.phone || c.number}`)
+        .join('\n');
+    }
+    case 'whatsapp-num':
+    case 'whatsapp-name':
+      return `💬 WhatsApp message bhej diya ${p.name || p.number} ko.`;
+    case 'telegram-user':
+    case 'telegram-name':
+      return `✈️ Telegram message bhej diya ${p.name || p.username} ko.`;
+    case 'ytdlp':
+      return `⬇️ Download shuru ho gaya${d.path ? ` — saved: ${d.path}` : ''}.`;
+    case 'app-list': {
+      const list = Array.isArray(d) ? d : d.apps || [];
+      return `📱 ${list.length} apps installed hain.`;
+    }
+    case 'app-open':
+      return `📱 ${p.name} open kar di.`;
+    case 'url-open':
+      return `🌐 ${p.url} browser me khol di.`;
+    case 'media':
+      return `🎵 Media ${p.action} kar diya.`;
+    case 'share':
+      return '📤 Share sheet khol di.';
+    case 'camera-info':
+      return '📷 Camera info mil gayi.';
+    case 'storage-list': {
+      const list = Array.isArray(d) ? d : d.files || [];
+      if (!list.length) return '📂 Folder khaali hai.';
+      return '📂 Files:\n' + list.slice(0, 20).map((f: any) => `• ${f.name || f}`).join('\n');
+    }
+    case 'storage-read':
+      return `📄 File content:\n${d.content ?? d.text ?? ''}`;
+    case 'storage-write':
+      return '💾 File save kar di.';
+    case 'shell':
+      return `🖥️ Output:\n${d.output ?? d.stdout ?? '(no output)'}`;
+    default:
+      return typeof d === 'string' ? d : (res?.message || `${cmd.label} ✓`);
+  }
+}
+
+
   
 export const executePhoneCommand = async (cmd: PhoneCommand): Promise<{ success: boolean; message: string; data?: any }> => {
   try {
@@ -1898,22 +2024,21 @@ export const executePhoneCommand = async (cmd: PhoneCommand): Promise<{ success:
       case 'battery':    res = await phoneBattery(); break;
       case 'brightness': res = await phoneBrightness(cmd.params!.level); break;
       case 'volume':     res = await phoneVolume(cmd.params!.stream, cmd.params!.level); break;
-      case 'location':   res = await phoneLocation(); 
-  // Agar location sahi se mil gayi
-        if (res?.success && (res?.data?.latitude || res?.latitude)) {
-        const lat = res.data?.latitude || res.latitude;
-        const lon = res.data?.longitude || res.longitude;
-    
-    // Coordinates ko city name mein convert karo
-    const cityName = await getCityFromCoordinates(lat, lon);
-    
-    // Response modify kar do taaki AI / User ko city ka naam dikhe
-    if (cityName) {
-      res.message = `Location: ${cityName} (Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)})`;
-      res.cityName = cityName; 
-    }
-  }
-  break;
+      case 'location': {
+        res = await phoneLocation();
+        const lat = res?.data?.latitude ?? res?.latitude;
+        const lon = res?.data?.longitude ?? res?.longitude;
+        if (lat != null && lon != null) {
+          const place = await getCityFromCoordinates(Number(lat), Number(lon));
+          if (place) {
+            res.message = `📍 ${place}`;
+            res.place = place;
+            res.coords = `${Number(lat).toFixed(5)}, ${Number(lon).toFixed(5)}`;
+          }
+        }
+        break;
+      }
+
 
       case 'wifi':       res = await phoneWifiToggle(cmd.params!.on); break;
       case 'wifi-info':  res = await phoneWifiInfo(); break;
@@ -1928,9 +2053,26 @@ export const executePhoneCommand = async (cmd: PhoneCommand): Promise<{ success:
       case 'notify':     res = await phoneNotify(cmd.params!.title, cmd.params!.content); break;
       case 'tts':        res = await phoneTts(cmd.params!.text); break;
       case 'sensors':    res = await phoneSensors(); break;
-      case 'contacts':   res = await phoneContacts(); break;
-      case 'contacts-refresh': res = await phoneContactsRefresh(); break;
-      case 'contact-search':   res = await phoneContactsSearch(cmd.params!.query); break;
+      case 'contacts':
+        res = await phoneContacts();
+        await syncContactsToDb(res?.data ?? res);
+        break;
+      case 'contacts-refresh':
+        res = await phoneContactsRefresh();
+        await syncContactsToDb(res?.data ?? res);
+        break;
+      case 'contact-search': {
+        // Pehle apne database me dekho (fast + offline), warna bridge se
+        const dbHits = await searchContacts(cmd.params!.query);
+        if (dbHits.length) {
+          res = { success: true, data: dbHits };
+        } else {
+          res = await phoneContactsSearch(cmd.params!.query);
+          await syncContactsToDb(res?.data ?? res);
+        }
+        break;
+      }
+
       case 'whatsapp-num':  res = await phoneWhatsappSend(cmd.params!.number, cmd.params!.text); break;
       case 'whatsapp-name': 
         // Pehle phoneContactsSearch se verify karenge
@@ -1971,9 +2113,12 @@ export const executePhoneCommand = async (cmd: PhoneCommand): Promise<{ success:
     const ok = res?.success !== false && res?.ok !== false;
     return {
       success: ok,
-      message: ok ? `Phone Bridge: ${cmd.label} ✓` : (res?.error || res?.message || `${cmd.label} failed`),
+      message: ok
+        ? formatPhoneResult(cmd, res)
+        : (res?.error || res?.message || `${cmd.label} failed`),
       data: res,
     };
+
   } catch (e: any) {
     return { success: false, message: e?.message || 'Phone Bridge error' };
   }
