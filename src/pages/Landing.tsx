@@ -36,10 +36,10 @@ const Landing = () => {
 
   const features = [
     { icon: Bot, title: 'AI Conversation', desc: 'Natural language chat with emotional intelligence and context awareness', color: 'from-blue-500 to-cyan-500' },
-    { icon: Cpu, title: 'PC Control', desc: 'Control your computer with voice commands - shutdown, restart, open apps', color: 'from-purple-500 to-pink-500' },
+    { icon: Cpu, title: 'PC Control', desc: 'Control your computer with voice commands - shutdown, restart, open apps', color: 'from-blue-500 to-sky-400' },
     { icon: Code, title: 'Full-Stack Coding', desc: 'Generate complete React, Node.js, Python projects instantly', color: 'from-emerald-500 to-teal-500' },
     { icon: Smartphone, title: 'Android Control', desc: 'Control your phone via ADB - install apps, take screenshots', color: 'from-orange-500 to-red-500' },
-    { icon: Shield, title: 'Secure Bridge', desc: 'Encrypted local execution tunnel for safe PC automation', color: 'from-indigo-500 to-purple-500' },
+    { icon: Shield, title: 'Secure Bridge', desc: 'Encrypted local execution tunnel for safe PC automation', color: 'from-blue-600 to-sky-500' },
     { icon: Zap, title: 'Real-time', desc: 'Instant responses and actions with streaming AI', color: 'from-yellow-500 to-orange-500' },
   ];
 
@@ -84,16 +84,16 @@ const Landing = () => {
       features: ['Everything in Pro', 'Massage Automation', 'ADB Android Control', 'Excel Automation', 'Database Management', '24/7 Support'],
       cta: 'Get Elite',
       highlight: false,
-      gradient: 'from-purple-500 to-pink-500',
+      gradient: 'from-blue-500 to-sky-400',
       icon: <Crown className="w-5 h-5" />,
     },
   ];
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#07132a] via-[#0A1A2F] to-[#07132a] flex items-center justify-center">
         <div className="relative">
-          <div className="absolute inset-0 blur-3xl bg-gradient-to-r from-blue-600/30 to-purple-600/30 rounded-full"></div>
+          <div className="absolute inset-0 blur-3xl bg-gradient-to-r from-blue-600/30 to-sky-500/30 rounded-full"></div>
           <img src="https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/alsa-logo.png" alt="ALSA AI" className="w-24 h-24 rounded-2xl relative z-10 animate-pulse" />
         </div>
       </div>
@@ -133,7 +133,7 @@ const Landing = () => {
           {JSON.stringify({
             "@context": "https://schema.org",
             "@type": "ItemList",
-            "name": "Alsa AI 4.0 — New Features",
+            "name": "Alsa AI 5.1 — New Features",
             "itemListElement": v4Features.map((f, i) => ({
               "@type": "ListItem",
               "position": i + 1,
@@ -160,8 +160,8 @@ const Landing = () => {
             <a href="#pricing" className="text-xs font-medium text-white/60 hover:text-white transition-colors">Pricing</a>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/auth')} className="text-white/70 hover:bg-white hover:text-black text-xs px-2 md:px-4">Login</Button>
-            <Button size="sm" onClick={() => navigate('/auth')} className="bg-gradient-to-r from-blue-600 to-purple-600 text-[10px] md:text-sm px-3 py-1">Get Started</Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/auth')} className="text-white/70 hover:bg-white/10 hover:text-white text-xs px-2 md:px-4">Login</Button>
+            <Button size="sm" onClick={() => navigate('/auth')} className="bg-gradient-to-r from-blue-600 to-sky-500 text-[10px] md:text-sm px-3 py-1">Get Started</Button>
           </div>
         </div>
       </nav>
@@ -174,16 +174,16 @@ const Landing = () => {
           </Badge>
           <h1 className="text-4xl md:text-7xl font-black mb-6 leading-[1.1] tracking-tight px-2">
             Your AI That Actually <br />
-            <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Gets Things Done</span>
+            <span className="bg-gradient-to-r from-blue-400 via-sky-300 to-blue-200 bg-clip-text text-transparent">Gets Things Done</span>
           </h1>
           <p className="text-base md:text-xl text-white/60 max-w-3xl mx-auto mb-10 leading-relaxed font-light px-4">
             Automate software development, control hardware, and manage data with an AI that doesn't just talk—it <span className="text-white font-medium">acts</span>.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center px-4 mb-12">
-            <Button size="lg" onClick={() => navigate('/auth')} className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-7 rounded-2xl text-lg font-bold">
+            <Button size="lg" onClick={() => navigate('/auth')} className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-sky-500 px-8 py-7 rounded-2xl text-lg font-bold">
               Start Free Trial for ₹1 <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
-            <Button variant="outline" size="lg" onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })} className="w-full sm:w-auto border-purple-500/30 bg-purple-500/5 px-8 py-7 rounded-2xl text-lg font-bold">
+            <Button variant="outline" size="lg" onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })} className="w-full sm:w-auto border-blue-500/30 bg-blue-500/5 px-8 py-7 rounded-2xl text-lg font-bold">
               <Play className="mr-2 w-5 h-5" /> Watch Demo
             </Button>
           </div>
@@ -207,7 +207,7 @@ const Landing = () => {
               Live Demo
             </Badge>
             <h2 className="text-4xl md:text-6xl font-black tracking-tighter mb-4 italic">
-              Watch Alsa Ai <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">With Act</span>
+              Watch Alsa Ai <span className="bg-gradient-to-r from-blue-400 to-sky-300 bg-clip-text text-transparent">With Act</span>
             </h2>
             <p className="text-white/40 max-w-xl mx-auto text-sm md:text-base">
               Experience the seamless integration of ALSA AI with your desktop environment.
@@ -217,7 +217,7 @@ const Landing = () => {
           {/* The Video Mockup Frame */}
           <div className="relative group mx-auto max-w-4xl">
             {/* Outer Border Glow Effect */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-[2rem] md:rounded-[3rem] blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-sky-500 rounded-[2rem] md:rounded-[3rem] blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
 
             {/* Main Container */}
             <div className="relative rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden bg-[#0D1F35] border border-white/10 shadow-2xl">
@@ -320,7 +320,7 @@ const Landing = () => {
               <Sparkles className="w-4 h-4 mr-2 inline" /> Version 4.0 · Just Shipped
             </Badge>
             <h2 className="text-3xl md:text-5xl font-black mb-4 tracking-tight">
-              What's New in <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Alsa AI 4.0</span>
+              What's New in <span className="bg-gradient-to-r from-blue-400 to-sky-300 bg-clip-text text-transparent">Alsa AI 5.1</span>
             </h2>
             <p className="text-white/50 max-w-2xl mx-auto">
               The biggest update yet — BYOK, Phone Bridge, contact-name calling, mic in chat, and 50 free Pro accounts for early users.
@@ -330,7 +330,7 @@ const Landing = () => {
             {v4Features.map((f, i) => (
               <Card key={i} className="bg-white/5 border-white/10 hover:border-blue-500/40 transition-all backdrop-blur-sm">
                 <CardHeader className="pb-3">
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center mb-3">
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500/20 to-sky-400/20 border border-white/10 flex items-center justify-center mb-3">
                     <f.icon className="w-5 h-5 text-blue-300" />
                   </div>
                   <CardTitle className="text-white text-base">{f.title}</CardTitle>
@@ -374,7 +374,7 @@ const Landing = () => {
 
 
       {/* Footer */}
-      <footer className="py-16 px-6 border-t border-white/5 bg-slate-950/80">
+      <footer className="py-16 px-6 border-t border-white/5 bg-[#07132a]/90">
         <div className="container mx-auto">
           <div className="grid md:grid-cols-4 gap-12">
             <div>

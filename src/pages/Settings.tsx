@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import AddressBookSettings from '@/components/AddressBookSettings';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -1274,6 +1275,9 @@ const Settings = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Contacts: WhatsApp / Telegram / Email */}
+            <AddressBookSettings />
 
             {/* Save Button */}
             {/* <div className="flex justify-end gap-4 pb-6"> */}

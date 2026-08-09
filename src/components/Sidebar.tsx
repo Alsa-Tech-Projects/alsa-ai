@@ -182,10 +182,10 @@ const Sidebar = ({ bridgeConnected, onNewChat, onOpenMemory, onToggleBridge, cur
     };
 
     return (
-        <div className="w-64 h-screen bg-[#1a1a1a]/95 border-r border-white/5 flex flex-col sticky top-0 z-40 backdrop-blur-xl">
+        <div className="w-64 h-[100dvh] max-h-[100dvh] bg-[#1a1a1a]/95 border-r border-white/5 flex flex-col sticky top-0 z-40 backdrop-blur-xl overflow-hidden">
 
             {/* Bridge Status - Clickable to toggle */}
-            <div className="p-6 border-b border-white/5">
+            <div className="p-4 border-b border-white/5 shrink-0">
                 <button 
                     onClick={onToggleBridge}
                     className="w-full flex items-center justify-between bg-black/40 p-2.5 rounded-xl border border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
@@ -200,7 +200,7 @@ const Sidebar = ({ bridgeConnected, onNewChat, onOpenMemory, onToggleBridge, cur
             </div>
 
             {/* Actions */}
-            <div className="p-4 space-y-2">
+            <div className="p-3 space-y-2 shrink-0">
                 <Button onClick={onNewChat} className="w-full bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-lg justify-start h-9">
                     <MessageSquare className="w-3.5 h-3.5 mr-2.5" />
                     <span className="font-semibold text-xs">New Intelligence</span>
@@ -208,16 +208,17 @@ const Sidebar = ({ bridgeConnected, onNewChat, onOpenMemory, onToggleBridge, cur
             </div>
 
             {/* Nav */}
-            <div className="px-3 space-y-1">
+            <div className="px-3 space-y-1 shrink-0">
                 {/* Notification Menu - Above Creative Hub */}
                 <NotificationMenu />
                 
                 {[
                     { icon: BarChart3, label: 'Analytics', path: '/analytics' },
                     { icon: UserCircle2, label: 'Avatar Chat', path: '/avatar-chat' },
-                    { icon: Sparkles, label: 'Image Chat', path: '/image-chat' },
+                    
                     { icon: Code2, label: 'Vibe Coding', path: '/vibecoding' },
                     { icon: Lightbulb, label: 'History', path: '/history' },
+                    { icon: Sparkles, label: 'Updates History', path: '/update-history' },
                     { icon: Database, label: 'Memory', action: onOpenMemory },
                 ].map((item, idx) => (
                     <Button key={idx} variant="ghost" className="w-full justify-start text-white/50 hover:text-white hover:bg-white/5 rounded-lg h-8 transition-all"
@@ -229,7 +230,7 @@ const Sidebar = ({ bridgeConnected, onNewChat, onOpenMemory, onToggleBridge, cur
             </div>
 
             {/* History Section with ContextMenu Logic */}
-            <div className="flex-1 flex flex-col min-h-0 mt-6">
+            <div className="flex-1 flex flex-col min-h-0 mt-4 overflow-hidden">
                 <button className="flex items-center justify-between px-6 py-2 text-white/40 hover:text-white/80 transition-colors group" onClick={() => setShowRecent(!showRecent)}>
                     <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Recently Chat</span>
                     {showRecent ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
@@ -295,7 +296,7 @@ const Sidebar = ({ bridgeConnected, onNewChat, onOpenMemory, onToggleBridge, cur
 
             {/* Upgrade Prompt for Free Users */}
             {(subscriptionTier === 'free' || subscriptionTier === 'trial') && (
-                <div className="px-3 mb-2">
+                <div className="px-3 mb-2 shrink-0">
                     <Button
                         onClick={() => navigate('/pricing')}
                         className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white text-xs py-2 h-auto"
@@ -307,7 +308,7 @@ const Sidebar = ({ bridgeConnected, onNewChat, onOpenMemory, onToggleBridge, cur
             )}
 
             {/* Profile Section with Subscription Badge */}
-<div className="p-4 mt-auto border-t border-white/5 bg-black/20 space-y-3">
+<div className="p-3 shrink-0 border-t border-white/5 bg-black/20 space-y-3">
     {/* Subscription Badges - Showing based on tier */}
     <div className="flex justify-center">
         {subscriptionTier === 'elite' && (

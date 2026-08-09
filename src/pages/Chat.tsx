@@ -20,7 +20,6 @@ import { createScheduledMessage } from '@/utils/scheduledMessageManager';
 import ScheduledMessageChecker from '@/components/ScheduledMessageChecker';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { MusicPlayer } from '@/components/MusicPlayer';
 import { GameLauncher } from '@/components/GameLauncher';
 import Sidebar from '@/components/Sidebar';
@@ -28,6 +27,13 @@ import RightPanel from '@/components/RightPanel';
 import CircularSiriWave from '@/components/CircularSiriWave';
 import FileUpload from '@/components/FileUpload';
 import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
 
 interface FileAttachment {
   name: string;
@@ -53,6 +59,9 @@ const Chat = () => {
   const { conversationId: urlConversationId } = useParams();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
+  const [activeTool, setActiveTool] = useState<null | 'image' | 'deep' | 'learn' | 'create'>(null);
+  const [editBaseImage, setEditBaseImage] = useState<string | null>(null);
+
   const [bridgeConnected, setBridgeConnected] = useState(false);
   const [phoneBridgeConnected, setPhoneBridgeConnected] = useState(false);
   const [showMemoryManager, setShowMemoryManager] = useState(false);
@@ -426,10 +435,14 @@ ${bullets.join('\n\n')}
         if (error) throw error;
         loadedConvIdRef.current = convId;
         if (data && data.length > 0) {
-          setMessages(data.map(msg => ({
+          setMessages(data.map((msg: any) => ({
             role: msg.role as 'user' | 'assistant',
-            content: msg.content
+            content: msg.content,
+            files: msg.image_url
+              ? [{ name: 'generated.png', type: 'image/png', size: 0, data: msg.image_url, preview: msg.image_url }]
+              : undefined,
           })));
+
           setCurrentConversationId(convId);
         }
       } catch (error) {
@@ -517,14 +530,28 @@ ${bullets.join('\n\n')}
 
   // Scroll to bottom logic
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, []);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  
+
+  // "Edit" button on a generated image -> switch composer into image-edit mode
+  useEffect(() => {
+    const onEditImage = (e: any) => {
+      const src = e?.detail?.src;
+      if (!src) return;
+      setEditBaseImage(src);
+      setActiveTool('image');
+      toast({ title: 'Edit mode on', description: 'Describe the changes you want in this image.' });
+    };
+    window.addEventListener('alsa-edit-image', onEditImage as EventListener);
+    return () => window.removeEventListener('alsa-edit-image', onEditImage as EventListener);
+  }, [toast]);
+
+
   const saveConversation = async (userMsg: Message, assistantMsg: Message) => {
     if (!user) return; // Only save for logged-in users
 
@@ -542,6 +569,9 @@ ${bullets.join('\n\n')}
         if (convError) throw convError;
         conversationId = conv.id;
         setCurrentConversationId(conversationId);
+        // Mark as already loaded so the URL change doesn't re-fetch and wipe
+        // in-memory messages (images/attachments would disappear otherwise)
+        loadedConvIdRef.current = conversationId;
 
         navigate(`/c/${conversationId}`, { replace: true });
       } else {
@@ -551,10 +581,17 @@ ${bullets.join('\n\n')}
           .eq('id', conversationId);
       }
 
+      const assistantImage = (assistantMsg.files as any)?.find?.((f: any) => (f?.type || '').startsWith('image/'));
       await supabase.from('chat_messages').insert([
         { conversation_id: conversationId, role: 'user', content: userMsg.content },
-        { conversation_id: conversationId, role: 'assistant', content: assistantMsg.content }
+        {
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: assistantMsg.content,
+          image_url: assistantImage?.data || assistantImage?.preview || null,
+        }
       ]);
+
     } catch (error) {
       console.error('Error saving conversation:', error);
     }
@@ -700,8 +737,53 @@ ${bullets.join('\n\n')}
     }
 
     // ====== PRO/ELITE GATED COMMANDS (/deep, /create, custom commands) ======
-    const trimmed = text.trim();
+    let trimmed = text.trim();
+
+    // Tool selected from the "+" menu rewrites the message into its command
+    if (activeTool === 'deep' && !/^\/deep\b/i.test(trimmed)) trimmed = `/deep ${trimmed}`;
+    if (activeTool === 'learn' && !/^\/learn\b/i.test(trimmed)) trimmed = `/learn ${trimmed}`;
+    if (activeTool === 'create' && !/^\/create\b/i.test(trimmed)) trimmed = `/create ${trimmed}`;
+
+    // ====== IMAGE GENERATION (inline, from the + menu or /image) ======
+    if (activeTool === 'image' || /^\/image\b/i.test(trimmed)) {
+      const prompt = trimmed.replace(/^\/image\s*/i, '').trim();
+      if (!prompt) {
+        toast({ title: 'Describe the image', description: 'Type what you want to generate.' });
+        return;
+      }
+      setInputText('');
+      setActiveTool(null);
+      const baseImg = editBaseImage;
+      setEditBaseImage(null);
+      const userMsg: Message = { role: 'user', content: baseImg ? `✏️ Edit image: ${prompt}` : prompt };
+      setMessages(prev => [...prev, userMsg, { role: 'assistant', content: baseImg ? '✏️ Editing image…' : '🎨 Generating image…' }]);
+      setIsTyping(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('image-chat', {
+          body: { prompt, inputImages: baseImg ? [baseImg] : [], aspectRatio: '1:1' },
+        });
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        const assistantMsg: Message = {
+          role: 'assistant',
+          content: data?.text || `Here's your image for: **${prompt}**`,
+          files: data?.imageUrl
+            ? [{ name: 'generated.png', type: 'image/png', size: 0, data: data.imageUrl, preview: data.imageUrl }]
+            : undefined,
+        };
+        setMessages(prev => [...prev.slice(0, -1), assistantMsg]);
+        if (user) await saveConversation(userMsg, assistantMsg);
+      } catch (e: any) {
+        setMessages(prev => [...prev.slice(0, -1), { role: 'assistant', content: `❌ Image generation failed: ${e?.message || e}` }]);
+      } finally {
+        setIsTyping(false);
+      }
+      return;
+    }
+
     const lower = trimmed.toLowerCase();
+
     const isPremiumCmd =
       lower.startsWith('/deep') ||
       lower.startsWith('/create');
@@ -866,9 +948,13 @@ Output rules (strict markdown):
           const fname = generateArticlePdf(topic, fullText);
           summary = `📄 **PDF ready:** \`${fname}\`\n\nYour article on **${topic}** has been generated and downloaded. Check your Downloads folder.`;
         } else {
-          const files = downloadCodeFiles(topic, fullText);
-          summary = `💻 **Code files ready** (${files.length}):\n\n${files.map(f => `- \`${f}\``).join('\n')}\n\nAll files were downloaded to your Downloads folder.`;
+          const files = await downloadCodeFiles(topic, fullText);
+          const isZip = files[0]?.endsWith('.zip');
+          summary = isZip
+            ? `🗜️ **Project ZIP ready:** \`${files[0]}\`\n\nContains ${files.length - 1} files:\n\n${files.slice(1).map(f => `- \`${f}\``).join('\n')}`
+            : `💻 **Code file ready:**\n\n${files.map(f => `- \`${f}\``).join('\n')}\n\nDownloaded to your Downloads folder.`;
         }
+
         const assistantMsg = { role: 'assistant' as const, content: summary + '\n\n---\n\n' + fullText };
         setMessages(prev => [...prev, assistantMsg]);
         speak(mode === 'pdf' ? 'Your PDF is ready' : 'Your code files are ready');
@@ -1110,7 +1196,9 @@ Output rules (strict markdown):
           customInstructions: localStorage.getItem('alsa_custom_instructions') || '',
           userApiKey: localStorage.getItem('alsa_user_api_key') || '',
           userModel: localStorage.getItem('alsa_user_model') || '',
-          mode: aiMode,
+          mode: /^\/learn\b/i.test(trimmed) ? 'thinking' : aiMode,
+          learnMode: /^\/learn\b/i.test(trimmed),
+
         })
       });
 
@@ -1389,6 +1477,29 @@ lastMsg.content = finalText;
                 return newMessages;
               });
               speak(result.success ? 'WhatsApp sent' : 'WhatsApp failed');
+            } else if (parsed.type === 'email_msg') {
+              const { phoneEmailSend, phoneEmailSendByName, deriveSubject } = await import('@/utils/pcBridge');
+              const subject = parsed.subject || deriveSubject(parsed.body || '');
+              let result: any;
+              if (!phoneBridgeConnected) {
+                result = { ok: false, error: 'Phone Bridge is offline. Open the Alsa Phone Bridge app (port 5002).' };
+              } else if (parsed.to) {
+                result = await phoneEmailSend({ to: parsed.to, subject, body: parsed.html || parsed.body, html: !!parsed.html });
+              } else {
+                result = await phoneEmailSendByName(parsed.recipient_name || '', parsed.html || parsed.body, subject, !!parsed.html);
+              }
+              const ok = result?.ok !== false && !result?.error;
+              const statusMsg = ok
+                ? `✅ Email sent → ${parsed.to || result?.contact?.email || parsed.recipient_name} (Subject: ${subject})`
+                : `❌ Email failed: ${result?.error || 'unknown error'}${/not found/i.test(String(result?.error || '')) ? ' — add this contact in Settings → Email Automation.' : ''}`;
+              accumulatedText += `\n\n${statusMsg}`;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
+                return newMessages;
+              });
+              speak(ok ? 'Email sent' : 'Email failed');
             } else if (parsed.type === 'adb_connect') {
               // Phone Bridge already runs on the phone → ADB connect not needed
               const statusMsg = phoneBridgeConnected
@@ -1650,6 +1761,14 @@ lastMsg.content = finalText;
         if (user) {
           await saveConversation(userMessage, { role: 'assistant', content: accumulatedText });
         }
+      } else {
+        // Empty assistant placeholder ko permanent "Neural Processing" state me mat chhodo.
+        setMessages(prev => {
+          const next = [...prev];
+          const last = next[next.length - 1];
+          if (last?.role === 'assistant' && !last.content.trim()) next.pop();
+          return [...next, { role: 'assistant', content: 'Response receive nahi hua. Please message dobara send karein.' }];
+        });
       }
     } catch (error) {
       console.error('Chat error:', error);
@@ -1657,7 +1776,12 @@ lastMsg.content = finalText;
       setBackupKeyActive(false);
 
       const errorMessage = `❌ I'm having trouble responding right now. Please try again or contact support at support@alsa-ai.in for assistance.`;
-      setMessages(prev => [...prev, { role: 'assistant', content: errorMessage }]);
+      setMessages(prev => {
+        const next = [...prev];
+        const last = next[next.length - 1];
+        if (last?.role === 'assistant' && !last.content.trim()) next.pop();
+        return [...next, { role: 'assistant', content: errorMessage }];
+      });
 
       toast({
         title: "AI Response Error",
@@ -1672,8 +1796,8 @@ lastMsg.content = finalText;
   // Mobile UI
   if (isMobile) {
     return (
-      // <div className="flex flex-col h-screen w-screen bg-[#0d0d0d] text-white overflow-hidden">
-      <div className="flex flex-col h-screen w-screen bg-[#0d0d0d] text-white overflow-hidden max-w-full">
+      // <div className="flex flex-col h-[100dvh] w-full bg-[#0d0d0d] text-white overflow-hidden">
+      <div className="flex flex-col h-[100dvh] w-full bg-[#0d0d0d] text-white overflow-hidden max-w-full">
 
         {/* Scheduled Message Checker - Background Component */}
         <ScheduledMessageChecker userId={user?.id || null} />
@@ -1702,10 +1826,10 @@ lastMsg.content = finalText;
         {/* <ScrollArea className="flex-1"> */}
           {/* <div className="p-4 space-y-4"> */}
 
-          <ScrollArea className="flex-1 overflow-x-hidden">
-  <div className="p-4 space-y-4 overflow-x-hidden max-w-full">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain">
+  <div className="px-3 py-3 space-y-4 overflow-x-hidden max-w-full w-full">
             {!hasMessages && (
-              <div className="flex flex-col items-center justify-center h-[60vh]">
+              <div className="flex flex-col items-center justify-center py-24">
                 <h1 className="text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20">
                   ALSA AI
                 </h1>
@@ -1724,12 +1848,13 @@ lastMsg.content = finalText;
                 <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></span>
               </div>
             )}
-            <div ref={messagesEndRef} className="h-4" />
+            <div ref={messagesEndRef} className="h-2" />
           </div>
-        </ScrollArea>
+        </div>
+
 
         {/* Mobile Input */}
-        <div className="p-3 border-t border-white/5 bg-black/60 backdrop-blur-xl">
+        <div className="shrink-0 p-2 border-t border-white/5 bg-black/60 backdrop-blur-xl">
           {/* Voice Feedback - Top Left */}
           {isListening && (
             <div className="mb-2">
@@ -1765,7 +1890,7 @@ lastMsg.content = finalText;
               ))}
             </div>
           )}
-  <div className="flex items-center gap-2">
+  <div className="flex items-end gap-1.5 bg-[#1e1f20] border border-white/10 rounded-[26px] px-2 py-1.5">
     <input
       ref={fileInputRef}
       type="file"
@@ -1774,23 +1899,47 @@ lastMsg.content = finalText;
       className="hidden"
       onChange={(e) => { handleNativeFiles(e.target.files); e.target.value = ''; }}
     />
-    <Button
-      variant="ghost"
-      size="icon"
+    {/* + : premium tools */}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild disabled={isTyping}>
+        <button
+          type="button"
+          aria-label="Premium tools"
+          className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center transition ${
+            activeTool ? 'bg-blue-500/20 text-blue-300' : 'text-white/60 hover:text-white hover:bg-white/10'
+          }`}
+        >
+          <Plus className="w-5 h-5" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="start" className="bg-[#141414] border-white/10 text-white w-56">
+        <DropdownMenuItem onClick={() => setActiveTool('image')} className="cursor-pointer">🖼️ Image Generation</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setActiveTool('deep')} className="cursor-pointer">🔍 Deep Research</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setActiveTool('learn')} className="cursor-pointer">🎓 Smart Learning</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setActiveTool('create')} className="cursor-pointer">📄 Create (file / PDF)</DropdownMenuItem>
+        {activeTool && (
+          <DropdownMenuItem onClick={() => setActiveTool(null)} className="cursor-pointer text-white/50">✕ Clear tool</DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+    {/* attach any file */}
+    <button
+      type="button"
       disabled={isTyping}
       onClick={() => fileInputRef.current?.click()}
-      className="text-white/40 hover:text-white"
-      title="Attach files"
+      title="Attach images, PDFs, documents, code files"
+      className="shrink-0 h-9 w-9 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition disabled:opacity-40"
     >
-      <Paperclip className="w-4 h-4" />
-    </Button>
+      <Paperclip className="w-[18px] h-[18px]" />
+    </button>
+
     <Textarea
       value={inputText}
       disabled={isTyping}
       onChange={(e) => {
         setInputText(e.target.value);
         e.target.style.height = 'auto';
-        e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+        e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px';
       }}
       onKeyPress={(e) => {
         if (e.key === 'Enter' && !e.shiftKey && !isTyping) {
@@ -1798,28 +1947,46 @@ lastMsg.content = finalText;
           handleSubmit();
         }
       }}
-      placeholder={isListening ? "Listening... Please Speak" : isTyping ? "Typing..." : "Message ALSA..."}
-      className="flex-1 bg-white/10 border-white/10 text-white text-sm resize-none overflow-y-auto max-h-[150px] min-h-[40px]"
+      placeholder={
+        isListening ? 'Listening... please speak'
+          : isTyping ? 'Alsa is responding...'
+          : activeTool ? `${activeTool === 'image' ? 'Describe the image' : activeTool === 'deep' ? 'What should I research' : activeTool === 'learn' ? 'What should I teach you' : 'What should I create'}...`
+          : 'Ask Alsa AI'
+      }
+      className="flex-1 min-w-0 bg-transparent border-none text-white text-[15px] focus-visible:ring-0 resize-none overflow-y-auto max-h-[140px] min-h-[38px] py-2 px-1"
       rows={1}
     />
-    <Button
-      variant="ghost"
-      size="icon"
+
+    <button
+      type="button"
       onClick={toggleVoice}
-      className={isListening ? "text-red-400 bg-red-500/10 animate-pulse" : "text-white/40 hover:text-white"}
-      title={isListening ? "Stop mic" : "Voice input"}
+      title={isListening ? 'Stop mic' : 'Voice input'}
+      className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center transition ${
+        isListening ? 'text-red-400 bg-red-500/10 animate-pulse' : 'text-white/60 hover:text-white hover:bg-white/10'
+      }`}
     >
-      <Mic className="w-4 h-4" />
-    </Button>
-    <Button
-      size="icon"
+      <Mic className="w-[18px] h-[18px]" />
+    </button>
+    <button
+      type="button"
       disabled={isTyping}
       onClick={() => handleSubmit()}
-      className={isTyping ? "bg-gray-700" : "bg-blue-600 hover:bg-blue-700"}
+      className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center transition ${
+        isTyping ? 'bg-white/10 text-white/30' : 'bg-blue-600 text-white hover:bg-blue-500'
+      }`}
     >
-      <Send className="w-4 h-4" />
-    </Button>
+      <Send className="w-[17px] h-[17px]" />
+    </button>
   </div>
+  {activeTool && (
+    <button
+      type="button"
+      onClick={() => setActiveTool(null)}
+      className="mt-1.5 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-200"
+    >
+      {activeTool === 'image' ? 'Image' : activeTool === 'deep' ? 'Deep Research' : activeTool === 'learn' ? 'Smart Learning' : 'Create'} ✕
+    </button>
+  )}
 </div>
 
         {/* Mobile Sidebar Overlay */}
@@ -1881,7 +2048,7 @@ lastMsg.content = finalText;
   }
   // ================= DESKTOP UI =================
   return (
-    <div className="flex h-screen w-screen bg-[#0d0d0d] text-white overflow-hidden">
+    <div className="flex h-[100dvh] w-full bg-[#0d0d0d] text-white overflow-hidden">
       {/* Scheduled Message Checker - Background Component */}
       <ScheduledMessageChecker userId={user?.id || null} />
       
@@ -1944,8 +2111,8 @@ lastMsg.content = finalText;
           ) : (
             <>
               {/* CHAT MESSAGES */}
-              <ScrollArea className="flex-1 px-6">
-                <div className="max-w-5xl mx-auto py-12 space-y-10">
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-6">
+                <div className="max-w-5xl mx-auto py-8 space-y-8 w-full min-w-0">
                   {messages.map((m, i) => (
                     <ChatMessage key={i} role={m.role} content={m.content} files={m.files as any} keySource={m.keySource} />
                   ))}
@@ -1959,7 +2126,7 @@ lastMsg.content = finalText;
                   )}
                   <div ref={messagesEndRef} />
                 </div>
-              </ScrollArea>
+              </div>
 
               {/* VOICE FEEDBACK - TOP LEFT OF CHAT */}
               {isListening && (
@@ -1969,7 +2136,7 @@ lastMsg.content = finalText;
               )}
 
               {/* INPUT BAR (DURING CHAT) */}
-<div className="p-6 bg-gradient-to-t from-black via-black/80 to-transparent">
+<div className="px-6 py-4 bg-gradient-to-t from-black via-black/80 to-transparent">
   <div className="max-w-5xl mx-auto">
     {uploadedFiles.length > 0 && (
       <div className="flex gap-2 mb-2 flex-wrap">
@@ -2038,10 +2205,57 @@ lastMsg.content = finalText;
         className="hidden"
         onChange={(e) => { handleNativeFiles(e.target.files); e.target.value = ''; }}
       />
-      <Plus
-        className={`w-5 h-5 text-white/30 flex-shrink-0 ${isTyping ? 'opacity-50 cursor-not-allowed' : 'hover:text-white cursor-pointer'}`}
-        onClick={() => !isTyping && fileInputRef.current?.click()}
-      />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild disabled={isTyping}>
+          <button
+            type="button"
+            aria-label="Add attachment or tool"
+            className={`flex-shrink-0 rounded-full p-1 transition ${
+              activeTool ? 'bg-blue-500/20 text-blue-300' : 'text-white/30 hover:text-white'
+            } ${isTyping ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="top" align="start" className="bg-[#141414] border-white/10 text-white w-56">
+          <DropdownMenuItem onClick={() => setActiveTool('image')} className="cursor-pointer">
+            🖼️ Image Generation
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setActiveTool('deep')} className="cursor-pointer">
+            🔍 Deep Research
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setActiveTool('learn')} className="cursor-pointer">
+            🎓 Smart Learning
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setActiveTool('create')} className="cursor-pointer">
+            📄 Create (file / PDF)
+          </DropdownMenuItem>
+          {activeTool && (
+            <DropdownMenuItem onClick={() => setActiveTool(null)} className="cursor-pointer text-white/50">
+              ✕ Clear tool
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <button
+        type="button"
+        disabled={isTyping}
+        onClick={() => fileInputRef.current?.click()}
+        title="Attach images, PDFs, documents, code files"
+        className="flex-shrink-0 rounded-full p-1 text-white/30 hover:text-white transition disabled:opacity-40"
+      >
+        <Paperclip className="w-5 h-5" />
+      </button>
+      {activeTool && (
+        <button
+          type="button"
+          onClick={() => setActiveTool(null)}
+          className="flex-shrink-0 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-200"
+        >
+          {activeTool === 'image' ? 'Image' : activeTool === 'deep' ? 'Deep Research' : activeTool === 'learn' ? 'Smart Learning' : 'Create'} ✕
+        </button>
+      )}
+
       <Textarea
         value={inputText}
         disabled={isTyping}

@@ -12,7 +12,6 @@ const Chat = lazy(() => import("./pages/Chat"));
 const FaceAuthGate = lazy(() => import("./components/FaceAuthGate"));
 
 const Settings = lazy(() => import("./pages/Settings"));
-const WakeAlsaSmart = lazy(() => import("./pages/WakeAlsaSmart"));
 const History = lazy(() => import("./pages/History"));
 const Ratings = lazy(() => import("./pages/Ratings"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -27,7 +26,7 @@ const BridgeFeatures = lazy(() => import("./pages/BridgeFeatures"));
 const SharedConversation = lazy(() => import("./pages/SharedConversation"));
 const Admin = lazy(() => import("./pages/Admin"));
 const FAQ = lazy(() => import("./pages/FAQ"));
-const ImageChat = lazy(() => import("./pages/ImageChat"));
+
 const Vibecoding = lazy(() => import("./pages/Vibecoding"));
 const AvatarChat = lazy(() => import("./pages/AvatarChat"));
 const UpdateHistory = lazy(() => import("./pages/UpdateHistory"));
@@ -68,7 +67,7 @@ const App = () => (
             <Route path="/landing" element={<Navigate to="/" replace />} />
             <Route path="/Chat" element={<FaceAuthGate><Chat /></FaceAuthGate>} />
             <Route path="/Chats" element={<Navigate to="/Chat" replace />} />
-            <Route path="/wake-alsa-smart" element={<WakeAlsaSmart />} />
+
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/ratings" element={<Ratings />} />
             <Route path="/bridge-setup" element={<BridgeSetup />} />
@@ -83,11 +82,10 @@ const App = () => (
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/faq" element={<FAQ />} />
-            <Route path="/image-chat" element={<ImageChat />} />
             <Route path="/vibecoding" element={<Vibecoding />} />
             <Route path="/avatar-chat" element={<AvatarChat />} />
             <Route path="/update-history" element={<UpdateHistory />} />
-            <Route path="/changelog" element={<UpdateHistory />} />
+
             <Route path="/share/:shareToken" element={<SharedConversation />} />
             {/* Obfuscated admin path — protected by auth + role check inside */}
             <Route path="/zx-control-9k2" element={<ProtectedRoute redirectTo="/auth"><Admin /></ProtectedRoute>} />

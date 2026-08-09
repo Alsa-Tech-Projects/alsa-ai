@@ -213,3 +213,23 @@ All colors MUST be HSL.
 .shadow-glow {
   box-shadow: 0 0 20px hsl(var(--primary) / 0.4);
 }
+
+/* Chat markdown (Gemini-style) */
+.alsa-md .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 0;
+  margin: 12px 0;
+}
+.alsa-md .katex { font-size: 1.02em; }
+.alsa-md > *:first-child { margin-top: 0; }
+.alsa-md > *:last-child { margin-bottom: 0; }
+
+/* Chat markdown: never overflow the screen */
+.alsa-md { max-width: 100%; min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+.alsa-md pre,
+.alsa-md code { white-space: pre-wrap !important; word-break: break-word; max-width: 100%; }
+.alsa-md table { display: table; width: 100%; }
+.alsa-md img { max-width: 100%; height: auto; }
+.alsa-md .katex-display { max-width: 100%; overflow-x: auto; overflow-y: hidden; }
+.alsa-md p, .alsa-md li { overflow-wrap: anywhere; }

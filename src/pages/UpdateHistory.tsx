@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Sparkles, Bot, Smartphone, Bell, Key, Wrench, Zap, Gift, Mic,
-  Youtube, MessageSquare, PhoneCall, Settings2, Contact, MapPin, Code2, Volume2,
+  Youtube, MessageSquare, Mail, PhoneCall, Settings2, Contact, MapPin, Code2, Volume2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -29,6 +29,63 @@ type Release = {
 };
 
 const RELEASES: Release[] = [
+  {
+    version: '5.1',
+    label: 'Version 5.1 — Contacts, Email & Clean Theme',
+    tagline: 'Email automation, saved contacts and a cleaner blue look.',
+    released: 'Latest',
+    changes: [
+      {
+        icon: Mail,
+        title: 'Send Email By Name',
+        desc: 'Connect your own mailbox once in Settings using your email address and an app password. After that you can simply say "email Ravi about the report". Alsa finds the address in your saved contacts, writes a subject if you did not give one, and sends the mail from your own device. You can also ask for an HTML formatted email.',
+        color: 'from-blue-500 to-sky-400',
+        badge: 'NEW',
+      },
+      {
+        icon: Contact,
+        title: 'Contacts For WhatsApp, Telegram And Email',
+        desc: 'Settings now has three contact books. Alsa always checks them before sending a message, so it never invents a number, username or email address. If a contact is missing, it tells you to add it.',
+        color: 'from-emerald-500 to-teal-500',
+      },
+      {
+        icon: Settings2,
+        title: 'CSV Bulk Upload',
+        desc: 'You can add many contacts at once with a CSV file. WhatsApp needs the columns name and phone. Telegram needs name plus username or phone. Email needs name and email. Everything is saved in your secure cloud database instead of the browser.',
+        color: 'from-violet-500 to-blue-500',
+      },
+      {
+        icon: MessageSquare,
+        title: 'Faster And More Reliable Messaging',
+        desc: 'WhatsApp and Telegram sending through the Phone Bridge no longer times out early, and failures now show a clear reason instead of a plain "Failed to fetch".',
+        color: 'from-green-500 to-emerald-500',
+      },
+      {
+        icon: MapPin,
+        title: 'Correct Location Again',
+        desc: 'Location lookup now uses a second map service as a backup, so you get the real colony, city and state instead of "Unknown location".',
+        color: 'from-orange-500 to-amber-500',
+      },
+      {
+        icon: Bot,
+        title: 'Knows Today\'s Real Date And Remembers You',
+        desc: 'Alsa now always uses the real current date and time up to 2026, and keeps learning what you work on, what you like and what you asked before, so replies feel more personal.',
+        color: 'from-sky-500 to-blue-600',
+      },
+      {
+        icon: Sparkles,
+        title: 'One Brand Theme Everywhere',
+        desc: 'The landing page and the rest of the app now use the same blue and white brand colours, and the sidebar profile card no longer gets hidden on small screens.',
+        color: 'from-blue-400 to-sky-300',
+      },
+      {
+        icon: Zap,
+        title: 'Deployment Cache Fix',
+        desc: 'New builds now appear immediately after deploying. The old cached page will not show up any more.',
+        color: 'from-yellow-500 to-orange-500',
+      },
+    ],
+  },
   {
     version: '5.0',
     label: 'Version 5.0 — Voice & Phone Era',
@@ -85,6 +142,39 @@ const RELEASES: Release[] = [
         desc: 'Alsa ab sirf "Boss" ya aapke saved naam se bulaata hai — koi "yaar", "jaan" jaise filler nahi. English mein baat karo to English, Hinglish mein karo to Hinglish.',
         color: 'from-yellow-500 to-amber-500',
       },
+      {
+        icon: MessageSquare,
+        title: 'Naya Gemini-Style Chat UI',
+        desc: 'Reply ab bina kisi chhote black box ke poori screen ki width par aata hai. User message ek clean pill bubble mein, aur assistant ka jawab full-width readable layout mein. Mobile par chat ab screen se bahar nahi jaati.',
+        color: 'from-blue-500 to-indigo-500',
+        badge: 'NEW',
+      },
+      {
+        icon: Code2,
+        title: 'Coding Canvas — Open, Copy, Download & Preview',
+        desc: 'Lambe code blocks ab chat ko nahi todte. "Open File In Canvas" par click karke poora file view milta hai jisme Copy, Download aur .html files ke liye live "Preview Output" bhi hai.',
+        color: 'from-emerald-500 to-green-600',
+        badge: 'NEW',
+      },
+      {
+        icon: Wrench,
+        title: 'Better Markdown: Tables, Math, Links & Code',
+        desc: 'Tables, KaTeX math, link previews aur code blocks ab sahi spacing aur styling ke saath render hote hain. Lambi lines apne aap agli line par wrap hoti hain, isliye horizontal scroll aur cut-off text khatam.',
+        color: 'from-cyan-500 to-sky-600',
+      },
+      {
+        icon: Smartphone,
+        title: 'Scroll & Layout Fixes',
+        desc: 'Chat area ab sahi se upar-neeche scroll hota hai, chat aur input ke beech ka bada black gap hata diya gaya hai, aur keyboard khulne par bhi layout (100dvh) screen mein fit rehta hai — koi message ab input ke peeche nahi chhupta.',
+        color: 'from-rose-500 to-red-500',
+      },
+      {
+        icon: Zap,
+        title: 'Premium "+" Menu In Composer',
+        desc: 'Input box ke "+" se Image Generation, Deep Research, Smart Learning aur Create (file/PDF) directly choose kar sakte ho — saath mein attach button aur right side par Mic + Send.',
+        color: 'from-purple-500 to-fuchsia-500',
+      },
+
     ],
   },
   {

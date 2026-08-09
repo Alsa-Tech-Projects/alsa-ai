@@ -46,19 +46,18 @@ Endpoints (all JSON POST unless noted):
   POST /url/open                  -> { url }
   POST /shell                     -> { command }   (arbitrary shell command)
 
-  # ── WhatsApp automation (ADB-based, works via Termux OR via USB-ADB) ──
-  POST /whatsapp/send             -> { number, text }            # sends to E.164 number
-  POST /whatsapp/send-by-name     -> { name, text }              # looks up contacts.json
-  POST /contacts/refresh          -> {}                          # rebuild contacts.json
-  POST /contacts/search           -> { query }                   # fuzzy name → numbers
+  # ── Messaging ──
+  POST /send                      -> { platform: "whatsapp|telegram", number?, username?, text }
+  POST /whatsapp/send-by-name     -> { name, text }
+  POST /telegram/send-by-name     -> { name, text }
+  POST /contacts/refresh          -> {}
+  POST /contacts/search           -> { query }
 
-  # ── yt-dlp (YouTube / video / audio downloader) ──
+  # ── yt-dlp ──
   POST /ytdlp/status              -> {}
-  POST /ytdlp/download            -> { url, mode: "video|audio", quality?, audio_format?,
-                                        subtitles?, embed_thumbnail?, embed_metadata?,
-                                        playlist?, output_dir? }
+  POST /ytdlp/download            -> { url, mode: "video|audio", quality? }
 
-Port: 5002  (different from PC Bridge's 5001)
+Port: 5002
 """
 import subprocess
 import json
@@ -77,189 +76,94 @@ CORS(app)
 PORT = 5002
 HOME = os.path.expanduser("~")
 CONTACTS_FILE = os.path.join(HOME, "alsa_contacts.json")
-# Prefer real Android media folders (via termux-setup-storage). Fallback: HOME.
 _SHARED = os.path.join(HOME, "storage", "shared")
 _HAS_SHARED = os.path.isdir(_SHARED)
 YTDLP_VIDEO_DIR = os.path.join(_SHARED, "DCIM", "Snapchat") if _HAS_SHARED else os.path.join(HOME, "Videos")
 YTDLP_AUDIO_DIR = os.path.join(_SHARED, "Music")           if _HAS_SHARED else os.path.join(HOME, "Music")
-YTDLP_DEFAULT_DIR = YTDLP_VIDEO_DIR  # legacy alias
 
 APPS_DATABASE = {
     "youtube": "com.google.android.youtube/.app.honeycomb.Shell$HomeActivity",
     "whatsapp": "com.whatsapp/.Main",
     "whatsapp_business": "com.whatsapp.w4b/com.whatsapp.Main",
     "instagram": "com.instagram.android/.activity.MainTabActivity",
-    "instagram_lite": "com.instagram.basel/.mainactivity.BaselActivity",
     "facebook": "com.facebook.katana/.LoginActivity",
-    "facebook_pages": "com.facebook.pages.app/.auth.PagesManagerLoginActivity",
-    "messenger_lite": "com.facebook.stella/com.facebook.wearable.companion.silverstone.main.view.SilverstoneMainActivity",
     "telegram": "org.telegram.messenger/.DefaultIcon",
-    "upi": "com.naviapp/.home.compose.activity.HomePageActivity",
-    "chatgpt": "com.openai.chatgpt/.MainActivity",
-    "gpay": "com.google.android.apps.nbu.paisa.user/com.google.nbu.paisa.flutter.gpay.app.LauncherActivity",
-    "inshot": "com.camerasideas.instashot/.MainActivity",
-    "google": "com.google.android.googlequicksearchbox/.SearchActivity",
-    "assistant": "com.google.android.apps.googleassistant/.AssistantActivity",
     "chrome": "com.android.chrome/com.google.android.apps.chrome.Main",
     "gmail": "com.google.android.gm/.ConversationListActivityGmail",
     "maps": "com.google.android.apps.maps/com.google.android.maps.MapsActivity",
-    "photos": "com.google.android.apps.photos/.home.HomeActivity",
-    "drive": "com.google.android.apps.docs/.app.NewMainProxyActivity",
-    "duo": "com.google.android.apps.tachyon/.MainActivity",
-    "files": "com.google.android.apps.nbu.files/.home.HomeActivity",
-    "contacts": "com.google.android.contacts/com.android.contacts.activities.PeopleActivity",
-    "dialer": "com.google.android.dialer/.extensions.GoogleDialtactsActivity",
-    "messages": "com.google.android.apps.messaging/.ui.ConversationListActivity",
-    "tasks": "com.google.android.apps.tasks/.ui.TaskListsActivity",
-    "list": "com.google.android.keep/.activities.BrowseActivity",
-    "calendar": "com.google.android.calendar/com.android.calendar.AllInOneActivity",
-    "playstore": "com.android.vending/.AssetBrowserActivity",
-    "lens": "com.google.ar.lens/com.google.vr.apps.ornament.app.lens.LensLauncherActivity",
-    "pubg": "com.activision.callofduty.shooter/com.tencent.tmgp.cod.CODMPrivatePermissionActivity",
-    "flipkart": "com.flipkart.android/.GoatSaleIconAlias",
-    "reddit": "com.reddit.frontpage/launcher.default",
-    "zoho_mail": "com.zoho.mail/.android.activities.Login",
-    "pinterest": "com.pinterest/.activity.PinterestActivity",
-    "hotstar": "in.startv.hotstar/com.hotstar.MainActivity",
-    "protonvpn": "ch.protonvpn.android/.RoutingActivity",
-    "razorpay": "com.razorpay.payments.app/.MainActivity",
-    "threads": "com.instagram.barcelona/.mainactivity.BarcelonaActivity",
-    "mx_player": "com.mxtech.videoplayer.ad/.ActivityWelcomeMX",
-    "twitter": "com.twitter.android/com.x.android.main.MainActivity",
-    "pydroid": "ru.iiec.pydroid3/ru.iiec.pydroid.MainActivity",
-    "real_cricket": "com.nautilus.realcricket/.IconAlias0",
-    "myjio": "com.jio.myjio/.dashboard.activities.SplashActivity",
-    "indian_bikes": "com.Rohit.IndianBikes/com.unity3d.player.UnityPlayerActivity",
-    "linkedin": "com.linkedin.android/.authenticator.LaunchActivityDefault",
-    "canva": "com.canva.editor/com.canva.app.editor.splash.SplashActivity",
-    "snapchat": "com.snapchat.android/.LandingPageActivity",
-    "zarchiver": "ru.zdevs.zarchiver/.ZArchiver",
-    "termux": "com.termux/.app.TermuxActivity",
-    "termux_api": "com.termux.api/.activities.TermuxAPILauncherActivity",
     "settings": "com.android.settings/.Settings",
-    "camera": "com.oppo.camera/.Camera",
-    "calculator": "com.coloros.calculator/com.android.calculator2.Calculator",
-    "file_manager": "com.coloros.filemanager/com.oplus.filemanager.main.ui.SplashActivity",
-    "video_player": "com.coloros.video/com.oplus.video.SplashActivity",
-    "gallery": "com.coloros.gallery3d/.app.MainActivity",
-    "sound_recorder": "com.coloros.soundrecorder/oppo.multimedia.soundrecorder.filebrowser.BrowseFile",
-    "clock": "com.coloros.alarmclock/.AlarmClock",
-    "weather": "com.coloros.weather2/com.coloros.weather.main.view.WeatherMainActivity",
-    "compass": "com.coloros.compass2/com.coloros.compass.flat.FlatCompass",
-    "theme_store": "com.heytap.themestore/com.nearme.themespace.activities.ThemeActivity",
-    "browser": "com.heytap.browser/com.android.browser.BrowserActivity",
-    "cloud": "com.heytap.cloud/.home.ui.CloudLauncherActivity",
-    "fm_radio": "com.android.fmradio/.FmMainActivity",
-    "pixellab": "com.imaginstudio.imagetools.pixellab/.MainActivity",
-    "justdial": "com.justdial.search/.SplashScreenNewActivity"
+    "camera": "com.oppo.camera/.Camera"
 }
 
-
 def run(cmd, timeout=30, input_data=None):
-    """Run a shell/termux-api command and return (ok, stdout|stderr, json?)."""
     try:
         r = subprocess.run(
-            cmd,
-            shell=isinstance(cmd, str),
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            input=input_data,
+            cmd, shell=isinstance(cmd, str), capture_output=True, text=True, timeout=timeout, input=input_data
         )
         out = r.stdout.strip()
         err = r.stderr.strip()
         parsed = None
         if out:
-            try:
-                parsed = json.loads(out)
-            except Exception:
-                parsed = None
+            try: parsed = json.loads(out)
+            except: parsed = None
         return (r.returncode == 0, out or err, parsed)
-    except subprocess.TimeoutExpired:
-        return (False, "Command timeout", None)
-    except FileNotFoundError:
-        return (False, "termux-api not installed. Run: pkg install termux-api", None)
     except Exception as e:
         return (False, str(e), None)
 
-
-# ─────────────────────────── Basic ───────────────────────────
 @app.route("/status", methods=["GET"])
 def status():
-    return jsonify({"ok": True, "device": "phone", "bridge": "alsa-phone-bridge", "version": "1.0"})
-
+    return jsonify({"ok": True, "device": "phone", "bridge": "alsa-phone-bridge", "version": "1.1"})
 
 @app.route("/notify", methods=["POST"])
 def notify():
     d = request.get_json(force=True) or {}
-    title = d.get("title", "Alsa AI")
-    content = d.get("content", "")
-    ok, out, _ = run(["termux-notification", "--title", title, "--content", content])
+    ok, out, _ = run(["termux-notification", "--title", d.get("title", "Alsa AI"), "--content", d.get("content", "")])
     return jsonify({"ok": ok, "output": out})
-
 
 @app.route("/toast", methods=["POST"])
 def toast():
     d = request.get_json(force=True) or {}
-    text = d.get("text", "Hello from Alsa AI")
-    ok, out, _ = run(["termux-toast", text])
+    ok, out, _ = run(["termux-toast", d.get("text", "Hello")])
     return jsonify({"ok": ok, "output": out})
-
 
 @app.route("/vibrate", methods=["POST"])
 def vibrate():
     d = request.get_json(force=True) or {}
-    dur = int(d.get("duration", 1000))
-    ok, out, _ = run(["termux-vibrate", "-d", str(dur)])
+    ok, out, _ = run(["termux-vibrate", "-d", str(d.get("duration", 1000))])
     return jsonify({"ok": ok, "output": out})
 
-
-# ─────────────────────────── Hardware ────────────────────────
 @app.route("/torch", methods=["POST"])
 def torch():
     d = request.get_json(force=True) or {}
-    on = "on" if d.get("on") else "off"
-    ok, out, _ = run(["termux-torch", on])
+    ok, out, _ = run(["termux-torch", "on" if d.get("on") else "off"])
     return jsonify({"ok": ok, "output": out})
-
 
 @app.route("/brightness", methods=["POST"])
 def brightness():
     d = request.get_json(force=True) or {}
-    level = int(d.get("level", 128))
-    ok, out, _ = run(["termux-brightness", str(level)])
+    ok, out, _ = run(["termux-brightness", str(d.get("level", 128))])
     return jsonify({"ok": ok, "output": out})
-
 
 @app.route("/volume", methods=["POST"])
 def volume():
     d = request.get_json(force=True) or {}
-    stream = d.get("stream", "music")
-    level = int(d.get("level", 5))
-    ok, out, _ = run(["termux-volume", stream, str(level)])
+    ok, out, _ = run(["termux-volume", d.get("stream", "music"), str(d.get("level", 5))])
     return jsonify({"ok": ok, "output": out})
-
 
 @app.route("/battery", methods=["POST"])
 def battery():
     ok, out, j = run(["termux-battery-status"])
     return jsonify({"ok": ok, "data": j or out})
 
-
 @app.route("/location", methods=["POST"])
 def location():
-    d = request.get_json(force=True) or {}
-    provider = d.get("provider", "gps")
-    ok, out, j = run(["termux-location", "-p", provider, "-r", "once"], timeout=60)
+    ok, out, j = run(["termux-location", "-p", "gps", "-r", "once"], timeout=60)
     return jsonify({"ok": ok, "data": j or out})
 
-
-# ─────────────────────────── Clipboard ───────────────────────
 @app.route("/clipboard/get", methods=["POST"])
 def clip_get():
     ok, out, _ = run(["termux-clipboard-get"])
     return jsonify({"ok": ok, "text": out})
-
 
 @app.route("/clipboard/set", methods=["POST"])
 def clip_set():
@@ -267,508 +171,301 @@ def clip_set():
     ok, out, _ = run(["termux-clipboard-set"], input_data=d.get("text", ""))
     return jsonify({"ok": ok, "output": out})
 
-
-# ─────────────────────────── SMS / Call ──────────────────────
 @app.route("/sms/send", methods=["POST"])
 def sms_send():
     d = request.get_json(force=True) or {}
-    number = d.get("number")
-    text = d.get("text", "")
-    if not number:
-        return jsonify({"ok": False, "error": "number required"}), 400
-    ok, out, _ = run(["termux-sms-send", "-n", number], input_data=text)
+    if not d.get("number"): return jsonify({"ok": False, "error": "number required"}), 400
+    ok, out, _ = run(["termux-sms-send", "-n", d["number"]], input_data=d.get("text", ""))
     return jsonify({"ok": ok, "output": out})
-
 
 @app.route("/sms/list", methods=["POST"])
 def sms_list():
     d = request.get_json(force=True) or {}
-    limit = int(d.get("limit", 10))
-    ok, out, j = run(["termux-sms-list", "-l", str(limit)])
+    ok, out, j = run(["termux-sms-list", "-l", str(d.get("limit", 10))])
     return jsonify({"ok": ok, "messages": j or out})
-
 
 @app.route("/call/make", methods=["POST"])
 def call_make():
     d = request.get_json(force=True) or {}
-    number = d.get("number")
-    if not number:
-        return jsonify({"ok": False, "error": "number required"}), 400
-    ok, out, _ = run(["termux-telephony-call", number])
+    if not d.get("number"): return jsonify({"ok": False, "error": "number required"}), 400
+    ok, out, _ = run(["termux-telephony-call", d["number"]])
     return jsonify({"ok": ok, "output": out})
-
 
 @app.route("/call/by-name", methods=["POST"])
 def call_by_name():
-    """Look up a contact by fuzzy name in contacts.json and place the call.
-    Works in any language — client just sends the plain name string."""
     d = request.get_json(force=True) or {}
     name = (d.get("name") or "").strip().lower()
-    if not name:
-        return jsonify({"ok": False, "error": "name required"}), 400
-    # ensure contacts.json exists
-    if not os.path.exists(CONTACTS_FILE):
-        _rebuild_contacts_file()
+    if not name: return jsonify({"ok": False, "error": "name required"}), 400
     matches = [c for c in _load_contacts() if name in c["name"].lower()]
-    if not matches:
-        return jsonify({
-            "ok": False,
-            "error": f"No contact named '{name}' found. Try 'contacts refresh'."
-        }), 404
-    if len(matches) > 1 and not d.get("first"):
-        return jsonify({"ok": False, "error": "multiple_matches", "matches": matches[:10]}), 409
+    if not matches: return jsonify({"ok": False, "error": "Contact not found"}), 404
     chosen = matches[0]
     ok, out, _ = run(["termux-telephony-call", chosen["number"]])
     return jsonify({"ok": ok, "output": out, "contact": chosen})
-
-
-
-@app.route("/call/end", methods=["POST"])
-def call_end():
-    # Requires cell_info hack — best-effort
-    ok, out, _ = run(["input", "keyevent", "KEYCODE_ENDCALL"])
-    return jsonify({"ok": ok, "output": out})
-
 
 @app.route("/contacts", methods=["POST"])
 def contacts():
     ok, out, j = run(["termux-contact-list"])
     return jsonify({"ok": ok, "contacts": j or out})
 
-
-# ─────────────────────────── Voice ───────────────────────────
 @app.route("/tts", methods=["POST"])
 def tts():
     d = request.get_json(force=True) or {}
-    text = d.get("text", "")
-    ok, out, _ = run(["termux-tts-speak"], input_data=text)
+    ok, out, _ = run(["termux-tts-speak"], input_data=d.get("text", ""))
     return jsonify({"ok": ok})
-
 
 @app.route("/stt", methods=["POST"])
 def stt():
     ok, out, _ = run(["termux-speech-to-text"], timeout=60)
     return jsonify({"ok": ok, "text": out})
 
-
-# ─────────────────────────── Camera ──────────────────────────
 @app.route("/camera/photo", methods=["POST"])
 def camera_photo():
     d = request.get_json(force=True) or {}
     path = d.get("path") or "/sdcard/alsa_photo.jpg"
-    camera = str(d.get("camera", 0))
-    ok, out, _ = run(["termux-camera-photo", "-c", camera, path])
-    b64 = None
-    if ok and os.path.exists(path):
-        try:
-            with open(path, "rb") as f:
-                b64 = base64.b64encode(f.read()).decode()
-        except Exception:
-            pass
-    return jsonify({"ok": ok, "path": path, "image_base64": b64})
+    ok, out, _ = run(["termux-camera-photo", "-c", str(d.get("camera", 0)), path])
+    return jsonify({"ok": ok, "path": path})
 
-
-@app.route("/camera/info", methods=["POST"])
-def camera_info():
-    ok, out, j = run(["termux-camera-info"])
-    return jsonify({"ok": ok, "data": j or out})
-
-
-# ─────────────────────────── Apps / Intents ──────────────────
-#@app.route("/app/open", methods=["POST"])
-#def app_open():
-#    d = request.get_json(force=True) or {}
-#    pkg = d.get("package")
-#    if not pkg:
-#        return jsonify({"ok": False, "error": "package required"}), 400
-#    ok, out, _ = run(["am", "start", "-n", pkg + "/.MainActivity"])
-#    if not ok:
-#        # fallback via monkey
-#        ok, out, _ = run(["monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"])
-#    return jsonify({"ok": ok, "output": out})
-
-# ─────────────────────────── Apps / Intents ──────────────────
 @app.route("/app/open", methods=["POST"])
 def app_open():
     d = request.get_json(force=True) or {}
     pkg = d.get("package")
-    if not pkg:
-        return jsonify({"ok": False, "error": "package required"}), 400
-    
-    pkg_clean = pkg.strip().lower()
-    
-    # 1. Pehle check karo ki kya yeh naam humare APPS_DATABASE mein hai
-    if pkg_clean in APPS_DATABASE:
-        target_path = APPS_DATABASE[pkg_clean]
-    # 2. Agar user ne direct package name bheja hai (jaise com.whatsapp), toh database mein value search karo
-    elif pkg in APPS_DATABASE.values():
-        target_path = pkg
-    else:
-        # 3. Agar database mein nahi mila, toh safe side ke liye default format banao
-        target_path = f"{pkg}/.MainActivity"
-
-    # Perfect execution using: am start --user 0 -n {target_path}
-    ok, out, _ = run(["am", "start", "--user", "0", "-n", target_path])
-    
-    # Agar kisi wajah se fail ho jaye (jaise custom component name galat ho), tabhi monkey fallback chalega
-    if not ok:
-        # Agar shortcut name tha (jaise 'whatsapp'), toh real package name extract karo fallback ke liye
-        fallback_pkg = target_path.split('/')[0] if '/' in target_path else pkg
-        ok, out, _ = run(["monkey", "-p", fallback_pkg, "-c", "android.intent.category.LAUNCHER", "1"])
-        
-    return jsonify({"ok": ok, "output": out, "target_used": target_path})
-
-@app.route("/app/list", methods=["POST"])
-def app_list():
-    ok, out, _ = run(["pm", "list", "packages"])
-    pkgs = [l.replace("package:", "") for l in out.splitlines()] if ok else []
-    return jsonify({"ok": ok, "packages": pkgs})
-
+    if not pkg: return jsonify({"ok": False, "error": "package required"}), 400
+    target = APPS_DATABASE.get(pkg.lower(), pkg + "/.MainActivity")
+    ok, out, _ = run(["am", "start", "--user", "0", "-n", target])
+    return jsonify({"ok": ok, "output": out})
 
 @app.route("/url/open", methods=["POST"])
 def url_open():
     d = request.get_json(force=True) or {}
-    url = d.get("url")
-    if not url:
-        return jsonify({"ok": False, "error": "url required"}), 400
-    ok, out, _ = run(["termux-open-url", url])
-    return jsonify({"ok": ok, "output": out})
-
-
-@app.route("/share", methods=["POST"])
-def share():
-    d = request.get_json(force=True) or {}
-    title = d.get("title", "Share")
-    ok, out, _ = run(["termux-share", "-t", title], input_data=d.get("text", ""))
+    ok, out, _ = run(["termux-open-url", d.get("url", "")])
     return jsonify({"ok": ok})
 
-
-# ─────────────────────────── Wi-Fi ───────────────────────────
-@app.route("/wifi/toggle", methods=["POST"])
-def wifi_toggle():
-    d = request.get_json(force=True) or {}
-    on = "true" if d.get("on") else "false"
-    ok, out, _ = run(["termux-wifi-enable", on])
-    return jsonify({"ok": ok, "output": out})
-
-
-@app.route("/wifi/info", methods=["POST"])
-def wifi_info():
-    ok, out, j = run(["termux-wifi-connectioninfo"])
-    return jsonify({"ok": ok, "data": j or out})
-
-
-# ─────────────────────────── Media ───────────────────────────
-@app.route("/media/control", methods=["POST"])
-def media_control():
-    d = request.get_json(force=True) or {}
-    action = d.get("action", "play")
-    ok, out, _ = run(["termux-media-player", action])
-    return jsonify({"ok": ok, "output": out})
-
-
-# ─────────────────────────── Sensors ─────────────────────────
-@app.route("/sensors", methods=["POST"])
-def sensors():
-    d = request.get_json(force=True) or {}
-    name = d.get("name")
-    cmd = ["termux-sensor", "-n", "1"]
-    if name:
-        cmd.extend(["-s", name])
-    else:
-        cmd.append("-a")
-    ok, out, j = run(cmd, timeout=15)
-    return jsonify({"ok": ok, "data": j or out})
-
-
-# ─────────────────────────── Storage ─────────────────────────
-@app.route("/storage/list", methods=["POST"])
-def storage_list():
-    d = request.get_json(force=True) or {}
-    path = d.get("path", "/sdcard")
-    try:
-        items = os.listdir(path)
-        return jsonify({"ok": True, "items": items})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)})
-
-
-@app.route("/storage/read", methods=["POST"])
-def storage_read():
-    d = request.get_json(force=True) or {}
-    path = d.get("path")
-    if not path:
-        return jsonify({"ok": False, "error": "path required"}), 400
-    try:
-        with open(path, "r", errors="ignore") as f:
-            return jsonify({"ok": True, "content": f.read()})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)})
-
-
-@app.route("/storage/write", methods=["POST"])
-def storage_write():
-    d = request.get_json(force=True) or {}
-    path = d.get("path")
-    content = d.get("content", "")
-    if not path:
-        return jsonify({"ok": False, "error": "path required"}), 400
-    try:
-        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-        with open(path, "w") as f:
-            f.write(content)
-        return jsonify({"ok": True, "path": path})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)})
-
-
-# ─────────────────────────── Shell (power user) ──────────────
 @app.route("/shell", methods=["POST"])
 def shell():
     d = request.get_json(force=True) or {}
-    cmd = d.get("command")
-    if not cmd:
-        return jsonify({"ok": False, "error": "command required"}), 400
-    ok, out, _ = run(cmd, timeout=60)
+    ok, out, _ = run(d.get("command", ""), timeout=60)
     return jsonify({"ok": ok, "output": out})
 
+# --- Messaging Logic ---
 
-# ─────────────────────── Contacts (contacts.json) ────────────
 def _normalize_num(n):
-    if not n:
-        return ""
-    return re.sub(r"[^\d+]", "", str(n))
-
+    return re.sub(r"[^\d+]", "", str(n or ""))
 
 def _rebuild_contacts_file():
-    """Dump termux-contact-list -> ~/alsa_contacts.json.
-    Fallback: try `content query --uri content://contacts/phones/` if termux-api missing."""
     ok, out, j = run(["termux-contact-list"], timeout=45)
     contacts = []
     if ok and isinstance(j, list):
         for c in j:
-            name = c.get("name") or ""
-            number = _normalize_num(c.get("number"))
-            if name and number:
-                contacts.append({"name": name.strip(), "number": number})
-    if not contacts:
-        # ADB / non-Termux fallback
-        ok2, out2, _ = run("content query --uri content://com.android.contacts/data/phones "
-                           "--projection display_name:data1", timeout=30)
-        if ok2 and out2:
-            for line in out2.splitlines():
-                m_name = re.search(r"display_name=([^,]+)", line)
-                m_num = re.search(r"data1=([^,]+)", line)
-                if m_name and m_num:
-                    contacts.append({
-                        "name": m_name.group(1).strip(),
-                        "number": _normalize_num(m_num.group(1)),
-                    })
-    # de-dupe
+            name = c.get("name") or c.get("display_name") or ""
+            number = _normalize_num(c.get("number") or c.get("phone") or "")
+            if name and number: contacts.append({"name": name.strip(), "number": number})
     seen = set()
     uniq = []
     for c in contacts:
-        key = (c["name"].lower(), c["number"])
-        if key in seen:
-            continue
-        seen.add(key)
-        uniq.append(c)
-    try:
-        with open(CONTACTS_FILE, "w") as f:
-            json.dump({"updated_at": int(time.time()), "contacts": uniq}, f, indent=2)
-    except Exception as e:
-        return False, str(e), []
+        if c["number"] not in seen:
+            seen.add(c["number"])
+            uniq.append(c)
+    with open(CONTACTS_FILE, "w") as f:
+        json.dump({"updated_at": int(time.time()), "contacts": uniq}, f)
     return True, CONTACTS_FILE, uniq
 
-
 def _load_contacts():
-    if not os.path.exists(CONTACTS_FILE):
-        _rebuild_contacts_file()
+    if not os.path.exists(CONTACTS_FILE): _rebuild_contacts_file()
     try:
-        with open(CONTACTS_FILE) as f:
-            return json.load(f).get("contacts", [])
+        with open(CONTACTS_FILE) as f: return json.load(f).get("contacts", [])
+    except: return []
+
+def _whatsapp_send_number(number, text):
+    if not shutil.which("adb"): return False, "adb not found"
+    num = _normalize_num(number).lstrip("+")
+    url = f"https://wa.me/{num}?text={urllib.parse.quote(text)}"
+    run(["adb", "shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", url, "com.whatsapp"])
+    time.sleep(3) # Reduced sleep for speed
+    run(["adb", "shell", "input", "keyevent", "66"])
+    return True, "WhatsApp pre-filled"
+
+def _telegram_send(target, text, is_username=True):
+    if not shutil.which("adb"): return False, "adb not found"
+    if is_username:
+        url = f"tg://resolve?domain={target.lstrip('@')}"
+    else:
+        url = f"tg://resolve?phone={_normalize_num(target).lstrip('+')}"
+    run(["adb", "shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", url, "org.telegram.messenger"])
+    time.sleep(3)
+    if text:
+        run(["adb", "shell", "input", "text", f'"{text}"'])
+        time.sleep(0.5)
+        run(["adb", "shell", "input", "keyevent", "66"])
+    return True, "Telegram command sent"
+
+@app.route("/send", methods=["POST"])
+def send_unified():
+    d = request.get_json(force=True) or {}
+    platform = d.get("platform", "whatsapp").lower()
+    text = d.get("text", "")
+    if platform == "whatsapp":
+        return jsonify(_whatsapp_send_number(d.get("number"), text))
+    elif platform == "telegram":
+        return jsonify(_telegram_send(d.get("username") or d.get("number"), text, is_username=bool(d.get("username"))))
+    return jsonify({"ok": False, "error": "Invalid platform"}), 400
+
+@app.route("/whatsapp/send-by-name", methods=["POST"])
+def whatsapp_send_by_name():
+    d = request.get_json(force=True) or {}
+    name = d.get("name", "").lower()
+    matches = [c for c in _load_contacts() if name in c["name"].lower()]
+    if not matches: return jsonify({"ok": False, "error": "Contact not found"}), 404
+    return jsonify(_whatsapp_send_number(matches[0]["number"], d.get("text", "")))
+
+@app.route("/telegram/send-by-name", methods=["POST"])
+def telegram_send_by_name():
+    d = request.get_json(force=True) or {}
+    name = d.get("name", "").lower()
+    matches = [c for c in _load_contacts() if name in c["name"].lower()]
+    if not matches: return jsonify({"ok": False, "error": "Contact not found"}), 404
+    # For Telegram, we usually only have phone numbers in contacts.json
+    return jsonify(_telegram_send(matches[0]["number"], d.get("text", ""), is_username=False))
+
+@app.route("/whatsapp/send", methods=["POST"])
+def whatsapp_send_direct():
+    """Alias for /send with platform=whatsapp (frontend compatibility)."""
+    d = request.get_json(force=True) or {}
+    ok, msg = _whatsapp_send_number(d.get("number"), d.get("text", ""))
+    return jsonify({"ok": ok, "success": ok, "message": msg})
+
+
+@app.route("/telegram/send", methods=["POST"])
+def telegram_send_direct():
+    d = request.get_json(force=True) or {}
+    target = d.get("username") or d.get("number")
+    if not target:
+        return jsonify({"ok": False, "error": "username or number required"}), 400
+    ok, msg = _telegram_send(target, d.get("text", ""), is_username=bool(d.get("username")))
+    return jsonify({"ok": ok, "success": ok, "message": msg})
+
+
+# ── EMAIL AUTOMATION (SMTP via app password) ─────────────────────────
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+EMAIL_FILE = os.path.join(HOME, "alsa_email.json")
+
+SMTP_PRESETS = {
+    "gmail.com":     ("smtp.gmail.com", 587),
+    "googlemail.com": ("smtp.gmail.com", 587),
+    "outlook.com":   ("smtp-mail.outlook.com", 587),
+    "hotmail.com":   ("smtp-mail.outlook.com", 587),
+    "live.com":      ("smtp-mail.outlook.com", 587),
+    "yahoo.com":     ("smtp.mail.yahoo.com", 587),
+    "zoho.com":      ("smtp.zoho.com", 587),
+}
+
+
+def _load_email_cfg():
+    try:
+        with open(EMAIL_FILE) as f:
+            return json.load(f)
     except Exception:
-        return []
+        return {}
+
+
+@app.route("/email/config", methods=["POST"])
+def email_config():
+    """Save the user's email + app password once. { email, app_password, smtp_host?, smtp_port? }"""
+    d = request.get_json(force=True) or {}
+    email_addr = (d.get("email") or "").strip()
+    app_password = (d.get("app_password") or "").replace(" ", "")
+    if not email_addr or not app_password:
+        return jsonify({"ok": False, "error": "email and app_password required"}), 400
+    domain = email_addr.split("@")[-1].lower()
+    host, port = SMTP_PRESETS.get(domain, ("smtp." + domain, 587))
+    cfg = {
+        "email": email_addr,
+        "app_password": app_password,
+        "smtp_host": d.get("smtp_host") or host,
+        "smtp_port": int(d.get("smtp_port") or port),
+        "display_name": d.get("display_name") or "",
+    }
+    with open(EMAIL_FILE, "w") as f:
+        json.dump(cfg, f)
+    return jsonify({"ok": True, "success": True, "message": f"Email connected: {email_addr}"})
+
+
+@app.route("/email/status", methods=["POST", "GET"])
+def email_status():
+    cfg = _load_email_cfg()
+    return jsonify({"ok": True, "configured": bool(cfg.get("email")), "email": cfg.get("email", "")})
+
+
+@app.route("/email/send", methods=["POST"])
+def email_send():
+    """
+    { to, subject, body, html?: bool|string, cc?, bcc?, from_name? }
+    If `html` is true (or body contains HTML), the mail is sent as text/html.
+    """
+    d = request.get_json(force=True) or {}
+    cfg = _load_email_cfg()
+    if not cfg.get("email"):
+        return jsonify({"ok": False, "success": False,
+                        "error": "Email not connected. Save your email + app password first."}), 400
+
+    to = d.get("to") or d.get("email")
+    if not to:
+        return jsonify({"ok": False, "success": False, "error": "to (recipient) required"}), 400
+    recipients = [x.strip() for x in (to if isinstance(to, list) else str(to).split(",")) if x.strip()]
+
+    subject = (d.get("subject") or "").strip() or "(no subject)"
+    body = d.get("body") or d.get("text") or d.get("message") or ""
+    is_html = bool(d.get("html")) or bool(re.search(r"<\s*(html|body|div|p|table|h[1-6]|br)\b", str(body), re.I))
+
+    msg = MIMEMultipart("alternative")
+    from_name = d.get("from_name") or cfg.get("display_name") or ""
+    msg["From"] = f"{from_name} <{cfg['email']}>" if from_name else cfg["email"]
+    msg["To"] = ", ".join(recipients)
+    msg["Subject"] = subject
+
+    cc = d.get("cc")
+    if cc:
+        cc_list = [x.strip() for x in (cc if isinstance(cc, list) else str(cc).split(",")) if x.strip()]
+        msg["Cc"] = ", ".join(cc_list)
+        recipients += cc_list
+    bcc = d.get("bcc")
+    if bcc:
+        recipients += [x.strip() for x in (bcc if isinstance(bcc, list) else str(bcc).split(",")) if x.strip()]
+
+    if is_html:
+        plain = re.sub(r"<[^>]+>", "", str(body))
+        msg.attach(MIMEText(plain, "plain", "utf-8"))
+        msg.attach(MIMEText(str(body), "html", "utf-8"))
+    else:
+        msg.attach(MIMEText(str(body), "plain", "utf-8"))
+
+    try:
+        with smtplib.SMTP(cfg["smtp_host"], cfg["smtp_port"], timeout=30) as server:
+            server.ehlo()
+            server.starttls()
+            server.login(cfg["email"], cfg["app_password"])
+            server.sendmail(cfg["email"], recipients, msg.as_string())
+        return jsonify({"ok": True, "success": True,
+                        "message": f"Email sent to {', '.join(recipients)}",
+                        "subject": subject, "html": is_html})
+    except Exception as e:
+        return jsonify({"ok": False, "success": False, "error": f"SMTP error: {e}"}), 500
 
 
 @app.route("/contacts/refresh", methods=["POST"])
 def contacts_refresh():
     ok, path, uniq = _rebuild_contacts_file()
-    return jsonify({"ok": ok, "path": path, "count": len(uniq)})
-
+    return jsonify({"ok": ok, "count": len(uniq)})
 
 @app.route("/contacts/search", methods=["POST"])
 def contacts_search():
     d = request.get_json(force=True) or {}
-    q = (d.get("query") or "").strip().lower()
-    if not q:
-        return jsonify({"ok": False, "error": "query required"}), 400
+    q = (d.get("query") or "").lower()
     matches = [c for c in _load_contacts() if q in c["name"].lower()]
     return jsonify({"ok": True, "matches": matches[:20]})
 
-
-# ─────────────────────── WhatsApp via ADB intent ─────────────
-def _whatsapp_send_number(number, text):
-    """Open wa.me chat and press ENTER via ADB. Works when phone is USB-connected
-    to a PC running adb, OR from within Termux if `adb` binary is installed and
-    the device is set as its own host (rare — usually PC does this)."""
-    if not shutil.which("adb"):
-        return False, "adb binary not found on PATH. Install: pkg install android-tools (Termux) or run from PC."
-    number = _normalize_num(number).lstrip("+")
-    encoded = urllib.parse.quote(text or "")
-    url = f"https://wa.me/{number}?text={encoded}"
-    ok1, out1, _ = run(["adb", "shell", "am", "start", "-a",
-                        "android.intent.action.VIEW", "-d", url, "com.whatsapp"], timeout=20)
-    if not ok1:
-        return False, f"adb open failed: {out1}"
-    time.sleep(8)  # wait for chat to load
-    ok2, out2, _ = run(["adb", "shell", "input", "keyevent", "66"], timeout=15)
-    return (ok1 and ok2), out2 or out1
-
-
-@app.route("/whatsapp/send", methods=["POST"])
-def whatsapp_send():
-    d = request.get_json(force=True) or {}
-    number = d.get("number")
-    text = d.get("text", "")
-    if not number:
-        return jsonify({"ok": False, "error": "number required"}), 400
-    ok, msg = _whatsapp_send_number(number, text)
-    return jsonify({"ok": ok, "message": msg, "number": number})
-
-
-@app.route("/whatsapp/send-by-name", methods=["POST"])
-def whatsapp_send_by_name():
-    d = request.get_json(force=True) or {}
-    name = (d.get("name") or "").strip().lower()
-    text = d.get("text", "")
-    if not name:
-        return jsonify({"ok": False, "error": "name required"}), 400
-    matches = [c for c in _load_contacts() if name in c["name"].lower()]
-    if not matches:
-        return jsonify({"ok": False, "error": f"No contact named '{name}' in contacts.json. Try /contacts/refresh."}), 404
-    if len(matches) > 1 and not d.get("first"):
-        return jsonify({"ok": False, "error": "multiple_matches", "matches": matches[:10]}), 409
-    chosen = matches[0]
-    ok, msg = _whatsapp_send_number(chosen["number"], text)
-    return jsonify({"ok": ok, "message": msg, "contact": chosen})
-
-
-# ─────────────────────── yt-dlp (video / audio) ──────────────
-@app.route("/ytdlp/status", methods=["POST"])
-def ytdlp_status():
-    ok, out, _ = run(["yt-dlp", "--version"], timeout=15)
-    if not ok:
-        # try to auto-install
-        run(["pip", "install", "-U", "yt-dlp"], timeout=120)
-        ok, out, _ = run(["yt-dlp", "--version"], timeout=15)
-    return jsonify({"ok": ok, "installed": ok, "version": out if ok else None})
-
-
-@app.route("/ytdlp/download", methods=["POST"])
-def ytdlp_download():
-    d = request.get_json(force=True) or {}
-    url = d.get("url")
-    if not url:
-        return jsonify({"ok": False, "error": "url required"}), 400
-    mode = d.get("mode", "video")
-    quality = str(d.get("quality", "best"))
-    audio_fmt = d.get("audio_format", "mp3")
-    # Route by mode: audio → Music, video → DCIM/Videos (client can override with output_dir)
-    default_dir = YTDLP_AUDIO_DIR if mode == "audio" else YTDLP_VIDEO_DIR
-    outdir = d.get("output_dir") or default_dir
-    os.makedirs(outdir, exist_ok=True)
-
-    cmd = ["yt-dlp", "--no-warnings", "-o", os.path.join(outdir, "%(title)s.%(ext)s")]
-    if d.get("playlist"):
-        cmd.append("--yes-playlist")
-    else:
-        cmd.append("--no-playlist")
-    if d.get("subtitles"):
-        cmd += ["--write-subs", "--write-auto-subs", "--sub-langs", "en.*,hi.*"]
-    if d.get("embed_thumbnail"):
-        cmd.append("--embed-thumbnail")
-    if d.get("embed_metadata"):
-        cmd.append("--embed-metadata")
-
-    if mode == "audio":
-        cmd += ["-x", "--audio-format", audio_fmt, "--audio-quality", "0"]
-    else:
-        if quality in {"144", "240", "360", "480", "720", "1080", "1440", "2160"}:
-            cmd += ["-f", f"bestvideo[height<={quality}]+bestaudio/best[height<={quality}]", "--merge-output-format", "mp4"]
-        else:
-            cmd += ["-f", "bestvideo+bestaudio/best", "--merge-output-format", "mp4"]
-
-    cmd.append(url)
-    ok, out, _ = run(cmd, timeout=600)
-    files = []
-    try:
-        files = sorted(os.listdir(outdir))[-15:]
-    except Exception:
-        pass
-    return jsonify({
-        "ok": ok,
-        "success": ok,
-        "output_dir": outdir,
-        "count": len(files),
-        "files": files,
-        "log_tail": (out or "")[-1500:],
-    })
-
-# Function: Voice command se direct link browser mein kholna
-def open_alsa_chat():
-    print("🚀 'Hey Alsa' detected! Opening Chat Dashboard...")
-    # Termux ka use karke Android browser mein direct URL open karna
-    subprocess.run(["termux-open", "https://www.alsa-ai.in/Chat"])
-
-# Simple Voice Wake-word Listener Loop
-def start_wake_word_listener():
-    # Note: Iske liye 'pip install SpeechRecognition' zaroori hai
-    import speech_recognition as sr
-    
-    r = sr.Recognizer()
-    # Background mic ko optimize karne ke liye settings
-    r.dynamic_energy_threshold = True 
-    
-    print("🎙️ Wake-word engine active... Listening for 'Hey Alsa' or 'Ok Alsa'")
-    
-    with sr.Microphone() as source:
-        while True:
-            try:
-                # Chhoti-chhoti audio clips sunega background mein
-                audio = r.listen(source, timeout=None, phrase_time_limit=3)
-                text = r.recognize_google(audio, language="en-IN").lower()
-                
-                print(f"Heard: {text}") # Debugging ke liye ke kya suna
-                
-                # Agar wake word match hota hai
-                if "hey alsa" in text or "ok alsa" in text or "alsa" in text:
-                    open_alsa_chat()
-                    time.sleep(3) # Multi-triggering rokne ke liye break
-                    
-            except sr.UnknownValueError:
-                # Jab background noise ho aur clear word na samajh aaye
-                continue
-            except Exception as e:
-                # Koi aur error aaye toh loop tute na
-                time.sleep(1)
-                continue
-
-
-
 if __name__ == "__main__":
-    print(f"📱 Alsa AI Phone Bridge running on http://0.0.0.0:{PORT}")
-    print("Elite users only. Make sure Termux:API app is installed and permissions granted.")
-    # Auto-dump contacts on start (best-effort)
-    try:
-        okc, pathc, uniqc = _rebuild_contacts_file()
-        if okc:
-            print(f"✅ Contacts cached: {len(uniqc)} entries → {pathc}")
-        else:
-            print(f"⚠️  Contacts cache skipped: {pathc}")
-    except Exception as e:
-        print(f"⚠️  Contacts cache error: {e}")
-    import threading
-    threading.Thread(target=start_wake_word_listener, daemon=True).start()
-    app.run(host="0.0.0.0", port=PORT, debug=True)
-
+    _rebuild_contacts_file()
+    app.run(host="0.0.0.0", port=PORT)

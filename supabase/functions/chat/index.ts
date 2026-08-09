@@ -172,7 +172,9 @@ serve(async (req) => {
       customInstructions = "", // user-provided custom instructions from Settings
       userApiKey = "", // BYOK: user's own Google AI API key
       userModel = "", // BYOK: user's chosen Gemini model
+      learnMode = false, // Smart Learning: teach the concept step by step
     } = body;
+
 
     // Pick Gemini model based on mode (or user's chosen BYOK model)
     // thinking → gemini-2.5-pro (deeper reasoning, slower)
@@ -247,6 +249,10 @@ serve(async (req) => {
 
 
     const recentMessages = messages.slice(-5);
+    const latestMessage = String(messages[messages.length - 1]?.content || "");
+    // Normal chat me large tool schema bhejna response ko slow karta tha aur kabhi
+    // model text ke badle empty function-call deta tha. Tools sirf action requests par.
+    const shouldEnableTools = !createMode && /\b(create|make|build|open|launch|run|execute|send|schedule|play|weather|wikipedia|search|shutdown|restart|sleep|powerpoint|excel|database|project|telegram|whatsapp|adb)\b/i.test(latestMessage);
     const conversationMood = recentMessages.some((m: any) =>
       /sad|upset|frustrated|angry|depressed|worried|anxious|stressed|hurt|lonely/i.test(m.content || '')
     ) ? 'empathetic' : recentMessages.some((m: any) =>
@@ -301,6 +307,28 @@ WHO MADE YOU:
 - Do Not Sugarcoat If User Say Something Wrong Tell Them This Is Wrong Never Say Wrong To Right Or Righ To Wrong.
 - Don't Uses Unnecessary Words When User Chat With You Regarding Important Concept Or Topics. Always Remember That You Are An Smart Assistant So Always Help User.
 
+HEAVY / COMPLEX TASK RULE (CRITICAL — NEVER STOP HALFWAY):
+- Long or complex requests (full apps, multi-file code, long documents, deep explanations, cybersecurity labs, data pipelines) must be COMPLETED in one reply. Never stop mid-sentence, mid-function or mid-list.
+- Before answering a big task, silently plan the sections, then write them in order. Budget the length so the final section actually gets written — prefer dense, complete output over long preambles.
+- Never write "…", "rest of the code is similar", "I'll continue in the next message", or truncate a code block. Every code block must open and close.
+- If the task is genuinely too large for one reply, finish the current logical unit cleanly, then add a final line: "CONTINUE? Say 'continue' and I'll write part N+1." Only use this as a last resort.
+- Always re-read your own answer's ending: if it does not end with a complete sentence / closing fence, extend it until it does.
+
+CONCEPT TEACHING (MATH, CHEMISTRY, PHYSICS, CS):
+- When a user asks to understand a concept, teach it: intuition → definition → worked example with every step → common mistakes → quick practice question.
+- Show mathematics with proper notation ($...$ / $$...$$), chemistry with balanced equations and state symbols, code with runnable snippets. Never hand-wave a derivation.
+
+CODING / CYBERSECURITY / PROJECT MENTORING:
+- Be a senior full-stack + security mentor: production-grade code, real architecture advice, defensive-security tips, tooling tricks, debugging workflows, and best practices. Stay ethical — defensive/educational security only, never working malware or real attacks on third parties.
+- CODE OUTPUT FORMAT (the app renders these in a Canvas viewer): always put code in fenced blocks with the correct language tag (\`\`\`tsx, \`\`\`python, \`\`\`html …). Make the FIRST line of each block a comment with the exact filename. Give complete, runnable files — full imports, full component, no placeholders. Explain briefly ABOVE the block, not inside it.
+- For HTML/CSS/JS demos, output ONE self-contained \`\`\`html file so the user can hit "Preview Output".
+- All code, code comments, UI strings and variable names must be in ENGLISH, even when chatting in Hinglish.
+
+ADAPTIVE MEMORY & SELF-TRAINING:
+- Use the conversation history and cross-chat context to learn the user's level, stack, tone and preferences, and adapt permanently within the session: reuse their naming style, their language mix, their frameworks, their past decisions.
+- If the user corrects you, treat that correction as a standing rule for the rest of the conversation and reference it later ("as you prefer, we're using X").
+
+
 USER IDENTITY (NICKNAME RULE — VERY IMPORTANT):
 ${userName ? `- The user's name is **${userName}**. Address them as **${userName}** or **Boss** — nothing else.` : `- You don't know the user's name yet. Address them as **Boss** until they tell you their name, then use their name.`}
 - ONLY allowed forms of address: the user's saved name, or "Boss". 🚫 NEVER use "bhai", "yaar", "jaan", "dost", "buddy", "dude", "bro", "sir ji" or any other nickname. This is a hard rule.
@@ -349,6 +377,26 @@ ${styleKey === 'detailed' ? '- Thorough, well-structured replies with sections a
 ${styleKey === 'creative' ? '- Vivid metaphors, storytelling, imaginative analogies.' : ''}
 ${styleKey === 'balanced' ? '- Friendly, warm, witty desi best-friend energy — NO forced jokes or roasts.' : ''}
 
+CURRENT DATE & TIME (AUTHORITATIVE — NEVER SAY 2024):
+- Right now it is **${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'full', timeStyle: 'short' })} IST** (ISO: ${new Date().toISOString()}).
+- Your knowledge runs up to 2026. If asked the date, day, time, month or year, answer from the value above — never guess and never say 2024.
+- Compute "today", "tomorrow", "kal", "next week" and any scheduling timestamp from this exact value.
+
+EMAIL AUTOMATION (send_email):
+- The user connects their own mailbox (email + app password) inside the Alsa Phone Bridge app; the app sends via /email/send. You only call the send_email tool.
+- If the user gave a subject, forward it unchanged. If not, write a short professional subject yourself from the message.
+- If they refer to a person by name ("email Ravi about the report"), pass that name in recipient_name — do NOT ask for the address; the app looks it up in the saved email contacts.
+- Only ask for an address when the app reports that the contact was not found.
+- If the user asks for a formatted/HTML email, also fill the html field.
+
+CONTACT LOOKUP RULE (WhatsApp / Telegram / Email):
+- Before sending on any channel, the app checks the user's saved contact tables. Always pass the plain name and let the app resolve it. Never invent a number, username or email address.
+- If the app reports "contact not found", tell the user to add it in Settings → Contacts (manually or by CSV upload).
+
+CONTINUOUS USER PROFILING (REMEMBER EVERYTHING):
+- Quietly build a running profile of the user from every message: their goals, projects, tech stack, passion and interests, work/study context, tone, likes/dislikes, and everything they asked before.
+- Reuse that profile naturally in later replies (reference their past projects and preferences) without announcing that you are tracking it, and never contradict something they told you earlier.
+
 CORE CAPABILITIES:
 - Conversation, reasoning, knowledge
 - WhatsApp & Telegram messaging (send_whatsapp_message, send_telegram_message; schedule variants for future times — pass ISO timestamp)
@@ -366,7 +414,8 @@ FILE / IMAGE / DOC ANALYSIS:
 MESSAGING:
 1. WhatsApp → send_whatsapp_message; resolve contact name from saved contacts, else ask for number with country code.
 2. Telegram → send_telegram_message; resolve from contacts, else ask for link.
-3. Future-time messages → schedule_* with ISO timestamp. Don't combine with other tools.
+3. Email → send_email; resolve contact by name from saved email contacts.
+4. Future-time messages → schedule_* with ISO timestamp. Don't combine with other tools.
 
 BEHAVIOR RULES:
 1. Execute system commands immediately when asked.
@@ -408,8 +457,30 @@ ${deepWebContext}
 === /CREATE MODE — CONTENT GENERATION TASK ===
 ${createInstruction}
 IMPORTANT: In this mode, do NOT call any tools/functions. Reply with the requested content directly as plain text or fenced code blocks. Do not greet, do not ask follow-up questions, just output the content.
+When code spans several files, output one fenced block per file and make the FIRST line of each block a comment with the exact filename (e.g. "# main.py", "// src/App.tsx"). Never use the user's prompt sentence as a filename.
+DOCUMENT / PDF FORMATTING (STRICT — the output is converted into a PDF):
+- Keep a clean, professional document structure: Title, then numbered sections with headings, short paragraphs, bullet lists and tables where useful.
+- Write mathematics in clean readable plain text/Unicode (x², √2, ≤, ≥, ≠, π, Δ, ∫, α, β) — one equation per line, centered on its own line. Do NOT dump raw LaTeX macros like \\frac{}{} or $$ into PDF content.
+- Chemistry: use proper symbols (H₂O, CO₂, →, ⇌) and balanced equations on their own line.
+- Never break characters, never emit stray markdown symbols (###, **, |---|) inside plain paragraphs, and never truncate the document. Finish every section you start.
 === END /CREATE MODE ===
+` : ''}${learnMode ? `
+
+=== SMART LEARNING MODE (TEACH LIKE THE BEST TUTOR ALIVE) ===
+Do not just answer — TEACH. Structure every learning reply exactly like this:
+1. **TL;DR** — 2 lines: what this is and why it matters.
+2. **Intuition** — plain-language explanation + a real-world analogy the user can picture.
+3. **Visual / Structure** — whenever it helps, add an ASCII diagram, a mermaid diagram (\`\`\`mermaid block), or a markdown table so the idea is SEEN, not only read.
+4. **Formal definition** — exact statement with correct notation.
+5. **Step-by-step worked example** — every single step shown, with a one-line "why" after each step. Never skip algebra or reaction steps.
+6. **Comparison table** — when two or more concepts/methods exist, compare them in a markdown table.
+7. **Common mistakes** — 3 bullets of what students get wrong.
+8. **Practice** — 2-3 questions, each followed by "Answer:" with the full solution.
+FORMATTING RULES: Use LaTeX for maths ($...$ inline, $$...$$ for display) — it is rendered properly in the app. Use proper chemical formulas (H₂SO₄) and \`\`\`code blocks with the correct language tag for programming. Use headings, bold key terms and short paragraphs so it reads great on a mobile screen.
+DEPTH: Adapt to the user's level from the conversation history — beginner gets more analogy, advanced gets more rigour. Never end a lesson half-way.
+=== END SMART LEARNING MODE ===
 ` : ''}${customInstructions && String(customInstructions).trim() ? `
+
 
 === USER'S CUSTOM INSTRUCTIONS (From Settings) ===
 The user has set these personal preferences/instructions. Follow them WHENEVER they don't conflict with your core identity, safety, or ethical rules.
@@ -468,6 +539,24 @@ ${String(customInstructions).slice(0, 2000)}
               message: { type: "string", description: "The message content to be sent" }
             },
             required: ["link", "message"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "send_email",
+          description: "Send an email from the user's own connected mailbox through the Alsa Phone Bridge app. Use whenever the user asks to email someone. If the user gives only a name, pass it in recipient_name and leave to empty — the app resolves it from the saved email contacts.",
+          parameters: {
+            type: "object",
+            properties: {
+              to: { type: "string", description: "Recipient email address if the user gave one, else empty string" },
+              recipient_name: { type: "string", description: "Recipient name if the user referred to a saved contact by name" },
+              subject: { type: "string", description: "Subject line. If the user did not give one, write a short, professional subject from the message content." },
+              body: { type: "string", description: "The email body text" },
+              html: { type: "string", description: "Optional HTML version of the body when the user asks for a formatted/HTML email" }
+            },
+            required: ["subject", "body"]
           }
         }
       },
@@ -911,7 +1000,7 @@ ${String(customInstructions).slice(0, 2000)}
                 { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
                 { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
               ],
-              ...(createMode ? {} : { tools: [{ functionDeclarations: toolDeclarations.map(t => t.function) }] })
+              ...(shouldEnableTools ? { tools: [{ functionDeclarations: toolDeclarations.map(t => t.function) }] } : {})
             }),
           });
           
@@ -953,17 +1042,42 @@ ${String(customInstructions).slice(0, 2000)}
     };
 
     let response: Response;
+    let responseFormat: "gemini" | "openai" = "gemini";
     try {
       response = await makeGeminiRequest();
     } catch (err: any) {
       console.error("All API keys failed:", err.message);
-      return new Response(JSON.stringify({ 
-        error: "AI service temporarily unavailable", 
-        details: err.message 
-      }), {
-        status: 503,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      // Platform Gemini keys invalid/rate-limited hon to managed AI gateway final fallback hai.
+      const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+      if (!lovableKey) {
+        return new Response(JSON.stringify({ error: "AI service temporarily unavailable" }), {
+          status: 503,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+      response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${lovableKey}` },
+        body: JSON.stringify({
+          model: mode === "thinking" ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...messages.map((m: any) => ({ role: m.role, content: String(m.content || "") })),
+          ],
+          stream: true,
+          max_tokens: 65536,
+          temperature: ai_response_style === "roast" || ai_response_style === "comedian" || ai_response_style === "creative" ? 1.1 : 0.9,
+        }),
       });
+      if (!response.ok || !response.body) {
+        console.error("Managed AI gateway fallback failed:", response.status, await response.text());
+        return new Response(JSON.stringify({ error: "AI service temporarily unavailable" }), {
+          status: 503,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+      responseFormat = "openai";
+      lastSuccessKeySource = "server";
     }
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
@@ -993,15 +1107,25 @@ ${String(customInstructions).slice(0, 2000)}
 
               try {
                 const parsed = JSON.parse(data);
-                const part = parsed.candidates?.[0]?.content?.parts?.[0];
-
-                if (part?.text) {
-                  hasSentText = true;
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: part.text })}\n\n`));
+                if (responseFormat === "openai") {
+                  const delta = parsed.choices?.[0]?.delta?.content;
+                  if (delta) {
+                    hasSentText = true;
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta })}\n\n`));
+                  }
+                  continue;
                 }
 
-                if (part?.functionCall) {
-                  toolCalls.push({ name: part.functionCall.name, args: part.functionCall.args });
+                const parts = parsed.candidates?.[0]?.content?.parts || [];
+                for (const part of parts) {
+                  if (part?.text) {
+                    hasSentText = true;
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: part.text })}\n\n`));
+                  }
+
+                  if (part?.functionCall) {
+                    toolCalls.push({ name: part.functionCall.name, args: part.functionCall.args });
+                  }
                 }
               } catch (e) { /* silent parse error */ }
             }
@@ -1014,7 +1138,9 @@ ${String(customInstructions).slice(0, 2000)}
           //     controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: "Thoda intezaar karein, main action le raha hoon... ⚙️\n" })}\n\n`));
           //   }
 
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'tool_start' })}\n\n`));
+            if (toolCalls.length > 0) {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'tool_start' })}\n\n`));
+            }
 
             for (const call of toolCalls) {
               const args = call.args;
@@ -1055,6 +1181,12 @@ ${String(customInstructions).slice(0, 2000)}
               else if (call.name === 'send_telegram_message') {
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'telegram_msg', link: args.link, message: args.message })}\n\n`));
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n✈️ Telegram message sending...` })}\n\n`));
+              }
+
+              // 5b. Email (Frontend handle karega via Phone Bridge)
+              else if (call.name === 'send_email') {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'email_msg', to: args.to || '', recipient_name: args.recipient_name || '', subject: args.subject || '', body: args.body || '', html: args.html || '' })}\n\n`));
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n📧 Sending email...` })}\n\n`));
               }
 
               // 6. PC Power Commands (Frontend handle karega)

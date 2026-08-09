@@ -7,13 +7,13 @@ import { useState, useCallback, useRef, useEffect } from 'react';
  *  - Mic band nahi hota, background me hi agla chunk record hota rehta hai (fast feel)
  */
 
-const EDGE_FUNCTION_URL =
-  'https://vzfkokgkwbvdxvfqzeko.supabase.co/functions/v1/transcribe';
+const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transcribe`;
 
 const TARGET_SR = 16000;
-const SILENCE_MS = 2500;      // user 2.5s chup = sentence complete
+const SILENCE_MS = 1200;      // user 1.2s chup = sentence complete (fast auto-send)
 const SILENCE_RMS = 0.012;    // silence threshold
 const MAX_CHUNK_MS = 15000;   // safety flush
+
 
 function downsample(buffer: Float32Array, inRate: number, outRate: number): Float32Array {
   if (outRate >= inRate) return buffer;
@@ -68,14 +68,22 @@ export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
   const lastVoiceAtRef = useRef(0);
   const chunkStartRef = useRef(0);
   const flushingRef = useRef(false);
+  const pendingFlushRef = useRef<Float32Array[]>([]);
+  const flushRef = useRef<() => void>(() => undefined);
 
   const transcribe = useCallback(async (blob: Blob) => {
     if (blob.size < 3000) return;
     try {
       const fd = new FormData();
       fd.append('file', blob, 'recording.wav');
-      const res = await fetch(EDGE_FUNCTION_URL, { method: 'POST', body: fd });
+      const anon = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const res = await fetch(EDGE_FUNCTION_URL, {
+        method: 'POST',
+        headers: anon ? { apikey: anon, Authorization: `Bearer ${anon}` } : undefined,
+        body: fd,
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
       const data = await res.json();
       const text = (data?.text || '').trim();
       if (text) setTranscript((prev) => (prev ? prev + ' ' + text : text));
@@ -86,18 +94,34 @@ export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
   }, []);
 
   const flush = useCallback(() => {
-    if (flushingRef.current) return;
     const chunks = chunksRef.current;
     chunksRef.current = [];
     hasVoiceRef.current = false;
     chunkStartRef.current = Date.now();
     if (!chunks.length) return;
+
+    // Agar pichla upload abhi chal raha hai to nayi speech ko lose mat karo.
+    // Pichle implementation me yahi chunk manual mic off tak atka rehta tha.
+    if (flushingRef.current) {
+      pendingFlushRef.current.push(...chunks);
+      return;
+    }
+
     flushingRef.current = true;
     const sr = ctxRef.current?.sampleRate || 48000;
     const blob = encodeWav(chunks, sr);
-    // Non-blocking: recording chalu rehta hai jabki ye upload hota hai
-    transcribe(blob).finally(() => { flushingRef.current = false; });
+    // Recording chalu rehti hai; queued utterance previous request ke baad turant jaati hai.
+    transcribe(blob).finally(() => {
+      flushingRef.current = false;
+      if (pendingFlushRef.current.length) {
+        chunksRef.current = pendingFlushRef.current;
+        pendingFlushRef.current = [];
+        hasVoiceRef.current = true;
+        flushRef.current();
+      }
+    });
   }, [transcribe]);
+  flushRef.current = flush;
 
   const stopListening = useCallback(() => {
     try { nodeRef.current?.disconnect(); } catch {}
@@ -116,6 +140,7 @@ export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
       transcribe(blob);
     }
     chunksRef.current = [];
+    pendingFlushRef.current = [];
     ctxRef.current = null;
   }, [transcribe]);
 
@@ -140,6 +165,7 @@ export const useSpeechRecognition = (isAISpeaking: boolean = false) => {
       nodeRef.current = node;
 
       chunksRef.current = [];
+      pendingFlushRef.current = [];
       hasVoiceRef.current = false;
       chunkStartRef.current = Date.now();
       lastVoiceAtRef.current = Date.now();

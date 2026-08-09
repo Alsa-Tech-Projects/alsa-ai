@@ -304,6 +304,36 @@ export type Database = {
         }
         Relationships: []
       }
+      email_contacts: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          source?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       favorite_conversations: {
         Row: {
           conversation_id: string
@@ -566,6 +596,39 @@ export type Database = {
           is_active?: boolean
           share_token?: string
           view_count?: number
+        }
+        Relationships: []
+      }
+      telegram_contacts: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          phone: string | null
+          source: string
+          updated_at: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          phone?: string | null
+          source?: string
+          updated_at?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          source?: string
+          updated_at?: string
+          user_id?: string
+          username?: string | null
         }
         Relationships: []
       }

@@ -296,26 +296,66 @@ const extFor = (lang: string) => {
   return map[lang] || 'txt';
 };
 
-export const downloadCodeFiles = (topic: string, content: string): string[] => {
+/**
+ * Derive a proper project/document name.
+ * 1. Explicit user mention: "named X" / "called X" / "file name: X"
+ * 2. Otherwise the topic keywords (never the whole prompt sentence)
+ */
+export const deriveName = (topic: string, content?: string): string => {
+  const explicit = topic.match(/(?:named|called|file ?name(?: ?is)?|naam)\s*[:\-"']?\s*([\w .\-]{2,40})/i);
+  if (explicit) return sanitize(explicit[1]).trim();
+
+  // First H1 of the generated content is usually the real topic title
+  const h1 = content?.match(/^#\s+(.+)$/m);
+  if (h1) return sanitize(h1[1].replace(/\*\*/g, '')).trim();
+
+  const stop = /\b(create|make|build|generate|write|a|an|the|me|please|for|with|using|that|which|and|to|of|in|on|program|script|code|file|app|project|pdf|document)\b/gi;
+  const cleaned = topic.replace(stop, ' ').replace(/[^\w\s.-]/g, ' ').replace(/\s+/g, ' ').trim();
+  const words = cleaned.split(' ').filter(Boolean).slice(0, 4).join(' ');
+  return sanitize(words || topic).trim();
+};
+
+/** Filename hint from the first comment line of a code block, e.g. `# main.py` or `// src/App.tsx` */
+const filenameFromBlock = (code: string): string | null => {
+  const first = code.split('\n')[0].trim();
+  const m = first.match(/^(?:\/\/|#|<!--|\/\*)\s*([\w./\-]+\.[A-Za-z0-9]{1,6})\s*(?:-->|\*\/)?$/);
+  return m ? m[1] : null;
+};
+
+export const downloadCodeFiles = async (topic: string, content: string): Promise<string[]> => {
   const blocks = extractCodeBlocks(content);
-  const slug = sanitize(topic).toLowerCase().replace(/\s+/g, '-');
-  const files: string[] = [];
+  const base = deriveName(topic, content);
+  const slug = base.toLowerCase().replace(/\s+/g, '-') || 'project';
+
   if (blocks.length === 0) {
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const fname = `${slug}.txt`;
-    downloadBlob(blob, fname);
+    downloadBlob(new Blob([content], { type: 'text/plain;charset=utf-8' }), fname);
     return [fname];
   }
-  blocks.forEach((b, i) => {
+
+  const named = blocks.map((b, i) => {
+    const hinted = filenameFromBlock(b.code);
     const ext = extFor(b.lang);
-    const fname = blocks.length === 1 ? `${slug}.${ext}` : `${slug}-${i + 1}.${ext}`;
-    const blob = new Blob([b.code], { type: 'text/plain;charset=utf-8' });
-    downloadBlob(blob, fname);
-    files.push(fname);
+    const name = hinted || (blocks.length === 1 ? `${slug}.${ext}` : `${slug}-${i + 1}.${ext}`);
+    return { name, code: b.code };
   });
-  return files;
+
+  // Single file -> plain download. Multiple files -> one ZIP.
+  if (named.length === 1) {
+    downloadBlob(new Blob([named[0].code], { type: 'text/plain;charset=utf-8' }), named[0].name);
+    return [named[0].name];
+  }
+
+  const JSZip = (await import('jszip')).default;
+  const zip = new JSZip();
+  named.forEach((f) => zip.file(f.name, f.code));
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const zipName = `${slug}.zip`;
+  downloadBlob(blob, zipName);
+  return [zipName, ...named.map((f) => f.name)];
 };
 
 export const getCreateMode = (topic: string): 'pdf' | 'code' => {
   return isCodingTopic(topic) ? 'code' : 'pdf';
 };
+

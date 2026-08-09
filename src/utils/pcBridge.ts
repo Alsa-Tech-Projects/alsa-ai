@@ -1,5 +1,5 @@
 // pcBridge.ts - Full PC Control Bridge with Natural Language Support
-import { syncContactsToDb, searchContacts } from '@/utils/contactsStore';
+import { syncContactsToDb, searchContacts, lookupTelegramContact, lookupEmailContact } from '@/utils/contactsStore';
 
 const BRIDGE_URL = 'http://127.0.0.1:5001';
 
@@ -1402,13 +1402,17 @@ export const extractYouTubeUrl = (text: string): string | null => {
 export const PHONE_BRIDGE_URL = 'http://127.0.0.1:5002';
 
 const phoneHeaders = () => ({ 'Content-Type': 'application/json' });
+const PHONE_REQUEST_TIMEOUT_MS = 45000; // WhatsApp/Telegram/Email automation needs time on-device
 
 const phonePost = async (path: string, body: any = {}) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PHONE_REQUEST_TIMEOUT_MS);
   try {
     const r = await fetch(`${PHONE_BRIDGE_URL}${path}`, {
       method: 'POST',
       headers: phoneHeaders(),
       body: JSON.stringify(body),
+      signal: controller.signal,
     });
     if (!r.ok) {
       const t = await r.text().catch(() => '');
@@ -1416,7 +1420,13 @@ const phonePost = async (path: string, body: any = {}) => {
     }
     return await r.json();
   } catch (e: any) {
-    return { ok: false, success: false, error: e?.message || 'Phone Bridge not reachable' };
+    return {
+      ok: false,
+      success: false,
+      error: e?.name === 'AbortError' ? 'Phone Bridge request timed out' : (e?.message || 'Phone Bridge not reachable'),
+    };
+  } finally {
+    clearTimeout(timeout);
   }
 };
 
@@ -1437,28 +1447,53 @@ export const checkPhoneBridgeConnection = async (): Promise<BridgeStatus> => {
 };
 
 // --- REVERSE GEOCODING HELPER (exact address: colony, area, city, state) ---
+// Uses OpenStreetMap first, then BigDataCloud as a fallback so we never say "Unknown location".
 async function getCityFromCoordinates(lat: number, lon: number): Promise<string> {
-  try {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=json&zoom=18&addressdetails=1&lat=${lat}&lon=${lon}`;
-    const res = await fetch(url, { headers: { 'Accept-Language': 'en-US,en' } });
-    const data = await res.json();
-    const a = data?.address || {};
+  const timed = async (url: string, headers?: Record<string, string>) => {
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), 8000);
+    try {
+      const r = await fetch(url, { headers, signal: c.signal });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(t);
+    }
+  };
 
-    const parts = [
-      a.neighbourhood || a.residential || a.hamlet,   // colony
-      a.suburb || a.village || a.town_district,        // area
-      a.city || a.town || a.municipality || a.city_district || a.state_district,
-      a.state,
-      a.postcode,
-    ].filter(Boolean);
+  // 1) OpenStreetMap Nominatim — most detailed (colony / area level)
+  const data = await timed(
+    `https://nominatim.openstreetmap.org/reverse?format=json&zoom=18&addressdetails=1&lat=${lat}&lon=${lon}`,
+    { 'Accept-Language': 'en' },
+  );
+  const a = data?.address || {};
+  const parts = [
+    a.neighbourhood || a.residential || a.hamlet || a.quarter,
+    a.suburb || a.village || a.town_district || a.county,
+    a.city || a.town || a.municipality || a.city_district || a.state_district,
+    a.state,
+    a.postcode,
+  ].filter(Boolean);
+  const unique = parts.filter((p: string, i: number) => parts.indexOf(p) === i);
+  if (unique.length) return unique.join(', ');
+  if (data?.display_name) return data.display_name;
 
-    const unique = parts.filter((p, i) => parts.indexOf(p) === i);
-    return unique.length ? unique.join(', ') : (data?.display_name || '');
-  } catch (error) {
-    console.error('Geocoding error:', error);
-    return '';
+  // 2) BigDataCloud fallback — no API key, CORS friendly
+  const bd = await timed(
+    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
+  );
+  if (bd) {
+    const p2 = [bd.locality, bd.city, bd.principalSubdivision, bd.countryName].filter(Boolean);
+    const u2 = p2.filter((p: string, i: number) => p2.indexOf(p) === i);
+    if (u2.length) return u2.join(', ');
   }
+
+  // 3) Last resort — raw coordinates (better than "Unknown location")
+  return `${Number(lat).toFixed(5)}, ${Number(lon).toFixed(5)} (address lookup unavailable)`;
 }
+
 
         
 
@@ -1520,14 +1555,74 @@ export const phoneStorageWrite = (path: string, content: string) => phonePost('/
 // Shell (power user)
 export const phoneShell = (command: string) => phonePost('/shell', { command });
 
-// WhatsApp automation (via ADB — works when phone-bridge can reach adb)
-export const phoneWhatsappSend       = (number: string, text: string) => phonePost('/whatsapp/send', { number, text });
-export const phoneWhatsappSendByName = (name: string, text: string, first = true) =>
-  phonePost('/whatsapp/send-by-name', { name, text, first });
+// WhatsApp automation — tries the dedicated route, then the unified /send route.
+const phonePostWithFallback = async (paths: string[], body: any) => {
+  let last: any = null;
+  for (const p of paths) {
+    const res = await phonePost(p, body);
+    if (res && (res.ok === true || res.success === true)) return res;
+    last = res;
+    // Only retry the next route when the endpoint itself was missing / bad request
+    const err = String(last?.error || '');
+    if (!/404|not found|405|Method Not Allowed|Unsupported|Invalid platform/i.test(err)) return last;
+  }
+  return last;
+};
+
+export const phoneWhatsappSend = (number: string, text: string) =>
+  phonePostWithFallback(['/whatsapp/send', '/send'], { platform: 'whatsapp', number, text });
+
+export const phoneWhatsappSendByName = async (name: string, text: string, _first = true) => {
+  // 1) Resolve from our own cloud contacts first (works even if the phone address book isn't synced)
+  const hits = await searchContacts(name);
+  if (hits.length && hits[0].phone) return phoneWhatsappSend(hits[0].phone, text);
+  // 2) Fall back to the bridge's local contacts file
+  return phonePostWithFallback(['/whatsapp/send-by-name'], { name, text });
+};
 
 // Telegram automation
-export const phoneTelegramSend = (username: string, text: string) => phonePost('/telegram/send', { username, text });
-export const phoneTelegramSendByName = (name: string, text: string) => phonePost('/telegram/send-by-name', { name, text });
+export const phoneTelegramSend = (usernameOrNumber: string, text: string) => {
+  const isUsername = /^@?[a-zA-Z][a-zA-Z0-9_]{3,}$/.test(String(usernameOrNumber || ''));
+  const body = isUsername
+    ? { platform: 'telegram', username: String(usernameOrNumber).replace(/^@/, ''), text }
+    : { platform: 'telegram', number: usernameOrNumber, text };
+  return phonePostWithFallback(['/telegram/send', '/send'], body);
+};
+
+export const phoneTelegramSendByName = async (name: string, text: string) => {
+  const hit = await lookupTelegramContact(name);
+  if (hit) return phoneTelegramSend(hit.username || hit.phone || '', text);
+  return phonePostWithFallback(['/telegram/send-by-name'], { name, text });
+};
+
+// Email automation (SMTP through the phone bridge)
+export const phoneEmailConfig = (email: string, appPassword: string, displayName = '') =>
+  phonePost('/email/config', { email, app_password: appPassword, display_name: displayName });
+
+export const phoneEmailStatus = () => phonePost('/email/status');
+
+export const phoneEmailSend = (opts: {
+  to: string; subject?: string; body: string; html?: boolean; cc?: string; bcc?: string;
+}) => phonePost('/email/send', opts);
+
+/** Send an email by contact name — resolves from the saved email address book first. */
+export const phoneEmailSendByName = async (name: string, body: string, subject?: string, html = false) => {
+  const hit = await lookupEmailContact(name);
+  if (!hit) {
+    return { ok: false, success: false, error: `No saved email found for "${name}". Add it in Settings → Email Contacts.` };
+  }
+  return phoneEmailSend({ to: hit.email, subject: subject || deriveSubject(body), body, html });
+};
+
+/** Build a short subject line from the message body when the user didn't give one. */
+export const deriveSubject = (body: string) => {
+  const clean = String(body || '').replace(/\s+/g, ' ').trim();
+  if (!clean) return 'Message from Alsa AI';
+  const firstSentence = clean.split(/[.!?\n]/)[0].trim();
+  const s = firstSentence.length > 4 ? firstSentence : clean;
+  return s.length > 70 ? `${s.slice(0, 67)}...` : s;
+};
+
 
 
 // Contacts
@@ -1782,6 +1877,10 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
   if (waNameM && !/\d/.test(waNameM[1])) {
     return { action: 'whatsapp-name', params: { name: waNameM[1].trim(), text: waNameM[2].trim() }, label: `WhatsApp to ${waNameM[1].trim()}` };
   }
+  const waNaturalM = input.match(/(?:whatsapp\s+(?:par\s+)?)?([a-zA-Z][a-zA-Z\s.'-]{1,30}?)\s+ko\s+(?:message|msg|massage)\s+(?:send\s+)?(?:karo|bhejo|kar\s+do)\s*[:,\-]?\s*["']?(.+?)["']?$/i);
+  if (waNaturalM && !/\d/.test(waNaturalM[1])) {
+    return { action: 'whatsapp-name', params: { name: waNaturalM[1].trim(), text: waNaturalM[2].trim() }, label: `WhatsApp to ${waNaturalM[1].trim()}` };
+  }
   
     // Telegram via phone bridge
   const tgUserM = input.match(/telegram\s+(?:msg|message|send|bhejo|karo)?\s*(?:to\s+)?@([a-zA-Z0-9_]+)\s*[:,\-]?\s*["']?(.+?)["']?$/i);
@@ -1791,6 +1890,10 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
   const tgNameM = input.match(/telegram\s+(?:msg|message|send|bhejo|karo)?\s*(?:to\s+)?([a-zA-Z][a-zA-Z\s]{1,30}?)\s*[:,\-]\s*["']?(.+?)["']?$/i);
   if (tgNameM && !/\d/.test(tgNameM[1])) {
     return { action: 'telegram-name', params: { name: tgNameM[1].trim(), text: tgNameM[2].trim() }, label: `Telegram to ${tgNameM[1].trim()}` };
+  }
+  const tgNaturalM = input.match(/telegram\s+(?:par\s+)?([a-zA-Z][a-zA-Z\s.'-]{1,30}?)\s+ko\s+(?:message|msg|massage)\s+(?:send\s+)?(?:karo|bhejo|kar\s+do)\s*[:,\-]?\s*["']?(.+?)["']?$/i);
+  if (tgNaturalM && !/\d/.test(tgNaturalM[1])) {
+    return { action: 'telegram-name', params: { name: tgNaturalM[1].trim(), text: tgNaturalM[2].trim() }, label: `Telegram to ${tgNaturalM[1].trim()}` };
   }
   
   //YT-DLP on phone
@@ -2073,28 +2176,11 @@ export const executePhoneCommand = async (cmd: PhoneCommand): Promise<{ success:
         break;
       }
 
-      case 'whatsapp-num':  res = await phoneWhatsappSend(cmd.params!.number, cmd.params!.text); break;
-      case 'whatsapp-name': 
-        // Pehle phoneContactsSearch se verify karenge
-        const waContact = await phoneContactsSearch(cmd.params!.name);
-        if (waContact?.error || (waContact?.data && waContact.data.length === 0)) {
-          return { success: false, message: `Error: Contact '${cmd.params!.name}' device me nahi mila.` };
-        }
-        res = await phoneWhatsappSendByName(cmd.params!.name, cmd.params!.text); 
-        break;
-      
+      case "whatsapp-num":  res = await phoneWhatsappSend(cmd.params!.number, cmd.params!.text); break;
+      case "whatsapp-name": res = await phoneWhatsappSendByName(cmd.params!.name, cmd.params!.text); break;
       case 'telegram-user': 
-        res = await phoneTelegramSend(cmd.params!.username, cmd.params!.text); 
-        break;
-      case 'telegram-name': 
-        // Pehle phoneContactsSearch se verify karenge
-        const tgContact = await phoneContactsSearch(cmd.params!.name);
-        if (tgContact?.error || (tgContact?.data && tgContact.data.length === 0)) {
-          return { success: false, message: `Error: Contact '${cmd.params!.name}' device me nahi mila.` };
-        }
-        res = await phoneTelegramSendByName(cmd.params!.name, cmd.params!.text); 
-        break;
-
+      case "telegram-user": res = await phoneTelegramSend(cmd.params!.username || cmd.params!.number, cmd.params!.text); break;
+      case "telegram-name": res = await phoneTelegramSendByName(cmd.params!.name, cmd.params!.text); break;
       case 'ytdlp':         res = await phoneYtdlpDownload(cmd.params as any); break;
       case 'app-list':   res = await phoneAppList(); break;
       case 'app-open':   res = await smartOpenApp(cmd.params!.name); break;
