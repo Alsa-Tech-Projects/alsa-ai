@@ -187,7 +187,7 @@ const Auth = () => {
 
     toast({
       title: "Redirecting...",
-      description: "Google sign-in page par bheja ja raha hai.",
+      description: "Google Sign In Redirect To Google Auth",
     });
   } catch (error: any) {
     toast({
@@ -216,7 +216,7 @@ const Auth = () => {
             "@type": "WebPage",
             "name": "ALSA AI Login & Signup",
             "description": "Create your account or login to ALSA AI for PC automation and AI assistance",
-            "url": "https://alsa-ai.lovable.app/auth"
+            "url": "https://www.alsa-ai.in/auth"
           })}
         </script>
       </Helmet>

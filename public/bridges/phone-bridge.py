@@ -1,4 +1,3 @@
-# It's Outdated Ideas 💡 
 #!/usr/bin/env python3
 """
 Alsa AI — Phone Bridge (Elite Only)

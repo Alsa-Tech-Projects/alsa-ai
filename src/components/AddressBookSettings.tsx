@@ -12,7 +12,7 @@ import {
   listEmailContacts, upsertEmailContacts, deleteEmailContact,
   parseCsv, type StoredContact, type TelegramContact, type EmailContact,
 } from '@/utils/contactsStore';
-import { phoneEmailConfig, phoneEmailStatus } from '@/utils/pcBridge';
+import { phoneEmailConfig, phoneEmailStatus } from '@/utils/phoneBridge';
 
 /** Small reusable CSV upload button. */
 const CsvButton = ({ onRows, columns }: { onRows: (rows: Record<string, string>[]) => void; columns: string }) => {

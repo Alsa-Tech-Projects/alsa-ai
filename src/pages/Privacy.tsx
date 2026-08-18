@@ -1,6 +1,16 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Shield, Lock, Eye, Database, Bell, UserCheck } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Shield, 
+  Lock, 
+  Eye, 
+  Database, 
+  Bell, 
+  UserCheck, 
+  History, 
+  CreditCard 
+} from 'lucide-react';
 import { Helmet } from 'react-helmet';
 
 const Privacy = () => {
@@ -9,99 +19,136 @@ const Privacy = () => {
   const sections = [
     {
       icon: Database,
-      title: 'Data Collection',
+      title: 'Data Collection & Storage',
       content: [
-        { heading: 'Information We Collect', items: [
-          'Account information (email, name, profile details)',
-          'Usage data and interaction logs',
-          'Device information and IP addresses',
-          'Payment information (processed securely via Razorpay)'
-        ]},
-        { heading: 'PC Bridge Data', items: [
-          'When using PC Bridge, commands are processed locally on your machine',
-          'We do not store or transmit your file contents to our servers',
-          'System information is only used for feature functionality'
-        ]}
+        { 
+          heading: 'Information We Collect', 
+          items: [
+            'Account information (email, name, profile details)',
+            'Usage data and interaction logs',
+            'Device information and IP addresses',
+            'Payment information (processed securely via Razorpay)'
+          ]
+        },
+        { 
+          heading: 'Storage Mechanism', 
+          items: [
+            'App Passwords and Emails are saved securely in your Local Storage (on both the App and Website) and never leave your device.',
+            'Data such as Contacts, Phone Numbers, Telegram Usernames, and Emails are stored on our secure Server Database in a fully encrypted format.'
+          ]
+        },
+        { 
+          heading: 'ALSA AI PC Bridge', 
+          items: [
+            'The ALSA AI Bridge App is our proprietary application that connects our website (www.alsa-ai.in) directly to your local system.',
+            'When using PC Bridge, commands are processed locally on your machine.',
+            'We do not store or transmit your personal file contents to our servers.',
+            'System information is only used temporarily for feature functionality.'
+          ]
+        }
+      ]
+    },
+    {
+      icon: History,
+      title: 'Data Retention & Chat History',
+      content: [
+        { 
+          heading: '30-Day Auto-Clear Policy', 
+          items: [
+            'To protect your privacy, all chat histories are automatically cleared every 30 days.',
+            'If you have an important chat, you can back it up by exporting it as a .json file directly from the History page.',
+            'Alternatively, you can send an email to support@alsa-ai.in referencing the chat, and request that we do not delete it.'
+          ],
+          action: {
+            label: "Go To History Page",
+            path: "/history"
+          }
+        }
+      ]
+    },
+    {
+      icon: CreditCard,
+      title: 'Subscription & Cancellation',
+      content: [
+        { 
+          heading: '7-Day Cancellation Policy', 
+          items: [
+            'We want you to be completely satisfied with ALSA AI.',
+            'After purchasing a plan, if you do not like the service, you can cancel it at any time within the first 7 days.',
+            'Cancellations within this 7-day window are eligible for our money-back guarantee.'
+          ]
+        }
       ]
     },
     {
       icon: Lock,
       title: 'Data Security',
       content: [
-        { heading: 'Security Measures', items: [
-          'All data transmission is encrypted using TLS/SSL',
-          'Passwords are hashed using secure algorithms',
-          'PC Bridge uses local-only execution with no cloud storage',
-          'Regular security audits and vulnerability assessments',
-          'Access controls and authentication for all services'
-        ]},
-        { heading: 'Infrastructure', items: [
-          'Your data is stored securely on enterprise-grade infrastructure with industry-standard security protocols'
-        ]}
+        { 
+          heading: 'Security Measures', 
+          items: [
+            'All data transmission is encrypted using TLS/SSL',
+            'Passwords are hashed using secure algorithms',
+            'Regular security audits and vulnerability assessments',
+            'Access controls and authentication for all services'
+          ]
+        }
       ]
     },
     {
       icon: Eye,
       title: 'How We Use Your Data',
       content: [
-        { heading: 'We Use Your Information To', items: [
-          'Provide, maintain, and improve our AI assistant services',
-          'Process transactions and send related information',
-          'Send technical notices and support messages',
-          'Respond to your comments and questions',
-          'Analyze usage patterns to enhance user experience',
-          'Detect and prevent fraudulent or unauthorized activity'
-        ]},
-        { heading: 'We Do NOT', items: [
-          'Sell your personal data to third parties',
-          'Share your data with advertisers',
-          'Use your data for purposes you haven\'t consented to'
-        ]}
+        { 
+          heading: 'We Use Your Information To', 
+          items: [
+            'Provide, maintain, and improve our AI assistant services',
+            'Process transactions and send related information',
+            'Send technical notices and support messages',
+            'Detect and prevent fraudulent or unauthorized activity'
+          ]
+        },
+        { 
+          heading: 'We Do NOT', 
+          items: [
+            'Sell your personal data to third parties',
+            'Share your data with advertisers',
+            'Use your data for purposes you haven\'t consented to'
+          ]
+        }
       ]
     },
     {
       icon: UserCheck,
       title: 'Your Rights',
       content: [
-        { heading: 'You Have The Following Rights', items: [
-          'Access: Request a copy of your personal data',
-          'Correction: Request correction of inaccurate data',
-          'Deletion: Request deletion of your data (subject to legal requirements)',
-          'Portability: Request transfer of your data to another service',
-          'Objection: Object to processing of your data'
-        ]},
-        { heading: 'How To Exercise Your Rights', items: [
-          'Contact us at alsa.ai.assistant@gmail.com'
-        ]}
+        { 
+          heading: 'You Have The Following Rights', 
+          items: [
+            'Access: Request a copy of your personal data',
+            'Correction: Request correction of inaccurate data',
+            'Deletion: Request deletion of your data (subject to legal requirements)',
+            'Portability: Request transfer of your data to another service'
+          ]
+        }
       ]
     },
     {
       icon: Bell,
       title: 'Updates to This Policy',
       content: [
-        { heading: 'We Will Notify You By', items: [
-          'Posting the new Privacy Policy on this page',
-          'Updating the "Last Updated" date',
-          'Sending an email notification for significant changes'
-        ]},
-        { heading: 'Your Responsibility', items: [
-          'We encourage you to review this Privacy Policy periodically'
-        ]}
-      ]
-    },
-    {
-      icon: Shield,
-      title: 'Third-Party Services',
-      content: [
-        { heading: 'Services We Use', items: [
-          'Authentication: Secure login services for user authentication',
-          'Payments: Razorpay for payment processing (PCI DSS compliant)',
-          'Analytics: Anonymous usage analytics to improve our service',
-          'AI Processing: Secure AI models for chat functionality'
-        ]},
-        { heading: 'Note', items: [
-          'Each third-party service has its own privacy policy governing data handling'
-        ]}
+        { 
+          heading: 'Policy Changes & Version History', 
+          items: [
+            'We will notify you of any changes by posting the new Privacy Policy on this page.',
+            'We encourage you to review this Privacy Policy periodically.',
+            'You can check all the latest updates, features, and changes made to ALSA AI on our Update History page.'
+          ],
+          action: {
+            label: "Click Here For Update Information",
+            path: "/update-history"
+          }
+        }
       ]
     }
   ];
@@ -126,7 +173,7 @@ const Privacy = () => {
             Back
           </Button>
           <div className="flex items-center gap-2">
-            <img src= "https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/alsa-logo.png" alt="ALSA AI" className="w-8 h-8 rounded-full" />
+            <img src="https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/alsa-logo.png" alt="ALSA AI" className="w-8 h-8 rounded-full" />
             <span className="font-bold">ALSA AI</span>
           </div>
         </div>
@@ -137,7 +184,7 @@ const Privacy = () => {
           <Shield className="w-16 h-16 text-blue-400 mx-auto mb-4" />
           <h1 className="text-4xl font-bold mb-4">Privacy Policy</h1>
           <p className="text-white/60">
-            Last Updated: January 2025
+            Last Updated: August 18, 2026
           </p>
         </div>
 
@@ -160,11 +207,12 @@ const Privacy = () => {
                   </div>
                   <h2 className="text-xl font-bold text-white">{section.title}</h2>
                 </div>
+                
                 <div className="space-y-6">
                   {section.content.map((block, j) => (
                     <div key={j}>
                       <h3 className="text-lg font-semibold text-blue-300 mb-3">{block.heading}</h3>
-                      <ul className="space-y-2">
+                      <ul className="space-y-2 mb-4">
                         {block.items.map((item, k) => (
                           <li key={k} className="flex items-start gap-3 text-white/70">
                             <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2 flex-shrink-0"></span>
@@ -172,6 +220,16 @@ const Privacy = () => {
                           </li>
                         ))}
                       </ul>
+                      {/* Conditional rendering for action buttons */}
+                      {block.action && (
+                        <Button 
+                          onClick={() => navigate(block.action.path)} 
+                          variant="secondary" 
+                          className="mt-2 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 hover:text-white border border-blue-500/30"
+                        >
+                          {block.action.label}
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -1,6 +1,0 @@
-Add mobile responsive UI with sidebar toggle for phones and tablets
-Continue implementing the remaining features: Update Index.tsx to integrate RightPanel, mobile UI, document creation, and ADB fixes
-bro website ui for laptop or desktop keep same as prevoius but for mobile phones add mobile ui 
-and you are note take input from me for weatherapi key ? why ?
-bro also thats 110+ website add to pc bridge for use open not on sidebar panel and image sharing and files sharing does not work fix all pc-bridge issues becouse related to pc bridge does not work and for every language can we use for execute any commands.
-remove that whitelisted comamnds from the pc bridge and ai can try for every thing execute and now add also an application and that is antigravity for coding and user can open it any where and any path when we say recording or screenshot so thats does not work fix it.

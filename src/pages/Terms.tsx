@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, FileText, AlertTriangle, CreditCard, Ban, Scale, Globe } from 'lucide-react';
+import { ArrowLeft, FileText, AlertTriangle, CreditCard, Ban, Scale, Globe, Database } from 'lucide-react';
 import { Helmet } from 'react-helmet';
 
 const Terms = () => {
@@ -15,6 +15,23 @@ const Terms = () => {
           'By accessing or using ALSA AI services, you agree to be bound by these Terms of Service and all applicable laws and regulations',
           'If you do not agree with any of these terms, you are prohibited from using or accessing this service',
           'These terms apply to all users, visitors, and others who access or use the Service'
+        ]}
+      ]
+    },
+    {
+      icon: Database,
+      title: 'Data Collection & Usage Consent',
+      content: [
+        { heading: 'Data We Access and Store', items: [
+          'By using ALSA AI, you explicitly consent to the collection and storage of specific data required to provide our services.',
+          'Local Storage Data: Sensitive credentials like your App Passwords and Emails are saved securely in your device\'s local storage (for both the App and Website) and are never transmitted to our servers.',
+          'Encrypted Cloud Data: Information such as Contacts, Phone Numbers, Telegram Usernames, and Emails are stored in our secure database in a fully encrypted format.',
+          'PC Bridge Data: Commands are executed locally on your machine. We do not store, access, or transmit your personal file contents or sensitive system data to our servers.'
+        ]},
+        { heading: 'Data Retention & Deletion', items: [
+          'To ensure your privacy, all chat histories on ALSA AI are automatically cleared every 30 days.',
+          'If you wish to keep important chats, it is your responsibility to export them as a .json file or contact our support team to request an exemption before the 30-day period.',
+          'Upon termination of your account, any remaining personal data associated with you will be permanently deleted.'
         ]}
       ]
     },
@@ -48,7 +65,7 @@ const Terms = () => {
         { heading: 'Payment Terms', items: [
           'Payments are processed securely via Razorpay',
           'Subscriptions auto-renew unless cancelled',
-          'No Refunds',
+          '7-Day Cancellation: If you are unsatisfied, you can cancel within the first 7 days of purchasing a plan.',
           'Prices may change with 30 days notice'
         ]},
         { heading: 'Trial Period', items: [
@@ -75,7 +92,7 @@ const Terms = () => {
         { heading: 'PC Bridge Restrictions', items: [
           'Only execute commands on your own systems',
           'Do not use for unauthorized system access',
-          'You are responsible for all actions performed'
+          'You are entirely responsible for all actions performed on your system via PC Bridge'
         ]}
       ]
     },
@@ -89,17 +106,17 @@ const Terms = () => {
         { heading: 'Limitation of Liability', items: [
           'We are not liable for any indirect, incidental, or consequential damages',
           'Our total liability is limited to the amount paid for the service',
-          'We are not responsible for data loss from PC Bridge commands'
+          'We are strictly not responsible for any data loss, system errors, or damages resulting from PC Bridge commands'
         ]},
         { heading: 'AI Limitations', items: [
-          'AI responses may contain errors',
-          'Always verify critical information',
+          'AI responses may contain errors or inaccuracies',
+          'Always verify critical code, commands, or information',
           'AI does not replace professional advice'
         ]},
-        { heading: 'PC Bridge', items: [
-          'Execute commands at your own risk',
-          'Back up important data regularly',
-          'We are not responsible for system damage'
+        { heading: 'PC Bridge Risks', items: [
+          'Execute system commands at your own risk',
+          'Back up important data regularly before executing complex automation tasks',
+          'We are not responsible for OS or system damage'
         ]}
       ]
     },
@@ -117,8 +134,7 @@ const Terms = () => {
         ]},
         { heading: 'Termination', items: [
           'We may terminate access for Terms violations',
-          'You may cancel your subscription anytime',
-          'Upon termination, your data will be deleted within 30 days'
+          'You may cancel your subscription anytime'
         ]},
         { heading: 'Changes to Terms', items: [
           'We may modify these Terms at any time',
@@ -148,7 +164,7 @@ const Terms = () => {
             Back
           </Button>
           <div className="flex items-center gap-2">
-            <img src= "https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/alsa-logo.png" alt="ALSA AI" className="w-8 h-8 rounded-full" />
+            <img src="https://tyivfgrzftbpzeuypeyf.supabase.co/storage/v1/object/public/photos/alsa-logo.png" alt="ALSA AI" className="w-8 h-8 rounded-full" />
             <span className="font-bold">ALSA AI</span>
           </div>
         </div>
@@ -159,7 +175,7 @@ const Terms = () => {
           <Scale className="w-16 h-16 text-blue-400 mx-auto mb-4" />
           <h1 className="text-4xl font-bold mb-4">Terms of Service</h1>
           <p className="text-white/60">
-            Last Updated: January 2025
+            Last Updated: August 18, 2026
           </p>
         </div>
 

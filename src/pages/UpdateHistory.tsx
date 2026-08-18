@@ -78,12 +78,6 @@ const RELEASES: Release[] = [
         desc: 'The landing page and the rest of the app now use the same blue and white brand colours, and the sidebar profile card no longer gets hidden on small screens.',
         color: 'from-blue-400 to-sky-300',
       },
-      {
-        icon: Zap,
-        title: 'Deployment Cache Fix',
-        desc: 'New builds now appear immediately after deploying. The old cached page will not show up any more.',
-        color: 'from-yellow-500 to-orange-500',
-      },
     ],
   },
   {

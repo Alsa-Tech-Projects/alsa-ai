@@ -8,7 +8,41 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
-import { checkBridgeConnection, checkPhoneBridgeConnection, executeSystemCommand, scanSystem, SystemScanResult, startScreenRecording, stopScreenRecording, parseNaturalLanguage, WEBSITES, createProject, createPowerPoint, createExcel, createDatabase, executePythonFile, executeCmdCommand, runCommand, checkInstallation, sendCommand, adbConnect, adbCommand, closeWindow, openFolder, runProject, createFolder, createTextFile, openWebsiteWithSearch, openCustomApp, sendTelegramMsg, sendWhatsAppMsg, parsePhoneCommand, executePhoneCommand } from '@/utils/pcBridge';
+import { 
+  checkBridgeConnection, 
+  executeSystemCommand, 
+  scanSystem, 
+  SystemScanResult, 
+  startScreenRecording, 
+  stopScreenRecording, 
+  parseNaturalLanguage, 
+  WEBSITES, 
+  createProject, 
+  createPowerPoint, 
+  createExcel, 
+  createDatabase, 
+  executePythonFile, 
+  executeCmdCommand, 
+  runCommand, 
+  checkInstallation, 
+  sendCommand, 
+  adbConnect, 
+  adbCommand, 
+  closeWindow, 
+  openFolder, 
+  runProject, 
+  createFolder, 
+  createTextFile, 
+  openWebsiteWithSearch, 
+  openCustomApp, 
+  sendTelegramMsg, 
+  sendWhatsAppMsg 
+} from '@/utils/pcBridge';
+import { 
+  checkPhoneBridgeConnection, 
+  parsePhoneCommand, 
+  executePhoneCommand 
+} from '@/utils/phoneBridge';
 import ChatMessage from '@/components/ChatMessage';
 import MemoryManager from '@/components/MemoryManager';
 import TranscriptionFeedback from '@/components/TranscriptionFeedback';
@@ -1834,7 +1868,7 @@ lastMsg.content = finalText;
                   ALSA AI
                 </h1>
                 <p className="text-blue-500/50 font-mono text-[8px] uppercase tracking-[0.3em] mt-2">
-                  Alsa AI From Chat To Execution 5.0
+                  Alsa AI From Chat To Execution 5.1
                 </p>
               </div>
             )}
@@ -2074,7 +2108,7 @@ lastMsg.content = finalText;
                 ALSA AI
               </h1>
               <p className="mt-3 text-blue-500/50 font-mono text-[10px] tracking-[0.5em] uppercase">
-                Alsa AI From Chat To Execution 5.0
+                Alsa AI From Chat To Execution 5.1
               </p>
 
               <div className="mt-14 w-full max-w-2xl">
