@@ -41,7 +41,7 @@ interface CustomApp {
 interface Contact {
   id: string;
   name: string;
-  value: string; // WhatsApp ke liye number, TG ke liye link
+  value: string;
 }
 
 const Settings = () => {
@@ -103,10 +103,8 @@ const Settings = () => {
   const [newTgName, setNewTgName] = useState('');
   const [newTgLink, setNewTgLink] = useState('');
 
-    // File input ko reference karne ke liye
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // CSV handle karne ka function
   const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -117,15 +115,12 @@ const Settings = () => {
       const lines = text.split('\n');
       const newContacts: Contact[] = [];
 
-      // CSV ki har line ko parse karenge
       lines.forEach((line, index) => {
-        // Maan kar chal rahe hain format "Name,Number" hai
         const [name, number] = line.split(',').map(item => item?.trim());
         
-        // Header row ("Contacts_Name") aur empty lines ko ignore karne ke liye
         if (name && number && name.toLowerCase() !== 'contacts_name') {
           newContacts.push({
-            id: Date.now().toString() + index, // Unique ID
+            id: Date.now().toString() + index,
             name: name,
             value: number
           });
@@ -133,7 +128,6 @@ const Settings = () => {
       });
 
       if (newContacts.length > 0) {
-        // State update karte hi UI me live dikhne lagega
         setWhatsappContacts(prev => [...prev, ...newContacts]);
         toast({ 
           title: "CSV Uploaded", 
@@ -147,7 +141,6 @@ const Settings = () => {
         });
       }
       
-      // Input ko reset kar do taaki same file dobara upload ho sake
       if (fileInputRef.current) fileInputRef.current.value = '';
     };
     
@@ -173,58 +166,39 @@ const Settings = () => {
   }, []);
 
   const loadLocalSettings = () => {
-    // 1. Load output paths
     const savedPaths = localStorage.getItem('alsa_output_paths');
     if (savedPaths) {
       try { setOutputPaths(JSON.parse(savedPaths)); } catch (e) { console.error('Error:', e); }
     }
 
-    // 2. Load custom sites
     const savedSites = localStorage.getItem('alsa_user_sites');
     if (savedSites) {
       try { setCustomSites(JSON.parse(savedSites)); } catch (e) { console.error('Error:', e); }
     }
 
-    // 3. Load custom apps
     const savedApps = localStorage.getItem('alsa_custom_apps');
     if (savedApps) {
       try { setCustomApps(JSON.parse(savedApps)); } catch (e) { console.error('Error:', e); }
     }
 
-    // 4. Load WhatsApp Contacts
     const savedWp = localStorage.getItem('alsa_whatsapp_contacts');
     if (savedWp) {
-      try {
-        setWhatsappContacts(JSON.parse(savedWp));
-      } catch (e) {
-        console.error('Error loading WhatsApp contacts:', e);
-      }
+      try { setWhatsappContacts(JSON.parse(savedWp)); } catch (e) { console.error('Error:', e); }
     }
 
-    // 5. Load Telegram Contacts
     const savedTg = localStorage.getItem('alsa_telegram_contacts');
     if (savedTg) {
-      try {
-        setTelegramContacts(JSON.parse(savedTg));
-      } catch (e) {
-        console.error('Error loading Telegram contacts:', e);
-      }
+      try { setTelegramContacts(JSON.parse(savedTg)); } catch (e) { console.error('Error:', e); }
     }
 
-    // Load voice gender with default to female
     const savedGender = localStorage.getItem('alsa_voice_gender') as 'male' | 'female' | 'auto';
     if (savedGender) {
       setPreferences(prev => ({ ...prev, voice_gender: savedGender }));
     }
 
-    // 6. Load Email Settings
     const savedEmailSettings = localStorage.getItem('alsa_email_settings');
     if (savedEmailSettings) {
-      try {
-        setEmailSettings(JSON.parse(savedEmailSettings));
-      } catch (e) {
-        console.error('Error loading email settings:', e);
-      }
+      try { setEmailSettings(JSON.parse(savedEmailSettings)); } catch (e) { console.error('Error:', e); }
     }
   };
 
@@ -287,7 +261,6 @@ const Settings = () => {
         if (error) throw error;
       }
 
-      // Save local settings
       localStorage.setItem('alsa_output_paths', JSON.stringify(outputPaths));
       localStorage.setItem('alsa_user_sites', JSON.stringify(customSites));
       localStorage.setItem('alsa_custom_apps', JSON.stringify(customApps));
@@ -301,7 +274,6 @@ const Settings = () => {
       localStorage.setItem('alsa_user_api_key', userApiKey.trim());
       localStorage.setItem('alsa_user_model', userModel);
 
-      // Apply theme immediately
       applyTheme(preferences.theme);
 
       toast({
@@ -415,36 +387,6 @@ const Settings = () => {
     });
   };
 
-  const addWhatsappContact = () => {
-    if (!newWpName.trim() || !newWpNum.trim()) {
-      toast({ title: "Error", description: "Enter name and phone number", variant: "destructive" });
-      return;
-    }
-    setWhatsappContacts([...whatsappContacts, { 
-      id: Date.now().toString(), 
-      name: newWpName.trim(), 
-      value: newWpNum.trim() 
-    }]);
-    setNewWpName('');
-    setNewWpNum('');
-    toast({ title: "WhatsApp Contact Added", description: `${newWpName} saved!` });
-  };
-
-  const addTelegramContact = () => {
-    if (!newTgName.trim() || !newTgLink.trim()) {
-      toast({ title: "Error", description: "Enter name and Telegram link/username", variant: "destructive" });
-      return;
-    }
-    setTelegramContacts([...telegramContacts, { 
-      id: Date.now().toString(), 
-      name: newTgName.trim(), 
-      value: newTgLink.trim() 
-    }]);
-    setNewTgName('');
-    setNewTgLink('');
-    toast({ title: "Telegram Contact Added", description: `${newTgName} saved!` });
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -468,8 +410,8 @@ const Settings = () => {
         <ScrollArea className="h-auto sm:h-[calc(100vh-120px)] w-full">
           <div className="space-y-6 sm:pr-4 min-w-0 w-full max-w-full">
             <div>
-              <h1 className="text-3xl font-bold">Settings</h1>
-              <p className="text-muted-foreground mt-2">Customize your ALSA AI assistant experience</p>
+              <h1 className="text-2xl sm:text-3xl font-bold break-words">Settings</h1>
+              <p className="text-muted-foreground mt-2 text-sm sm:text-base">Customize your ALSA AI assistant experience</p>
             </div>
 
             {/* AI Response Style */}
@@ -486,7 +428,7 @@ const Settings = () => {
                       value={preferences.ai_response_style}
                       onValueChange={(value) => setPreferences({ ...preferences, ai_response_style: value })}
                     >
-                      <SelectTrigger id="response-style" className="mt-2">
+                      <SelectTrigger id="response-style" className="mt-2 w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -505,10 +447,12 @@ const Settings = () => {
             </Card>
 
             {/* Custom Instructions */}
-            <Card className="bg-card border-border w-full max-w-full overflow-hidden">
+            <Card className="bg-card border-border w-full max-w-full overflow-hidden min-w-0">
               <CardHeader>
                 <CardTitle>Custom Instructions</CardTitle>
-                <CardDescription>Tell ALSA how you want it to behave. Jailbreak / identity-change attempts will be safely ignored.</CardDescription>
+                <CardDescription className="break-words">
+                  Tell ALSA how you want it to behave. Jailbreak / identity-change attempts will be safely ignored.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <Textarea
@@ -516,19 +460,21 @@ const Settings = () => {
                   onChange={(e) => setCustomInstructions(e.target.value.slice(0, 2000))}
                   placeholder="Example: Always reply in Hinglish. Give code examples in TypeScript. Keep answers under 200 words."
                   rows={5}
-                  className="w-full max-w-full resize-y"
+                  className="w-full max-w-full resize-y break-words"
                 />
                 <p className="text-xs text-muted-foreground mt-2">{customInstructions.length}/2000</p>
               </CardContent>
             </Card>
 
             {/* Your Own API Key (BYOK) */}
-            <Card className="bg-card border-border w-full max-w-full overflow-hidden">
+            <Card className="bg-card border-border w-full max-w-full overflow-hidden min-w-0">
               <CardHeader>
                 <CardTitle>Your Google AI API Key (BYOK)</CardTitle>
-                <CardDescription>Use your own Google Gemini key — private, unlimited, our quota won't be touched.</CardDescription>
+                <CardDescription className="break-words">
+                  Use your own Google Gemini key — private, unlimited, our quota won't be touched.
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 min-w-0">
                 <div className="min-w-0">
                   <Label htmlFor="byok-api-key">API Key</Label>
                   <Input
@@ -537,14 +483,14 @@ const Settings = () => {
                     value={userApiKey}
                     onChange={(e) => setUserApiKey(e.target.value)}
                     placeholder="AIza..."
-                    className="mt-2 w-full max-w-full font-mono"
+                    className="mt-2 w-full max-w-full font-mono break-all"
                     autoComplete="off"
                   />
                   <a
                     href="https://aistudio.google.com/app/apikey"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-primary hover:underline mt-2 inline-block"
+                    className="text-xs text-primary hover:underline mt-2 inline-block break-words"
                   >
                     Get a free key from Google AI Studio →
                   </a>
@@ -570,8 +516,6 @@ const Settings = () => {
               </CardContent>
             </Card>
 
-
-
             {/* Voice Settings */}
             <Card className="bg-card border-border w-full max-w-full overflow-hidden min-w-0">
               <CardHeader>
@@ -580,15 +524,16 @@ const Settings = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0 flex-1">
                       <Label htmlFor="voice-enabled">Voice Enabled</Label>
-                      <p className="text-sm text-muted-foreground">Enable voice recognition and text-to-speech</p>
+                      <p className="text-sm text-muted-foreground break-words">Enable voice recognition and text-to-speech</p>
                     </div>
                     <Switch
                       id="voice-enabled"
                       checked={preferences.voice_enabled}
                       onCheckedChange={(checked) => setPreferences({ ...preferences, voice_enabled: checked })}
+                      className="flex-shrink-0"
                     />
                   </div>
 
@@ -598,7 +543,7 @@ const Settings = () => {
                       value={preferences.voice_gender}
                       onValueChange={(value: 'male' | 'female' | 'auto') => setPreferences({ ...preferences, voice_gender: value })}
                     >
-                      <SelectTrigger id="voice-gender" className="mt-2">
+                      <SelectTrigger id="voice-gender" className="mt-2 w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -607,7 +552,7 @@ const Settings = () => {
                         <SelectItem value="female">Female - Hinglish Voice</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground mt-1">Select preferred voice for Hinglish responses</p>
+                    <p className="text-xs text-muted-foreground mt-1 break-words">Select preferred voice for Hinglish responses</p>
                   </div>
 
                   <div>
@@ -616,7 +561,7 @@ const Settings = () => {
                       value={preferences.voice_name}
                       onValueChange={(value) => setPreferences({ ...preferences, voice_name: value })}
                     >
-                      <SelectTrigger id="voice-name" className="mt-2">
+                      <SelectTrigger id="voice-name" className="mt-2 w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -635,14 +580,14 @@ const Settings = () => {
             <Card className="bg-card border-border w-full max-w-full overflow-hidden min-w-0">
               <CardHeader>
                 <CardTitle>Appearance</CardTitle>
-                <CardDescription>Theme mode, accent color and font size — applies across the entire app</CardDescription>
+                <CardDescription className="break-words">Theme mode, accent color and font size — applies across the entire app</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
                   {/* Mode */}
                   <div>
                     <Label className="mb-2 block">Theme Mode</Label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       {([
                         { v: 'light', icon: Sun, label: 'Light' },
                         { v: 'dark', icon: Moon, label: 'Dark' },
@@ -653,10 +598,10 @@ const Settings = () => {
                           type="button"
                           variant={themeSettings.mode === v ? 'default' : 'outline'}
                           onClick={() => updateTheme({ mode: v })}
-                          className="transition-all"
+                          className="transition-all w-full"
                         >
-                          <Icon className="w-4 h-4 mr-2" />
-                          {label}
+                          <Icon className="w-4 h-4 mr-2 flex-shrink-0" />
+                          <span className="truncate">{label}</span>
                         </Button>
                       ))}
                     </div>
@@ -678,7 +623,7 @@ const Settings = () => {
                           type="button"
                           onClick={() => updateTheme({ accent: v })}
                           aria-label={v}
-                          className={`w-10 h-10 rounded-full border-2 transition-all ${
+                          className={`w-10 h-10 rounded-full border-2 transition-all flex-shrink-0 ${
                             themeSettings.accent === v
                               ? 'border-foreground scale-110 shadow-lg'
                               : 'border-border hover:scale-105'
@@ -691,10 +636,10 @@ const Settings = () => {
 
                   {/* Font size */}
                   <div>
-                    <Label className="mb-2 block flex items-center gap-2">
-                      <Type className="w-4 h-4" /> Font Size
+                    <Label className="mb-2 flex items-center gap-2">
+                      <Type className="w-4 h-4 flex-shrink-0" /> Font Size
                     </Label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       {([
                         { v: 'small', label: 'Small', cls: 'text-xs' },
                         { v: 'medium', label: 'Medium', cls: 'text-sm' },
@@ -705,7 +650,7 @@ const Settings = () => {
                           type="button"
                           variant={themeSettings.fontSize === v ? 'default' : 'outline'}
                           onClick={() => updateTheme({ fontSize: v })}
-                          className={cls}
+                          className={`${cls} w-full`}
                         >
                           {label}
                         </Button>
@@ -720,17 +665,17 @@ const Settings = () => {
             <Card className="bg-card border-border w-full max-w-full overflow-hidden min-w-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-primary" /> Face Authentication
+                  <ShieldCheck className="w-5 h-5 text-primary flex-shrink-0" /> Face Authentication
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="break-words">
                   Unlock the assistant with your face. Runs fully on-device — no images uploaded. Liveness + anti-spoof enabled.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 min-w-0">
                 <div className="flex items-center justify-between gap-4">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <Label>Enable Face Auth on app open</Label>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-xs text-muted-foreground mt-1 break-words">
                       Status: {isEnrolled() ? 'Face enrolled ✓' : 'Not enrolled yet'}
                     </p>
                   </div>
@@ -742,6 +687,7 @@ const Settings = () => {
                       if (v && !isEnrolled()) setShowFaceEnroll(true);
                       toast({ title: v ? 'Face Auth enabled' : 'Face Auth disabled' });
                     }}
+                    className="flex-shrink-0"
                   />
                 </div>
 
@@ -751,7 +697,7 @@ const Settings = () => {
                     onClick={() => setShowFaceEnroll(true)}
                     disabled={!faceEnabled}
                   >
-                    <ShieldCheck className="w-4 h-4 mr-2" />
+                    <ShieldCheck className="w-4 h-4 mr-2 flex-shrink-0" />
                     {isEnrolled() ? 'Re-enroll Face' : 'Enroll Face'}
                   </Button>
                   {isEnrolled() && (
@@ -763,13 +709,13 @@ const Settings = () => {
                         toast({ title: 'Face data deleted', description: 'Enrollment cleared from this device' });
                       }}
                     >
-                      <Trash2 className="w-4 h-4 mr-2" /> Delete Face Data
+                      <Trash2 className="w-4 h-4 mr-2 flex-shrink-0" /> Delete Face Data
                     </Button>
                   )}
                 </div>
 
                 {showFaceEnroll && faceEnabled && (
-                  <div className="pt-2">
+                  <div className="pt-2 w-full overflow-x-auto">
                     <FaceAuth
                       forceMode="enroll"
                       onSuccess={() => setShowFaceEnroll(false)}
@@ -783,16 +729,16 @@ const Settings = () => {
             <Card className="bg-card border-border w-full max-w-full overflow-hidden min-w-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Mic className="w-5 h-5 text-primary" /> Custom Commands
+                  <Mic className="w-5 h-5 text-primary flex-shrink-0" /> Custom Commands
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="break-words">
                   Map a phrase (spoken or typed) to a PC action. Triggered when your message starts with or matches the phrase.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 min-w-0">
                 {/* Existing commands list */}
                 {customCmds.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                     {customCmds.map((c) => {
                       const Icon =
                         c.actionType === 'url' ? Globe :
@@ -801,16 +747,18 @@ const Settings = () => {
                         c.actionType === 'app' ? AppWindow :
                         c.actionType === 'script' ? FileCode : Keyboard;
                       return (
-                        <div key={c.id} className="flex items-start gap-3 p-3 bg-secondary/30 rounded-lg">
+                        <div key={c.id} className="flex items-start gap-3 p-3 bg-secondary/30 rounded-lg min-w-0 overflow-x-auto">
                           <Icon className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">"{c.phrase}"</p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              <span className="uppercase">{c.actionType}</span> → {c.payload}
+                          <div className="flex-1 min-w-0 break-words">
+                            <p className="font-medium break-all">"{c.phrase}"</p>
+                            <p className="text-xs text-muted-foreground break-all">
+                              <span className="uppercase font-semibold">{c.actionType}</span> → {c.payload}
                             </p>
                           </div>
                           <Button
-                            variant="ghost" size="icon"
+                            variant="ghost" 
+                            size="icon"
+                            className="flex-shrink-0"
                             onClick={() => {
                               removeCustomCommand(c.id);
                               setCustomCmds(loadCustomCommands());
@@ -827,14 +775,14 @@ const Settings = () => {
                 )}
 
                 {/* Add new */}
-                <div className="space-y-3 bg-secondary/20 p-4 rounded-lg">
+                <div className="space-y-3 bg-secondary/20 p-4 rounded-lg min-w-0">
                   <div>
                     <Label>Trigger Phrase</Label>
                     <Input
                       value={newCmdPhrase}
                       onChange={(e) => setNewCmdPhrase(e.target.value)}
                       placeholder='e.g. "open my work" or "lock screen"'
-                      className="mt-1"
+                      className="mt-1 w-full"
                     />
                   </div>
                   <div>
@@ -843,7 +791,7 @@ const Settings = () => {
                       value={newCmdAction}
                       onValueChange={(v) => setNewCmdAction(v as CustomActionType)}
                     >
-                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="url">🌐 Open URL (browser)</SelectItem>
                         <SelectItem value="shell">⚡ Run Shell Command (PC Bridge)</SelectItem>
@@ -874,10 +822,11 @@ const Settings = () => {
                         newCmdAction === 'script' ? 'C:\\scripts\\hello.py' :
                         'Hello world'
                       }
-                      className="mt-1"
+                      className="mt-1 w-full break-all"
                     />
                   </div>
                   <Button
+                    className="w-full sm:w-auto"
                     onClick={() => {
                       if (!newCmdPhrase.trim() || !newCmdPayload.trim()) {
                         toast({ title: 'Missing fields', description: 'Phrase aur payload dono required hain', variant: 'destructive' });
@@ -890,24 +839,23 @@ const Settings = () => {
                       toast({ title: 'Command added', description: `"${newCmdPhrase}" → ${newCmdAction}` });
                     }}
                   >
-                    <Plus className="w-4 h-4 mr-2" /> Add Command
+                    <Plus className="w-4 h-4 mr-2 flex-shrink-0" /> Add Command
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
-
             {/* Output Paths */}
             <Card className="bg-card border-border w-full max-w-full overflow-hidden min-w-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <FolderOpen className="w-5 h-5" />
+                  <FolderOpen className="w-5 h-5 flex-shrink-0" />
                   Output Paths
                 </CardTitle>
                 <CardDescription>Configure default save locations for files</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-4 min-w-0">
                   <div>
                     <Label htmlFor="rec-path">Screen Recording Path</Label>
                     <Input
@@ -915,7 +863,7 @@ const Settings = () => {
                       value={outputPaths.recording}
                       onChange={(e) => setOutputPaths({ ...outputPaths, recording: e.target.value })}
                       placeholder="C:\Users\...\Videos\Recordings"
-                      className="mt-1"
+                      className="mt-1 w-full break-all"
                     />
                   </div>
                   <div>
@@ -925,7 +873,7 @@ const Settings = () => {
                       value={outputPaths.ppt}
                       onChange={(e) => setOutputPaths({ ...outputPaths, ppt: e.target.value })}
                       placeholder="C:\Users\...\Presentations"
-                      className="mt-1"
+                      className="mt-1 w-full break-all"
                     />
                   </div>
                   <div>
@@ -935,7 +883,7 @@ const Settings = () => {
                       value={outputPaths.excel}
                       onChange={(e) => setOutputPaths({ ...outputPaths, excel: e.target.value })}
                       placeholder="C:\Users\...\Spreadsheets"
-                      className="mt-1"
+                      className="mt-1 w-full break-all"
                     />
                   </div>
                 </div>
@@ -946,28 +894,28 @@ const Settings = () => {
             <Card className="bg-card border-border w-full max-w-full overflow-hidden min-w-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Key className="w-5 h-5" />
+                  <Key className="w-5 h-5 flex-shrink-0" />
                   Custom Sites
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="break-words">
                   Add your own website shortcuts. Say "open [site name]" to open them quickly.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-4 min-w-0">
                   {customSites.length > 0 && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                       {customSites.map((site) => (
-                        <div key={site.id} className="flex items-center gap-2 p-3 bg-secondary/30 rounded-lg">
-                          <div className="flex-1">
-                            <p className="font-medium text-sm capitalize">{site.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">{site.url}</p>
+                        <div key={site.id} className="flex items-center gap-2 p-3 bg-secondary/30 rounded-lg min-w-0">
+                          <div className="flex-1 min-w-0 break-words">
+                            <p className="font-medium text-sm capitalize break-all">{site.name}</p>
+                            <p className="text-xs text-muted-foreground break-all">{site.url}</p>
                           </div>
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => removeCustomSite(site.id)}
-                            className="text-destructive hover:text-destructive"
+                            className="text-destructive hover:text-destructive flex-shrink-0"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -989,10 +937,11 @@ const Settings = () => {
                         value={newSiteUrl}
                         onChange={(e) => setNewSiteUrl(e.target.value)}
                         placeholder="URL (e.g., mywork.com)"
-                        className="flex-[2] min-w-0"
+                        className="flex-[2] min-w-0 break-all"
                       />
-                      <Button onClick={addCustomSite} size="icon" className="self-end sm:self-auto">
-                        <Plus className="w-4 h-4" />
+                      <Button onClick={addCustomSite} className="w-full sm:w-auto flex-shrink-0">
+                        <Plus className="w-4 h-4 mr-2 sm:mr-0" />
+                        <span className="sm:hidden">Add Site</span>
                       </Button>
                     </div>
                   </div>
@@ -1004,28 +953,28 @@ const Settings = () => {
             <Card className="bg-card border-border w-full max-w-full overflow-hidden min-w-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <FolderOpen className="w-5 h-5" />
+                  <FolderOpen className="w-5 h-5 flex-shrink-0" />
                   Custom Apps
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="break-words">
                   Add your own applications with their paths. Say "open [app name]" to launch them.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-4 min-w-0">
                   {customApps.length > 0 && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                       {customApps.map((app) => (
-                        <div key={app.id} className="flex items-center gap-2 p-3 bg-secondary/30 rounded-lg">
-                          <div className="flex-1">
-                            <p className="font-medium text-sm capitalize">{app.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">{app.path}</p>
+                        <div key={app.id} className="flex items-center gap-2 p-3 bg-secondary/30 rounded-lg min-w-0">
+                          <div className="flex-1 min-w-0 break-words">
+                            <p className="font-medium text-sm capitalize break-all">{app.name}</p>
+                            <p className="text-xs text-muted-foreground break-all">{app.path}</p>
                           </div>
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => removeCustomApp(app.id)}
-                            className="text-destructive hover:text-destructive"
+                            className="text-destructive hover:text-destructive flex-shrink-0"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -1047,10 +996,11 @@ const Settings = () => {
                         value={newAppPath}
                         onChange={(e) => setNewAppPath(e.target.value)}
                         placeholder="Full path to .exe file"
-                        className="flex-[2] min-w-0"
+                        className="flex-[2] min-w-0 break-all"
                       />
-                      <Button onClick={addCustomApp} size="icon" className="self-end sm:self-auto">
-                        <Plus className="w-4 h-4" />
+                      <Button onClick={addCustomApp} className="w-full sm:w-auto flex-shrink-0">
+                        <Plus className="w-4 h-4 mr-2 sm:mr-0" />
+                        <span className="sm:hidden">Add App</span>
                       </Button>
                     </div>
                   </div>
@@ -1058,16 +1008,15 @@ const Settings = () => {
               </CardContent>
             </Card>
 
-            {/* Contacts: WhatsApp / Telegram / Email */}
+            {/* Contacts Settings */}
             <AddressBookSettings />
 
-            {/* Save Button */}
-            {/* <div className="flex justify-end gap-4 pb-6"> */}
+            {/* Save Buttons */}
             <div className="flex flex-col sm:flex-row justify-end gap-3 pb-6">
-              <Button variant="outline" onClick={() => navigate('/')}>
+              <Button variant="outline" onClick={() => navigate('/')} className="w-full sm:w-auto">
                 Cancel
               </Button>
-              <Button onClick={savePreferences} disabled={saving}>
+              <Button onClick={savePreferences} disabled={saving} className="w-full sm:w-auto">
                 {saving ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
