@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// 📱 PHONE BRIDGE (Elite Only) — Termux on Android, port 5002
+// 📱 ALSA AI SERVER BRIDGE — Port 5002
 // ═══════════════════════════════════════════════════════════════
 import { supabase } from '@/integrations/supabase/client';
 
@@ -8,33 +8,11 @@ export interface BridgeStatus {
   message: string;
 }
 
-// User ID ke basis par profiles table se X-ALSA-TOKEN fetch karne ka helper
-async function getAlsaToken(): Promise<string | null> {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-
-    const { data } = await supabase
-      .from('profiles')
-      .select('header_api_key')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    return data?.header_api_key || null;
-  } catch {
-    return null;
-  }
-}
-
 export const PHONE_BRIDGE_URL = 'http://127.0.0.1:5002';
 
-const phoneHeaders = async (): Promise<Record<string, string>> => {
-  const token = await getAlsaToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { 'X-ALSA-Ai-TOKEN': token } : {}),
-  };
-};
+const phoneHeaders = (): Record<string, string> => ({
+  'Content-Type': 'application/json',
+});
 
 const PHONE_REQUEST_TIMEOUT_MS = 45000; // WhatsApp/Telegram/Email automation needs time on-device
 
@@ -42,7 +20,7 @@ const phonePost = async (path: string, body: any = {}) => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PHONE_REQUEST_TIMEOUT_MS);
   try {
-    const headers = await phoneHeaders();
+    const headers = phoneHeaders();
     const r = await fetch(`${PHONE_BRIDGE_URL}${path}`, {
       method: 'POST',
       headers,
@@ -58,7 +36,10 @@ const phonePost = async (path: string, body: any = {}) => {
     return {
       ok: false,
       success: false,
-      error: e?.name === 'AbortError' ? 'Phone Bridge request timed out' : (e?.message || 'Phone Bridge not reachable'),
+      error:
+        e?.name === 'AbortError'
+          ? 'Server request timed out'
+          : (e?.message || 'Server Is Offline Make Sure You Have Run The Server On Alsa Ai App'),
     };
   } finally {
     clearTimeout(timeout);
@@ -67,18 +48,18 @@ const phonePost = async (path: string, body: any = {}) => {
 
 export const checkPhoneBridgeConnection = async (): Promise<BridgeStatus> => {
   try {
-    const headers = await phoneHeaders();
+    const headers = phoneHeaders();
     const r = await fetch(`${PHONE_BRIDGE_URL}/status`, {
       method: 'GET',
       headers,
     });
     if (r.ok) {
       const j = await r.json().catch(() => ({}));
-      return { connected: true, message: j?.bridge || 'Phone Bridge connected' };
+      return { connected: true, message: j?.bridge || 'Server connected' };
     }
-    return { connected: false, message: 'Phone Bridge not responding' };
+    return { connected: false, message: 'Server not responding' };
   } catch {
-    return { connected: false, message: 'Phone Bridge not running (Termux)' };
+    return { connected: false, message: 'Server Is Offline Make Sure You Have Run The Server On Alsa Ai App' };
   }
 };
 
@@ -358,7 +339,7 @@ export interface PhoneCommand {
 export const parsePhoneCommand = (input: string): PhoneCommand | null => {
   const t = input.toLowerCase().trim();
 
-  // 📧 EMAIL AUTOMATION PARSING (FIXED)
+  // 📧 EMAIL AUTOMATION PARSING
   const emailDirectM = input.match(/(?:email|mail)\s+(?:to\s+)?([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\s*(?:subject\s+["']?([^"'\n]+)["']?)?\s*(?:body|text|msg|message)?\s*["']?([^"']+)["']?$/i);
   if (emailDirectM) {
     const to = emailDirectM[1];
@@ -377,14 +358,12 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
     }
   }
 
-  // 💬 WHATSAPP AUTOMATION PARSING (FIXED & ROBUST)
-  // 1. Phone number format: "whatsapp +919876543210 message hello"
+  // 💬 WHATSAPP AUTOMATION PARSING
   const waNumM = input.match(/(?:whatsapp|wa)\s+(?:msg|message|send|bhejo|karo)?\s*(?:to\s+)?(\+?\d[\d\s\-]{6,15})\s*[:,\-]?\s*(?:message|msg|text|saying)?\s*["']?(.+?)["']?$/i);
   if (waNumM) {
     return { action: 'whatsapp-num', params: { number: waNumM[1].replace(/[\s\-]/g, ''), text: waNumM[2].trim() }, label: `WhatsApp to ${waNumM[1]}` };
   }
 
-  // 2. Hinglish / English format: "WhatsApp par Rahul ko message karo Hello" or "whatsapp rahul saying hi"
   const waNaturalM = input.match(/(?:whatsapp|wa)\s*(?:par\s+)?([a-zA-Z][a-zA-Z\s.'-]{1,25}?)\s*(?:ko\s+)?(?:message|msg|massage|text|saying|bhejo|send|kar\s+do)*\s*[:,\-]?\s*["']?(.+?)["']?$/i);
   if (waNaturalM && !/\d/.test(waNaturalM[1])) {
     const targetName = waNaturalM[1].trim();
@@ -621,7 +600,7 @@ export const executePhoneCommand = async (cmd: PhoneCommand): Promise<{ success:
         break;
       }
       case 'app-open':   res = await smartOpenApp(cmd.params!.name); break;
-      default: return { success: false, message: `Unknown phone action: ${cmd.action}` };
+      default: return { success: false, message: `Unknown server action: ${cmd.action}` };
     }
     const ok = res?.success !== false && res?.ok !== false;
     return {
@@ -630,6 +609,6 @@ export const executePhoneCommand = async (cmd: PhoneCommand): Promise<{ success:
       data: res,
     };
   } catch (e: any) {
-    return { success: false, message: e?.message || 'Phone Bridge error' };
+    return { success: false, message: e?.message || 'Server Is Offline Make Sure You Have Run The Server On Alsa Ai App' };
   }
 };
