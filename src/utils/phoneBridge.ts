@@ -224,14 +224,23 @@ const phonePostWithFallback = async (paths: string[], body: any) => {
   return last;
 };
 
-export const phoneWhatsappSend = (number: string, text: string) =>
-  phonePostWithFallback(['/whatsapp/send', '/send'], { platform: 'whatsapp', number, text });
-
 export const phoneWhatsappSendByName = async (name: string, text: string) => {
   const hits = await searchContacts(name);
-  if (hits.length && hits[0].phone) return phoneWhatsappSend(hits[0].phone, text);
+
+  if (hits.length) {
+    // Pehle exact match dhoondo, fir pehle match (partial) par jao
+    const exactHit = hits.find(h => h.name.toLowerCase() === name.toLowerCase());
+    const target = exactHit || hits[0];
+
+    if (target?.phone) {
+      return phoneWhatsappSend(target.phone, text);
+    }
+  }
+
+  // Agar database me koi contact na mile, tab server fallback chalega
   return phonePostWithFallback(['/whatsapp/send-by-name'], { name, text });
 };
+                                              
 
 // Telegram Automation
 export const phoneTelegramSend = (usernameOrNumber: string, text: string) => {
