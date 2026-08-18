@@ -8,33 +8,7 @@ export interface BridgeStatus {
   message: string;
 }
 
-// User ID ke basis par profiles table se X-ALSA-TOKEN fetch karne ka helper
-async function getAlsaToken(): Promise<string | null> {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-
-    const { data } = await supabase
-      .from('profiles')
-      .select('header_api_key')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    return data?.header_api_key || null;
-  } catch {
-    return null;
-  }
-}
-
 export const PHONE_BRIDGE_URL = 'http://127.0.0.1:5002';
-
-const phoneHeaders = async (): Promise<Record<string, string>> => {
-  const token = await getAlsaToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { 'X-ALSA-Ai-TOKEN': token } : {}),
-  };
-};
 
 const PHONE_REQUEST_TIMEOUT_MS = 45000; // WhatsApp/Telegram/Email automation needs time on-device
 
@@ -42,10 +16,9 @@ const phonePost = async (path: string, body: any = {}) => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PHONE_REQUEST_TIMEOUT_MS);
   try {
-    const headers = await phoneHeaders();
     const r = await fetch(`${PHONE_BRIDGE_URL}${path}`, {
       method: 'POST',
-      headers,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -67,10 +40,8 @@ const phonePost = async (path: string, body: any = {}) => {
 
 export const checkPhoneBridgeConnection = async (): Promise<BridgeStatus> => {
   try {
-    const headers = await phoneHeaders();
     const r = await fetch(`${PHONE_BRIDGE_URL}/status`, {
       method: 'GET',
-      headers,
     });
     if (r.ok) {
       const j = await r.json().catch(() => ({}));
