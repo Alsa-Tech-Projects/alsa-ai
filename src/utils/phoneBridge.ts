@@ -67,7 +67,9 @@ export async function syncContactsToDb(contactsList: any) {
       phone: c.phone || c.number || null,
       email: c.email || null,
     }));
-    await supabase.from('phone_contacts').upsert(rows, { onConflict: 'user_id,phone' });
+    
+    // CHANGED: phone_contacts se contacts kar diya
+    await supabase.from('contacts').upsert(rows, { onConflict: 'user_id,phone' });
   } catch (e) {
     console.error('Error syncing contacts:', e);
   }
@@ -77,8 +79,10 @@ export async function searchContacts(query: string) {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
+    
+    // CHANGED: phone_contacts se contacts kar diya
     const { data } = await supabase
-      .from('phone_contacts')
+      .from('contacts')
       .select('*')
       .eq('user_id', user.id)
       .ilike('name', `%${query}%`)
@@ -91,12 +95,18 @@ export async function searchContacts(query: string) {
 
 export async function lookupEmailContact(name: string) {
   const hits = await searchContacts(name);
-  return hits.find((h) => h.email) || null;
+  if (!hits.length) return null;
+  // SMART FIX: Exact match priority for Email
+  const exactHit = hits.find(h => h.name.toLowerCase() === name.toLowerCase() && h.email);
+  return exactHit || hits.find((h) => h.email) || null;
 }
 
 export async function lookupTelegramContact(name: string) {
   const hits = await searchContacts(name);
-  return hits.find((h) => h.username || h.telegram || h.phone) || null;
+  if (!hits.length) return null;
+  // SMART FIX: Exact match priority for Telegram
+  const exactHit = hits.find(h => h.name.toLowerCase() === name.toLowerCase() && (h.username || h.telegram || h.phone));
+  return exactHit || hits.find((h) => h.username || h.telegram || h.phone) || null;
 }
 
 // --- REVERSE GEOCODING HELPER ---
@@ -219,7 +229,15 @@ export const phoneWhatsappSend = (number: string, text: string) =>
 
 export const phoneWhatsappSendByName = async (name: string, text: string) => {
   const hits = await searchContacts(name);
-  if (hits.length && hits[0].phone) return phoneWhatsappSend(hits[0].phone, text);
+  if (hits.length) {
+    // SMART FIX: Pehle exact match ko prefer karo jiske paas phone number ho
+    const exactHit = hits.find(h => h.name.toLowerCase() === name.toLowerCase() && h.phone);
+    const target = exactHit || hits.find(h => h.phone) || hits[0];
+    
+    if (target?.phone) {
+      return phoneWhatsappSend(target.phone, text);
+    }
+  }
   return phonePostWithFallback(['/whatsapp/send-by-name'], { name, text });
 };
 
