@@ -77,7 +77,7 @@ export async function syncContactsToDb(contactsList: any) {
       phone: c.phone || c.number || null,
       email: c.email || null,
     }));
-    await supabase.from('phone_contacts').upsert(rows, { onConflict: 'user_id,phone' });
+    await supabase.from('contacts').upsert(rows, { onConflict: 'user_id,phone' });
   } catch (e) {
     console.error('Error syncing contacts:', e);
   }
