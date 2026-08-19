@@ -10,9 +10,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Helmet } from 'react-helmet';
 import { Eye, EyeOff, Sparkles, Shield, Zap, User } from 'lucide-react';
-import { createLovableAuth } from '@lovable.dev/cloud-auth-js';
-
-const lovableAuth = createLovableAuth();
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -38,7 +35,7 @@ const Auth = () => {
       }
     };
 
-    // Check if user is already logged in
+    // Check if user is already logged in via Supabase
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) routeAfterAuth();
     });
@@ -124,7 +121,7 @@ const Auth = () => {
       } else {
         toast({
           title: "Account Created!",
-          description: "Please check your email to confirm your account, If You Didn't Recive Any Email In Your Inobox, Kindly Check Spam Folder.",
+          description: "Please check your email to confirm your account. If you didn't receive any email in your inbox, kindly check the Spam folder.",
         });
       }
     } catch (error: any) {
@@ -166,39 +163,36 @@ const Auth = () => {
   };
 
   const handleGoogleLogin = async (isSignup = false) => {
-  try {
-    setLoading(true);
-    // Jab user Sign Up tab se Google use karega tabhi ye trigger hoga
-    if (isSignup) localStorage.setItem('alsa_new_signup', '1');
-    
-    // Lovable wrapper ko bypass karke seedhe Native Supabase SDK ka use karein
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        // Redirection hamesha main domain root par rakhein taaki 404 na aaye
-        redirectTo: `${window.location.origin}/`,
-        queryParams: {
-          prompt: 'select_account',
+    try {
+      setLoading(true);
+      if (isSignup) localStorage.setItem('alsa_new_signup', '1');
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+          queryParams: {
+            prompt: 'select_account',
+          },
         },
-      },
-    });
+      });
 
-    if (error) throw error;
+      if (error) throw error;
 
-    toast({
-      title: "Redirecting...",
-      description: "Google Sign In Redirect To Google Auth",
-    });
-  } catch (error: any) {
-    toast({
-      title: "Google Sign in failed",
-      description: error.message,
-      variant: "destructive",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+      toast({
+        title: "Redirecting...",
+        description: "Google Sign In Redirect To Google Auth",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Google Sign in failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
@@ -452,13 +446,11 @@ const Auth = () => {
                   </div>
                 </div>
 
-                {/* GOOGLE BUTTON ADDED HERE */}
                 <Button
                   variant="outline"
                   type="button"
                   onClick={() => handleGoogleLogin(false)}
                   disabled={loading}
-                  /* Yahan text-slate-900 add kiya hai taaki text hamesha dikhe */
                   className="w-full bg-white border-white/20 text-slate-900 hover:bg-slate-100 flex items-center justify-center gap-3 group transition-all py-6 shadow-lg"
                 >
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
