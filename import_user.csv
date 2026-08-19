@@ -1,0 +1,48 @@
+export_sql
+"INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, aud) VALUES ('6f13c499-7028-4832-a648-27deed6daa28', '00000000-0000-0000-0000-000000000000', 'alsa.ai.assistant@gmail.com', '$2a$10$gnkSWkuUs3LgtKph/.mp.Ob4aXqAkLTCsaLFlb2aBZMpUZEC.MbTG', '2026-01-05 12:22:43.622818+00', '{""provider"": ""email"", ""providers"": [""email"", ""google""]}'::jsonb, '{""iss"": ""https://accounts.google.com"", ""sub"": ""111389120194541935396"", ""name"": ""Alsa Ai"", ""email"": ""alsa.ai.assistant@gmail.com"", ""picture"": ""https://lh3.googleusercontent.com/a/ACg8ocJbc4FR3SmLwv3jo0ljHpuA5yMcAB_OuLLl4LnE6cUdIETNng=s96-c"", ""full_name"": ""Alsa Ai"", ""avatar_url"": ""https://lh3.googleusercontent.com/a/ACg8ocJbc4FR3SmLwv3jo0ljHpuA5yMcAB_OuLLl4LnE6cUdIETNng=s96-c"", ""provider_id"": ""111389120194541935396"", ""email_verified"": true, ""phone_verified"": false}'::jsonb, '2026-01-05 12:22:43.544946+00', '2026-08-19 04:48:54.908246+00', 'authenticated', 'authenticated') ON CONFLICT (id) DO NOTHING;"
+"INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, aud) VALUES ('7ffde28d-e428-4f8d-8ede-842ce9a44832', '00000000-0000-0000-0000-000000000000', 'john543@gmail.com', '$2a$10$B1q69HFvdFaiBtmhGMIb/.C913.H1S7pMzyKIuRAm1npbaW5FuMNq', '2026-07-03 07:53:17.722719+00', '{""provider"": ""email"", ""providers"": [""email""]}'::jsonb, '{""age"": 24, ""sub"": ""7ffde28d-e428-4f8d-8ede-842ce9a44832"", ""email"": ""john543@gmail.com"", ""gender"": ""male"", ""full_name"": ""Michel John Bradman"", ""email_verified"": true, ""phone_verified"": false}'::jsonb, '2026-07-03 07:53:17.673767+00', '2026-07-09 18:08:57.216103+00', 'authenticated', 'authenticated') ON CONFLICT (id) DO NOTHING;"
+"INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, aud) VALUES ('c0b629eb-b0d8-4e52-a5f0-b34300b01e89', '00000000-0000-0000-0000-000000000000', 'ved2009singh@gmail.com', '$2a$10$8n0Qal1sN2zNP6TzLMdl.u4s.3V2fMgJE/k5faRO5.ieG5fxfDAr6', '2026-06-11 14:39:20.383945+00', '{""provider"": ""email"", ""providers"": [""email"", ""google""]}'::jsonb, '{""age"": 17, ""iss"": ""https://accounts.google.com"", ""sub"": ""112591554515167163174"", ""name"": ""Vishal Singh"", ""email"": ""ved2009singh@gmail.com"", ""gender"": ""male"", ""picture"": ""https://lh3.googleusercontent.com/a/ACg8ocIVKeoHFnxWQa5SEQ5jCteGAWhQ-0GnYEPkBYzxuC70-Jj7PA=s96-c"", ""full_name"": ""Vishal Singh"", ""avatar_url"": ""https://lh3.googleusercontent.com/a/ACg8ocIVKeoHFnxWQa5SEQ5jCteGAWhQ-0GnYEPkBYzxuC70-Jj7PA=s96-c"", ""provider_id"": ""112591554515167163174"", ""email_verified"": true, ""phone_verified"": false}'::jsonb, '2026-06-11 14:39:20.336856+00', '2026-08-02 19:44:34.490366+00', 'authenticated', 'authenticated') ON CONFLICT (id) DO NOTHING;"
+"INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, aud) VALUES ('a4c17abe-856e-408a-898b-335775d6a929', '00000000-0000-0000-0000-000000000000', 'akshaydengra9424@gmail.com', '$2a$10$sNFZfHgHjLu086k8gWeYuusZfT6ra9Ul7U8ea.gfXWg65RmqiejRK', '2026-06-20 15:28:04.998509+00', '{""provider"": ""email"", ""providers"": [""email""]}'::jsonb, '{""age"": 30, ""sub"": ""a4c17abe-856e-408a-898b-335775d6a929"", ""email"": ""akshaydengra9424@gmail.com"", ""gender"": ""male"", ""full_name"": ""Akshay dengra"", ""email_verified"": true, ""phone_verified"": false}'::jsonb, '2026-06-20 15:28:04.905911+00', '2026-06-20 15:28:05.065053+00', 'authenticated', 'authenticated') ON CONFLICT (id) DO NOTHING;"
+"INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, aud) VALUES ('44d810c4-1c85-4c58-a1e0-068abdb476fe', '00000000-0000-0000-0000-000000000000', 'qadrieisa0@gmail.com', '$2a$10$DELgU9JwPXuvfZlqp9UBU.izyYYLkEL9u2ATYZHZwxFjWqJkMOZxe', '2026-01-05 17:56:47.851767+00', '{""provider"": ""email"", ""providers"": [""email""]}'::jsonb, '{""sub"": ""44d810c4-1c85-4c58-a1e0-068abdb476fe"", ""email"": ""qadrieisa0@gmail.com"", ""email_verified"": true, ""phone_verified"": false}'::jsonb, '2026-01-05 17:56:47.780971+00', '2026-01-15 06:40:05.257224+00', 'authenticated', 'authenticated') ON CONFLICT (id) DO NOTHING;"
+"INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, aud) VALUES ('5ce328d6-8280-4cbf-bcca-d133f61d07d5', '00000000-0000-0000-0000-000000000000', 'sumayyaqadri986@gmail.com', '$2a$10$9sGam5qTYKSvnhddMsue6OlMzBIKMgQ234qZ7j8/PaiUP8RBmyL8u', '2026-07-01 07:46:44.211853+00', '{""provider"": ""email"", ""providers"": [""email""]}'::jsonb, '{""age"": 16, ""sub"": ""5ce328d6-8280-4cbf-bcca-d133f61d07d5"", ""email"": ""sumayyaqadri986@gmail.com"", ""gender"": ""female"", ""full_name"": ""Sumayya Qadri"", ""email_verified"": true, ""phone_verified"": false}'::jsonb, '2026-07-01 07:46:44.103643+00', '2026-07-01 07:46:44.256653+00', 'authenticated', 'authenticated') ON CONFLICT (id) DO NOTHING;"
+"INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, aud) VALUES ('e36b5099-d04f-4e80-b4be-52d21ff8eb31', '00000000-0000-0000-0000-000000000000', 'jyotiprakashs707@gmail.com', '$2a$10$yasIEld2yoNPl.W5l44QgeHxi7ioMYJqEpOi9QaLVNBMVJOHkc8gi', '2026-06-11 17:06:35.2856+00', '{""provider"": ""email"", ""providers"": [""email"", ""google""]}'::jsonb, '{""age"": 18, ""iss"": ""https://accounts.google.com"", ""sub"": ""109878385758015301218"", ""name"": ""Prakash Sahu"", ""email"": ""jyotiprakashs707@gmail.com"", ""gender"": ""male"", ""picture"": ""https://lh3.googleusercontent.com/a/ACg8ocIPI9Hzn1h4WYtbYvkrcDNdNkB_rg42Ol-1PRL8DHp-SCFJM5WueA=s96-c"", ""full_name"": ""Prakash Sahu"", ""avatar_url"": ""https://lh3.googleusercontent.com/a/ACg8ocIPI9Hzn1h4WYtbYvkrcDNdNkB_rg42Ol-1PRL8DHp-SCFJM5WueA=s96-c"", ""provider_id"": ""109878385758015301218"", ""email_verified"": true, ""phone_verified"": false}'::jsonb, '2026-06-11 17:06:35.182131+00', '2026-07-12 16:17:23.271252+00', 'authenticated', 'authenticated') ON CONFLICT (id) DO NOTHING;"
+
+
+
+
+
+
+
+
+
+
+
+
+
+"INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, aud) VALUES ('03c2a577-0ef7-426e-9bba-b27d099152c7', '00000000-0000-0000-0000-000000000000', 'safozer1@gongjua.com', '$2a$10$9nqRovKckRrUC9sLzyNRC.Kb8Psft50eMfVy7.ZsuLaVCLr04la5C', NULL, '{""provider"": ""email"", ""providers"": [""email""]}'::jsonb, '{""age"": 27, ""sub"": ""03c2a577-0ef7-426e-9bba-b27d099152c7"", ""email"": ""safozer1@gongjua.com"", ""gender"": ""male"", ""full_name"": ""Ahmed Gamal"", ""email_verified"": false, ""phone_verified"": false}'::jsonb, '2026-07-25 00:08:35.852966+00', '2026-07-25 00:08:36.231526+00', 'authenticated', 'authenticated') ON CONFLICT (id) DO NOTHING;"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, aud) VALUES ('4bd0fdea-db1e-4cc9-a767-27d821d858c9', '00000000-0000-0000-0000-000000000000', 'founder@alsa-ai.in', '$2a$10$PEIxr8D6oWYD0DVdnWgDg.KnQ.2kNFBBmu6qMnwodU4cC7rqZAR46', '2026-08-10 10:26:29.600852+00', '{""provider"": ""email"", ""providers"": [""email""]}'::jsonb, '{""email_verified"": true}'::jsonb, '2026-08-10 10:26:29.529649+00', '2026-08-10 20:10:15.996253+00', 'authenticated', 'authenticated') ON CONFLICT (id) DO NOTHING;"
+
+
+
+
+
+
+"INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, aud) VALUES ('877230c4-4998-41b1-b98b-e65c5aa915dc', '00000000-0000-0000-0000-000000000000', 'founder@zentryxtechsolutions.online', '$2a$10$NjapxAumTYnCX5UrgUYVs.JOyLyt7sDfsQre9MaPVR6Kx5GbJkwcO', '2026-08-18 10:23:02.972837+00', '{""provider"": ""email"", ""providers"": [""email""]}'::jsonb, '{""age"": 16, ""sub"": ""877230c4-4998-41b1-b98b-e65c5aa915dc"", ""email"": ""founder@zentryxtechsolutions.online"", ""gender"": ""male"", ""full_name"": ""Mohd Eisa Bey"", ""email_verified"": true, ""phone_verified"": false}'::jsonb, '2026-08-18 10:23:02.809377+00', '2026-08-18 17:16:39.88384+00', 'authenticated', 'authenticated') ON CONFLICT (id) DO NOTHING;"
+
+

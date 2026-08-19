@@ -1,10 +1,57 @@
-project_id = "dqrlnmxabgabendzkvwx"
+project_id = "xmyjkjxxdweclcmakyub"
 
-[functions.avatar-chat]
+[functions.admin-get-contacts]
+verify_jwt = false
+
+[functions.admin-mark-read]
 verify_jwt = false
 
 [functions.admin-send-notification]
 verify_jwt = false
 
+[functions.admin-update-subscription]
+verify_jwt = false
+
+[functions.admin-verify]
+verify_jwt = false
+
+[functions.analyze-conversation]
+verify_jwt = false
+
+[functions.avatar-chat]
+verify_jwt = false
+
+[functions.chat]
+verify_jwt = false
+
+[functions.create-razorpay-order]
+verify_jwt = false
+
+[functions.image-chat]
+verify_jwt = false
+
+[functions.mira-tts]
+verify_jwt = false
+
+[functions.mobile-chat]
+verify_jwt = false
+
+[functions.speech-to-text]
+verify_jwt = false
+
 [functions.transcribe]
 verify_jwt = false
+
+[functions.verify-bridge-token]
+verify_jwt = false
+
+[functions.verify-razorpay-payment]
+verify_jwt = false
+
+[functions.vibe-coder]
+verify_jwt = false
+
+[functions.vibe-github-push]
+verify_jwt = false
+
+

@@ -124,7 +124,7 @@ const Auth = () => {
       } else {
         toast({
           title: "Account Created!",
-          description: "Please check your email to confirm your account.",
+          description: "Please check your email to confirm your account, If You Didn't Recive Any Email In Your Inobox, Kindly Check Spam Folder.",
         });
       }
     } catch (error: any) {
