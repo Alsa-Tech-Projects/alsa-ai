@@ -37,15 +37,15 @@ async function getCityFromCoordinates(lat: number, lon: number): Promise<string>
     const res = await fetch(url, {
       headers: {
         // Nominatim strict hai, ek User-Agent bhejna zaroori hota hai
-        'User-Agent': 'AlsaAI-PhoneBridge/1.0' 
+        'User-Agent': 'AlsaAI-PhoneBridge/1.0'
       }
     });
     const data = await res.json();
-    
+
     // Exact city ya district ka naam nikalna
     const city = data.address?.city || data.address?.town || data.address?.state_district || "Unknown Location";
     const state = data.address?.state || "";
-    
+
     return `${city}, ${state}`;
   } catch (error) {
     console.error("Geocoding error:", error);
@@ -200,12 +200,12 @@ serve(async (req) => {
         }
       }
     }
-    
+
     // Convert contact arrays to name-based lookup objects for easier AI access
     // Input format: [{id, name, value}] → Output format: {name: value}
     const wpContactsMap: Record<string, string> = {};
     const tgContactsMap: Record<string, string> = {};
-    
+
     if (Array.isArray(whatsappContacts)) {
       whatsappContacts.forEach((c: any) => {
         if (c.name && c.value) {
@@ -213,7 +213,7 @@ serve(async (req) => {
         }
       });
     }
-    
+
     if (Array.isArray(telegramContacts)) {
       telegramContacts.forEach((c: any) => {
         if (c.name && c.value) {
@@ -920,7 +920,7 @@ ${String(customInstructions).slice(0, 2000)}
     // === STREAMING LOGIC WITH API KEY FALLBACK ===
     console.log("Available API keys:", geminiApiKeys.length);
     console.log("Messages count:", messages.length);
-    
+
     if (geminiApiKeys.length === 0) {
       console.error("No GEMINI_API_KEY configured!");
       return new Response(JSON.stringify({ error: "GEMINI_API_KEY is not configured" }), {
@@ -931,13 +931,12 @@ ${String(customInstructions).slice(0, 2000)}
 
     // Helper function to try API request with fallback
     // Try the chosen model first; if all keys exhaust on Pro (free-tier 0 quota), fall back to flash.
-    // Variant 1: Array assignment
-const modelChain = ["gemini-3.6-flash", "gemini-1.5-flash"];
 
-// Variant 2: Conditional assignment
-const modelChain = geminiModel === "gemini-3.6-flash" 
-  ? ["gemini-3.6-flash", "gemini-1.5-flash"] 
-  : ["gemini-2.0-flash", "gemini-1.5-flash"];
+
+    // Variant 2: Conditional assignment
+    const modelChain = geminiModel === "gemini-3.6-flash"
+      ? ["gemini-3.6-flash", "gemini-1.5-flash"]
+      : ["gemini-2.0-flash", "gemini-1.5-flash"];
 
 
     const makeGeminiRequest = async (): Promise<Response> => {
@@ -959,89 +958,89 @@ const modelChain = geminiModel === "gemini-3.6-flash"
 
           const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:streamGenerateContent?key=${apiKey}&alt=sse`;
 
-        
-        try {
-          // Build multimodal contents: images inline_data + extracted text appended
-          const buildParts = (m: any): any[] => {
-            const parts: any[] = [];
-            const files = Array.isArray(m.files) ? m.files : [];
-            let textBuf = String(m.content || "");
-            for (const f of files) {
-              if (typeof f?.extractedText === "string" && f.extractedText.trim()) {
-                textBuf += `\n\n--- Attached file: ${f.name} ---\n${f.extractedText.slice(0, 12000)}`;
-              } else if (f && !String(f.type || "").startsWith("image/")) {
-                textBuf += `\n\n[Attached: ${f.name} (${f.type || "file"})]`;
-              }
-            }
-            if (textBuf.trim()) parts.push({ text: textBuf });
-            for (const f of files) {
-              const t = String(f?.type || "");
-              if (t.startsWith("image/") && typeof f.data === "string") {
-                const b64 = f.data.includes(",") ? f.data.split(",")[1] : f.data;
-                if (b64) parts.push({ inline_data: { mime_type: t, data: b64 } });
-              }
-            }
-            if (parts.length === 0) parts.push({ text: " " });
-            return parts;
-          };
 
-          const response = await fetch(geminiUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              system_instruction: { parts: [{ text: systemPrompt }] },
-              contents: messages.map((m: any) => ({
-                role: m.role === 'assistant' ? 'model' : 'user',
-                parts: buildParts(m),
-              })),
-              generationConfig: {
-                maxOutputTokens: 65536,
-                temperature: ai_response_style === 'roast' || ai_response_style === 'comedian' || ai_response_style === 'creative' ? 1.1 : 0.9,
-                topP: 0.95,
-              },
-              safetySettings: [
-                { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-                { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-                { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-                { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
-              ],
-              ...(shouldEnableTools ? { tools: [{ functionDeclarations: toolDeclarations.map(t => t.function) }] } : {})
-            }),
-          });
-          
-          // If quota exceeded (429), rate limited (503), or invalid key (400/403), try next key
-          if (response.status === 429 || response.status === 503 || response.status === 400 || response.status === 403) {
-            const errorText = await response.text();
-            console.warn(`API key #${currentApiKeyIndex} failed (${response.status}), trying next...`, errorText.slice(0, 200));
-            lastError = new Error(`Key failed (${response.status}): ${errorText}`);
-            continue;
-          }
-          
-          // For other errors, return the response to be handled normally
-          if (!response.ok) {
-            const errorText = await response.text();
-            // Check if it's a quota/rate limit/invalid key error in the body
-            if (errorText.includes("RESOURCE_EXHAUSTED") || errorText.includes("quota") || errorText.includes("API_KEY_INVALID") || errorText.includes("API key not valid")) {
-              console.warn(`API key #${currentApiKeyIndex} invalid/exhausted in response, trying next...`);
-              lastError = new Error(`Key invalid/exhausted: ${errorText}`);
+          try {
+            // Build multimodal contents: images inline_data + extracted text appended
+            const buildParts = (m: any): any[] => {
+              const parts: any[] = [];
+              const files = Array.isArray(m.files) ? m.files : [];
+              let textBuf = String(m.content || "");
+              for (const f of files) {
+                if (typeof f?.extractedText === "string" && f.extractedText.trim()) {
+                  textBuf += `\n\n--- Attached file: ${f.name} ---\n${f.extractedText.slice(0, 12000)}`;
+                } else if (f && !String(f.type || "").startsWith("image/")) {
+                  textBuf += `\n\n[Attached: ${f.name} (${f.type || "file"})]`;
+                }
+              }
+              if (textBuf.trim()) parts.push({ text: textBuf });
+              for (const f of files) {
+                const t = String(f?.type || "");
+                if (t.startsWith("image/") && typeof f.data === "string") {
+                  const b64 = f.data.includes(",") ? f.data.split(",")[1] : f.data;
+                  if (b64) parts.push({ inline_data: { mime_type: t, data: b64 } });
+                }
+              }
+              if (parts.length === 0) parts.push({ text: " " });
+              return parts;
+            };
+
+            const response = await fetch(geminiUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                system_instruction: { parts: [{ text: systemPrompt }] },
+                contents: messages.map((m: any) => ({
+                  role: m.role === 'assistant' ? 'model' : 'user',
+                  parts: buildParts(m),
+                })),
+                generationConfig: {
+                  maxOutputTokens: 65536,
+                  temperature: ai_response_style === 'roast' || ai_response_style === 'comedian' || ai_response_style === 'creative' ? 1.1 : 0.9,
+                  topP: 0.95,
+                },
+                safetySettings: [
+                  { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+                  { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+                  { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+                  { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+                ],
+                ...(shouldEnableTools ? { tools: [{ functionDeclarations: toolDeclarations.map(t => t.function) }] } : {})
+              }),
+            });
+
+            // If quota exceeded (429), rate limited (503), or invalid key (400/403), try next key
+            if (response.status === 429 || response.status === 503 || response.status === 400 || response.status === 403) {
+              const errorText = await response.text();
+              console.warn(`API key #${currentApiKeyIndex} failed (${response.status}), trying next...`, errorText.slice(0, 200));
+              lastError = new Error(`Key failed (${response.status}): ${errorText}`);
               continue;
             }
-            console.error("Gemini API error:", response.status, errorText);
-            throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
-          }
-          
-          console.log(`Success with API key #${currentApiKeyIndex} (${keyInfo.source})`);
-          lastSuccessKeySource = keyInfo.source;
-          return response;
 
-        } catch (err: any) {
-          if (err.message?.includes("quota") || err.message?.includes("429")) {
-            lastError = err;
-            continue;
+            // For other errors, return the response to be handled normally
+            if (!response.ok) {
+              const errorText = await response.text();
+              // Check if it's a quota/rate limit/invalid key error in the body
+              if (errorText.includes("RESOURCE_EXHAUSTED") || errorText.includes("quota") || errorText.includes("API_KEY_INVALID") || errorText.includes("API key not valid")) {
+                console.warn(`API key #${currentApiKeyIndex} invalid/exhausted in response, trying next...`);
+                lastError = new Error(`Key invalid/exhausted: ${errorText}`);
+                continue;
+              }
+              console.error("Gemini API error:", response.status, errorText);
+              throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+            }
+
+            console.log(`Success with API key #${currentApiKeyIndex} (${keyInfo.source})`);
+            lastSuccessKeySource = keyInfo.source;
+            return response;
+
+          } catch (err: any) {
+            if (err.message?.includes("quota") || err.message?.includes("429")) {
+              lastError = err;
+              continue;
+            }
+            throw err;
           }
-          throw err;
-        }
-      } // end while (key rotation)
+        } // end while (key rotation)
       } // end for (model chain)
       throw new Error(lastError?.message || "All API keys exhausted on all models");
     };
@@ -1143,102 +1142,102 @@ const modelChain = geminiModel === "gemini-3.6-flash"
           //     controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: "Thoda intezaar karein, main action le raha hoon... ⚙️\n" })}\n\n`));
           //   }
 
-            if (toolCalls.length > 0) {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'tool_start' })}\n\n`));
+          if (toolCalls.length > 0) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'tool_start' })}\n\n`));
+          }
+
+          for (const call of toolCalls) {
+            const args = call.args;
+
+            // 1. Wikipedia Search (Backend handle karta hai)
+            // if (call.name === 'search_wikipedia') {
+            //   const res = await searchWikipedia(args.query);
+            //   controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n\n📖 Wikipedia Result:\n${res}` })}\n\n`));
+            // }
+            if (call.name === 'search_wikipedia') {
+              await searchWikipedia(args.query);
             }
 
-            for (const call of toolCalls) {
-              const args = call.args;
-
-              // 1. Wikipedia Search (Backend handle karta hai)
-              // if (call.name === 'search_wikipedia') {
-              //   const res = await searchWikipedia(args.query);
-              //   controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n\n📖 Wikipedia Result:\n${res}` })}\n\n`));
-              // }
-              if (call.name === 'search_wikipedia') {
-  await searchWikipedia(args.query);
-}
-
-              // 2. Weather (Backend handle karta hai)
-              else if (call.name === 'get_weather') {
-                const res = await getWeather(args.city);
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n🌡️ ${res}` })}\n\n`));
-              }
-
-              // 3. Project Creation (Gemini logic + Backend)
-              else if (call.name === 'create_coding_project') {
-                const files = await generateProjectFiles(args);
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-                  type: 'create_project',
-                  project_path: args.project_path,
-                  files
-                })}\n\n`));
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n✅ Project structure created at: ${args.project_path}` })}\n\n`));
-              }
-
-              // 4. WhatsApp (Frontend handle karega)
-              else if (call.name === 'send_whatsapp_message') {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'whatsapp_msg', phone: args.phone, message: args.message })}\n\n`));
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n📱 WhatsApp message sending to ${args.phone}...` })}\n\n`));
-              }
-
-              // 5. Telegram (Frontend handle karega)
-              else if (call.name === 'send_telegram_message') {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'telegram_msg', link: args.link, message: args.message })}\n\n`));
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n✈️ Telegram message sending...` })}\n\n`));
-              }
-
-              // 5b. Email (Frontend handle karega via Phone Bridge)
-              else if (call.name === 'send_email') {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'email_msg', to: args.to || '', recipient_name: args.recipient_name || '', subject: args.subject || '', body: args.body || '', html: args.html || '' })}\n\n`));
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n📧 Sending email...` })}\n\n`));
-              }
-
-              // 6. PC Power Commands (Frontend handle karega)
-              else if (call.name === 'system_power_command') {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'system_power_command', ...args })}\n\n`));
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n🖥️ PC ${args.action} command executed.` })}\n\n`));
-              }
-
-              // 7. ADB Commands (Frontend handle karega)
-              else if (call.name === 'adb_command') {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'adb_command', ...args })}\n\n`));
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n🤖 ADB Command sent: ${args.command}` })}\n\n`));
-              }
-
-              // 8. Scheduled Telegram Message (Frontend handle karega)
-              else if (call.name === 'schedule_telegram_message') {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
-                  type: 'schedule_telegram_msg', 
-                  contact_name: args.contact_name || '',
-                  link: args.link || '',
-                  message: args.message,
-                  scheduled_time: args.scheduled_time
-                })}\n\n`));
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n📅 Telegram message scheduled for ${args.scheduled_time}` })}\n\n`));
-              }
-
-              // 9. Scheduled WhatsApp Message (Frontend handle karega)
-              else if (call.name === 'schedule_whatsapp_message') {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
-                  type: 'schedule_whatsapp_msg', 
-                  contact_name: args.contact_name || '',
-                  phone: args.phone || '',
-                  message: args.message,
-                  scheduled_time: args.scheduled_time
-                })}\n\n`));
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n📅 WhatsApp message scheduled for ${args.scheduled_time}` })}\n\n`));
-              }
-
-              // 10. MASTER ELSE: Baaki saare tools (Music, Screenshot, Games etc.)
-              else {
-                // Jo tools upar listed nahi hain, wo seedhe frontend ko pass ho jayenge
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: call.name, ...args })}\n\n`));
-                // User ko batao ki process ho raha hai
-                const formattedName = call.name.replace(/_/g, ' ');
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n🚀 Running: ${formattedName}...` })}\n\n`));
-              }
+            // 2. Weather (Backend handle karta hai)
+            else if (call.name === 'get_weather') {
+              const res = await getWeather(args.city);
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n🌡️ ${res}` })}\n\n`));
             }
+
+            // 3. Project Creation (Gemini logic + Backend)
+            else if (call.name === 'create_coding_project') {
+              const files = await generateProjectFiles(args);
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                type: 'create_project',
+                project_path: args.project_path,
+                files
+              })}\n\n`));
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n✅ Project structure created at: ${args.project_path}` })}\n\n`));
+            }
+
+            // 4. WhatsApp (Frontend handle karega)
+            else if (call.name === 'send_whatsapp_message') {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'whatsapp_msg', phone: args.phone, message: args.message })}\n\n`));
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n📱 WhatsApp message sending to ${args.phone}...` })}\n\n`));
+            }
+
+            // 5. Telegram (Frontend handle karega)
+            else if (call.name === 'send_telegram_message') {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'telegram_msg', link: args.link, message: args.message })}\n\n`));
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n✈️ Telegram message sending...` })}\n\n`));
+            }
+
+            // 5b. Email (Frontend handle karega via Phone Bridge)
+            else if (call.name === 'send_email') {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'email_msg', to: args.to || '', recipient_name: args.recipient_name || '', subject: args.subject || '', body: args.body || '', html: args.html || '' })}\n\n`));
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n📧 Sending email...` })}\n\n`));
+            }
+
+            // 6. PC Power Commands (Frontend handle karega)
+            else if (call.name === 'system_power_command') {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'system_power_command', ...args })}\n\n`));
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n🖥️ PC ${args.action} command executed.` })}\n\n`));
+            }
+
+            // 7. ADB Commands (Frontend handle karega)
+            else if (call.name === 'adb_command') {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'adb_command', ...args })}\n\n`));
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n🤖 ADB Command sent: ${args.command}` })}\n\n`));
+            }
+
+            // 8. Scheduled Telegram Message (Frontend handle karega)
+            else if (call.name === 'schedule_telegram_message') {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                type: 'schedule_telegram_msg',
+                contact_name: args.contact_name || '',
+                link: args.link || '',
+                message: args.message,
+                scheduled_time: args.scheduled_time
+              })}\n\n`));
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n📅 Telegram message scheduled for ${args.scheduled_time}` })}\n\n`));
+            }
+
+            // 9. Scheduled WhatsApp Message (Frontend handle karega)
+            else if (call.name === 'schedule_whatsapp_message') {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                type: 'schedule_whatsapp_msg',
+                contact_name: args.contact_name || '',
+                phone: args.phone || '',
+                message: args.message,
+                scheduled_time: args.scheduled_time
+              })}\n\n`));
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n📅 WhatsApp message scheduled for ${args.scheduled_time}` })}\n\n`));
+            }
+
+            // 10. MASTER ELSE: Baaki saare tools (Music, Screenshot, Games etc.)
+            else {
+              // Jo tools upar listed nahi hain, wo seedhe frontend ko pass ho jayenge
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: call.name, ...args })}\n\n`));
+              // User ko batao ki process ho raha hai
+              const formattedName = call.name.replace(/_/g, ' ');
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content', delta: `\n🚀 Running: ${formattedName}...` })}\n\n`));
+            }
+          }
           // === TOOL EXECUTION END ===
 
           controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
