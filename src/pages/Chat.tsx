@@ -67,8 +67,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-
 interface FileAttachment {
   name: string;
   type: string;
@@ -77,15 +75,12 @@ interface FileAttachment {
   preview?: string;
   extractedText?: string; // text extracted from PDF/text files or audio transcript
 }
-
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   files?: FileAttachment[];
   keySource?: 'user' | 'server';
 }
-
-
 const Chat = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -95,7 +90,6 @@ const Chat = () => {
   const [inputText, setInputText] = useState('');
   const [activeTool, setActiveTool] = useState<null | 'image' | 'deep' | 'learn' | 'create'>(null);
   const [editBaseImage, setEditBaseImage] = useState<string | null>(null);
-
   const [bridgeConnected, setBridgeConnected] = useState(false);
   const [phoneBridgeConnected, setPhoneBridgeConnected] = useState(false);
   const [showMemoryManager, setShowMemoryManager] = useState(false);
@@ -112,7 +106,6 @@ const Chat = () => {
   const [uploadedFiles, setUploadedFiles] = useState<FileAttachment[]>([]);
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [show40Update, setShow40Update] = useState(false);
-
   // Show 4.0 update notice once per user (localStorage flag)
   useEffect(() => {
     try {
@@ -145,83 +138,28 @@ const Chat = () => {
   const [recordingSavedPath, setRecordingSavedPath] = useState<string | null>(null);
   const [aiMode, setAiMode] = useState<'fast' | 'thinking'>(() => (localStorage.getItem('alsa_ai_mode') as 'fast' | 'thinking') || 'fast');
   // const [screenshotPending, setScreenshotPending] = useState(false);
-
-
-//   const formatWikipedia = (text: string, query: string) => {
-//   if (!text) return "";
-
-//   return `
-// ## 📖 ${query.toUpperCase()}
-
-// ${text
-//   .replace("📖 Wikipedia Result:", "")
-//   .split('. ')
-//   .slice(0, 6)
-//   .map(line => `- ${line.trim()}`)
-//   .join('\n\n')}
-// `;
-// };
-// const formatWikipedia = (text: string, query: string) => {
-//   return `
-// ##  ${query.toUpperCase()}
-
-// ${text
-//   .replace("📖 Wikipedia Result:", "")
-//   .replace("Thoda intezaar karein, main action le raha hoon..", "")
-//   .replace("⚙️", "")
-//   .split(/\. |\n/)
-//   .map(line => line.trim())
-//   .filter(line => line.length > 20) // choti/gandi lines hatao
-// .map(line => {
-//   let clean = line.trim();
-//   if (!clean.endsWith('.')) clean += '.';
-//   return clean;
-// })
-//   .join('\n\n')}
-// `;
-// };
 const formatWikipedia = (text: string, query: string) => {
   const cleaned = text
     .replace("📖 Wikipedia Result:", "")
     .replace("Thoda intezaar karein, main action le raha hoon..", "")
     .replace("⚙️", "");
-
   const lines = cleaned
     .split(/\. |\n/)
     .map(line => line.trim())
     .filter(line => line.length > 25);
-
   // First line = intro paragraph
   const intro = lines[0] ? (lines[0].endsWith('.') ? lines[0] : lines[0] + '.') : "";
-
   // Remaining = bullets
   const bullets = lines.slice(1, 6).map(line => {
     if (!line.endsWith('.')) line += '.';
     return `• ${line}`;
   });
-
   return `
 ## ${query}
-
 ${intro}
-
 ${bullets.join('\n\n')}
 `;
 };
-
-// const formatWikipedia = (text: string, query: string) => {
-//   const cleaned = text
-//     .replace("📖 Wikipedia Result:", "")
-//     .replace("Thoda intezaar karein, main action le raha hoon..", "")
-//     .replace("⚙️", "")
-//     .trim();
-
-//   return `
-// ## ${query}
-
-// ${cleaned}
-// `;
-// };
   // Subscription hook for free tier restrictions
   const subscription = useSubscription();
   const { toast } = useToast();
@@ -233,7 +171,6 @@ ${bullets.join('\n\n')}
     resetTranscript
   } = useSpeechRecognition();
   const { speak: ttsSpeak, stop, isSpeaking } = useTextToSpeech();
-
   // Wrapper for speak — TTS is temporarily DISABLED (voice output off in this build)
   const TTS_ENABLED = false;
   const speak = useCallback((text: string) => {
@@ -243,13 +180,11 @@ ${bullets.join('\n\n')}
       ttsSpeak(text);
     }
   }, [ttsSpeak]);
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const listeningTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const lastProcessedRef = useRef<string>('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const loadedConvIdRef = useRef<string | null>(null);
-
   // Toggle PC Bridge connection
   const toggleBridgeConnection = useCallback(async () => {
     if (bridgeConnected) {
@@ -271,7 +206,6 @@ ${bullets.join('\n\n')}
       }
     }
   }, [bridgeConnected, toast]);
-
   // Toggle Phone Bridge (Termux :5002)
   const togglePhoneBridgeConnection = useCallback(async () => {
     if (phoneBridgeConnected) {
@@ -291,7 +225,6 @@ ${bullets.join('\n\n')}
       }
     }
   }, [phoneBridgeConnected, toast]);
-
   // Toggle voice — sabhi users ke liye available (mic input)
   const toggleVoice = useCallback(() => {
     if (isListening) {
@@ -302,8 +235,6 @@ ${bullets.join('\n\n')}
       toast({ title: '🎙️ Listening...', description: 'Bolna shuru karo — 2.5s chup rehne par message chala jaayega' });
     }
   }, [isListening, startListening, stopListening, toast]);
-
-
   // New conversation handler
   const handleNewConversation = useCallback(() => {
     setMessages([]);
@@ -316,20 +247,6 @@ ${bullets.join('\n\n')}
     speak('Starting a new conversation');
     toast({ title: 'New Chat', description: 'Ready for a new conversation' });
   }, [resetTranscript, speak, toast, navigate]);
-
-  // // Screenshot handler
-  // const handleScreenshot = useCallback(async () => {
-  //   const result = await captureScreenshot();
-  //   toast({
-  //     title: result.success ? 'Screenshot Captured' : 'Screenshot Failed',
-  //     description: result.message,
-  //     variant: result.success ? 'default' : 'destructive'
-  //   });
-  //   if (result.success) {
-  //     speak('Screenshot captured successfully');
-  //   }
-  // }, [toast, speak]);
-
   // Screen recording handler - DISABLED FOR FREE TIER USERS
   const handleRecording = useCallback(async () => {
     if (subscription.isFree) {
@@ -341,7 +258,6 @@ ${bullets.join('\n\n')}
       navigate('/pricing');
       return;
     }
-
     if (isRecording) {
       const result = await stopScreenRecording();
       setIsRecording(false);
@@ -369,7 +285,6 @@ ${bullets.join('\n\n')}
       }
     }
   }, [isRecording, toast, speak, subscription.isFree, navigate]);
-
   // Listen for recording saved event
   useEffect(() => {
     const handleRecordingSaved = (event: CustomEvent) => {
@@ -393,11 +308,9 @@ ${bullets.join('\n\n')}
         });
       }
     };
-
     window.addEventListener('recording-saved', handleRecordingSaved as EventListener);
     return () => window.removeEventListener('recording-saved', handleRecordingSaved as EventListener);
   }, [toast]);
-
   // Keyboard shortcuts: Alt+V for voice, Ctrl+Shift+O for new chat
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -407,25 +320,16 @@ ${bullets.join('\n\n')}
         toggleVoice();
         return;
       }
-
       // Ctrl+Shift+O for new conversation
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'o') {
         e.preventDefault();
         handleNewConversation();
         return;
       }
-
-      //   // Ctrl+Shift+S for screenshot
-      //   if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') {
-      //     e.preventDefault();
-      //     return;
-      //   }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleVoice, handleNewConversation]);
-
   // Auth state management - REDIRECT GUEST USERS
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -436,7 +340,6 @@ ${bullets.join('\n\n')}
         setUser(session.user);
       }
     });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
         // Logout hone par ya session khatam hone par -> Redirect
@@ -446,26 +349,21 @@ ${bullets.join('\n\n')}
         setUser(session.user);
       }
     });
-
     return () => subscription.unsubscribe();
   }, [navigate]); // navigate dependency add karna zaroori hai
-
   // Load conversation from URL param
   useEffect(() => {
     const loadConversation = async () => {
       const convId = urlConversationId || location.state?.conversationId;
       if (!convId || !user) return;
-
       // Only load each conversation ONCE — re-runs would wipe local files / unsaved messages
       if (loadedConvIdRef.current === convId) return;
-
       try {
         const { data, error } = await supabase
           .from('chat_messages')
           .select('*')
           .eq('conversation_id', convId)
           .order('created_at', { ascending: true });
-
         if (error) throw error;
         loadedConvIdRef.current = convId;
         if (data && data.length > 0) {
@@ -476,17 +374,14 @@ ${bullets.join('\n\n')}
               ? [{ name: 'generated.png', type: 'image/png', size: 0, data: msg.image_url, preview: msg.image_url }]
               : undefined,
           })));
-
           setCurrentConversationId(convId);
         }
       } catch (error) {
         console.error('Error loading conversation:', error);
       }
     };
-
     loadConversation();
   }, [urlConversationId, location.state, user]);
-
   // Initial greeting
   useEffect(() => {
     if (!hasGreeted && messages.length === 0) {
@@ -495,47 +390,35 @@ ${bullets.join('\n\n')}
       setHasGreeted(true);
     }
   }, [hasGreeted, messages.length]);
-
   // Check bridge connection on mount
   useEffect(() => {
     const checkBridge = async () => {
       const status = await checkBridgeConnection();
       setBridgeConnected(status.connected);
-
       if (status.connected && !systemData) {
         const scanResult = await scanSystem();
         if (scanResult.success && scanResult.data) {
           setSystemData(scanResult.data);
         }
       }
-
       // Also check Phone Bridge (Termux :5002)
       const phoneStatus = await checkPhoneBridgeConnection();
       setPhoneBridgeConnected(phoneStatus.connected);
     };
-
     checkBridge();
     const interval = setInterval(checkBridge, 30000);
     return () => clearInterval(interval);
   }, [systemData]);
-
   // ==========================================================
   // VOICE COMMAND PROCESSING
-  // Hook khud 2.5s silence detect karke transcript deta hai,
-  // yahan sirf usko input me daal ke turant bhej dete hain.
   // ==========================================================
   useEffect(() => {
     if (!isListening) return;
-
     const currentText = transcript.trim();
     if (!currentText) return;
-
     setInputText(currentText);
-
     if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current);
-
     const lowerText = currentText.toLowerCase();
-
     // Voice control commands
     if (lowerText === 'stop listening' || lowerText === 'voice off' || lowerText === 'mic off') {
       stopListening();
@@ -543,35 +426,26 @@ ${bullets.join('\n\n')}
       setInputText('');
       return;
     }
-
     // Transcript aa gaya matlab user chup ho chuka hai -> turant send
     listeningTimeoutRef.current = setTimeout(() => {
       if (currentText === lastProcessedRef.current) return;
       lastProcessedRef.current = currentText;
-
       handleSubmit(currentText);
       setInputText('');
       resetTranscript();
-
       setTimeout(() => { lastProcessedRef.current = ''; }, 1500);
     }, 400);
-
     return () => {
       if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current);
     };
   }, [transcript, isListening, stopListening, resetTranscript]);
-
-
   // Scroll to bottom logic
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, []);
-
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
-
-
   // "Edit" button on a generated image -> switch composer into image-edit mode
   useEffect(() => {
     const onEditImage = (e: any) => {
@@ -584,14 +458,10 @@ ${bullets.join('\n\n')}
     window.addEventListener('alsa-edit-image', onEditImage as EventListener);
     return () => window.removeEventListener('alsa-edit-image', onEditImage as EventListener);
   }, [toast]);
-
-
   const saveConversation = async (userMsg: Message, assistantMsg: Message) => {
     if (!user) return; // Only save for logged-in users
-
     try {
       let conversationId = currentConversationId;
-
       if (!conversationId) {
         const title = userMsg.content.slice(0, 50) + (userMsg.content.length > 50 ? '...' : '');
         const { data: conv, error: convError } = await supabase
@@ -599,14 +469,12 @@ ${bullets.join('\n\n')}
           .insert({ user_id: user.id, title })
           .select()
           .single();
-
         if (convError) throw convError;
         conversationId = conv.id;
         setCurrentConversationId(conversationId);
         // Mark as already loaded so the URL change doesn't re-fetch and wipe
         // in-memory messages (images/attachments would disappear otherwise)
         loadedConvIdRef.current = conversationId;
-
         navigate(`/c/${conversationId}`, { replace: true });
       } else {
         await supabase
@@ -614,7 +482,6 @@ ${bullets.join('\n\n')}
           .update({ updated_at: new Date().toISOString() })
           .eq('id', conversationId);
       }
-
       const assistantImage = (assistantMsg.files as any)?.find?.((f: any) => (f?.type || '').startsWith('image/'));
       await supabase.from('chat_messages').insert([
         { conversation_id: conversationId, role: 'user', content: userMsg.content },
@@ -625,18 +492,15 @@ ${bullets.join('\n\n')}
           image_url: assistantImage?.data || assistantImage?.preview || null,
         }
       ]);
-
     } catch (error) {
       console.error('Error saving conversation:', error);
     }
   };
-
   // Extract text from PDF / text files, transcribe audio via speech-to-text edge fn
   const extractFileText = async (f: any): Promise<string | undefined> => {
     const type: string = f.type || '';
     const name: string = (f.name || '').toLowerCase();
     const data: string = f.data || '';
-
     if (type.startsWith('audio/') || /\.(mp3|wav|m4a|ogg|webm|flac)$/.test(name)) {
       try {
         const base64 = data.includes(',') ? data.split(',')[1] : data;
@@ -647,7 +511,6 @@ ${bullets.join('\n\n')}
       } catch (e) { console.warn('Audio transcription failed', e); }
       return undefined;
     }
-
     const isText =
       type.startsWith('text/') || type === 'application/json' || type === 'application/xml' ||
       /\.(txt|md|csv|json|log|xml|js|ts|tsx|jsx|py|html|css|yml|yaml|sql|sh|env)$/.test(name);
@@ -658,7 +521,6 @@ ${bullets.join('\n\n')}
         return decoded.slice(0, 50000);
       } catch { /* fallthrough */ }
     }
-
     if (type === 'application/pdf' || name.endsWith('.pdf')) {
       try {
         // @ts-ignore dynamic CDN import
@@ -682,7 +544,6 @@ ${bullets.join('\n\n')}
     }
     return undefined;
   };
-
   const handleNativeFiles = async (fileList: FileList | null) => {
     if (!fileList || fileList.length === 0) return;
     const MAX = 20 * 1024 * 1024;
@@ -706,7 +567,6 @@ ${bullets.join('\n\n')}
     }
     if (files.length) await handleFilesSelected(files);
   };
-
   const handleFilesSelected = async (files: any[]) => {
     toast({ title: 'Processing files…', description: 'Extracting content for AI analysis' });
     const attachments: FileAttachment[] = await Promise.all(files.map(async (f) => {
@@ -724,7 +584,6 @@ ${bullets.join('\n\n')}
     setShowFileUpload(false);
     toast({ title: 'Files ready', description: `${attachments.length} file(s) attached for AI analysis` });
   };
-
   // Pull cross-conversation memory: snippet from user's last few other conversations
   const fetchCrossConversationContext = async (): Promise<string> => {
     if (!user) return '';
@@ -754,11 +613,9 @@ ${bullets.join('\n\n')}
       return blocks.join('\n\n');
     } catch (e) { console.warn('cross-convo fetch failed', e); return ''; }
   };
-
   const handleSubmit = async (text: string = inputText) => {
     // If AI is replying or text is empty, do nothing
     if (isTyping || (!text.trim() && uploadedFiles.length === 0)) return;
-
     // Check 50 message/day limit for free tier users
     if (user && subscription.isFree && !subscription.canSendMessage) {
       toast({
@@ -769,15 +626,12 @@ ${bullets.join('\n\n')}
       navigate('/pricing');
       return;
     }
-
     // ====== PRO/ELITE GATED COMMANDS (/deep, /create, custom commands) ======
     let trimmed = text.trim();
-
     // Tool selected from the "+" menu rewrites the message into its command
     if (activeTool === 'deep' && !/^\/deep\b/i.test(trimmed)) trimmed = `/deep ${trimmed}`;
     if (activeTool === 'learn' && !/^\/learn\b/i.test(trimmed)) trimmed = `/learn ${trimmed}`;
     if (activeTool === 'create' && !/^\/create\b/i.test(trimmed)) trimmed = `/create ${trimmed}`;
-
     // ====== IMAGE GENERATION (inline, from the + menu or /image) ======
     if (activeTool === 'image' || /^\/image\b/i.test(trimmed)) {
       const prompt = trimmed.replace(/^\/image\s*/i, '').trim();
@@ -796,7 +650,6 @@ ${bullets.join('\n\n')}
         const { data, error } = await supabase.functions.invoke('image-chat', {
           body: { prompt, inputImages: baseImg ? [baseImg] : [], aspectRatio: '1:1' },
         });
-
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
         const assistantMsg: Message = {
@@ -815,9 +668,7 @@ ${bullets.join('\n\n')}
       }
       return;
     }
-
     const lower = trimmed.toLowerCase();
-
     const isPremiumCmd =
       lower.startsWith('/deep') ||
       lower.startsWith('/create');
@@ -831,20 +682,19 @@ ${bullets.join('\n\n')}
       navigate('/pricing');
       return;
     }
-
     // Increment message count for free users (only if logged in)
     if (user && subscription.isFree) {
       subscription.incrementMessageCount();
     }
-
     const userMessage: Message = { role: 'user', content: text, files: uploadedFiles };
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
     setUploadedFiles([]);
-
     // ====== YT-DLP: YouTube Download — Phone Bridge FIRST, then PC Bridge ======
     try {
-      const { extractYouTubeUrl, ytdlpStatus, ytdlpDownload, phoneYtdlpStatus, phoneYtdlpDownload } = await import('@/utils/pcBridge');
+      const { extractYouTubeUrl, ytdlpStatus, ytdlpDownload } = await import('@/utils/pcBridge');
+      const { phoneYtdlpStatus, phoneYtdlpDownload } = await import('@/utils/phoneBridge'); // FIX: CORRECTED IMPORT SOURCE
+      
       const ytUrl = extractYouTubeUrl(trimmed);
       const wantsDownload = /\b(download|save|grab|mp3|mp4|audio|video|playlist|yt-?dlp)\b/i.test(trimmed);
       if (ytUrl && wantsDownload) {
@@ -903,7 +753,6 @@ ${bullets.join('\n\n')}
     } catch (e) {
       console.warn('yt-dlp handler skipped:', e);
     }
-
     // ====== /create COMMAND — generates downloadable PDF or code files ======
     if (lower.startsWith('/create')) {
       const topic = trimmed.replace(/^\/create\s*/i, '').trim();
@@ -915,29 +764,27 @@ ${bullets.join('\n\n')}
         setIsTyping(true);
         const { getCreateMode, generateArticlePdf, downloadCodeFiles } = await import('@/utils/createCommand');
         const mode = getCreateMode(topic);
-
         // createInstruction is appended to the existing Alsa system prompt on the server
         const createInstruction = mode === 'code'
           ? `The user wants you to CREATE the following: "${topic}". Reply with ONLY clean, runnable code in fenced markdown code blocks (\`\`\`lang\\n...\\n\`\`\`). If multiple files are needed, use a separate code block per file and start each block with a comment line containing the filename. Do not add long explanations.`
           : `You are producing a polished, professional PDF document. Treat the user's message below as a BRIEF — read it carefully, understand the intent, then PRODUCE the finished document. Do NOT repeat, quote, restate, or echo the brief. Do NOT include the user's instructions, questions, or any "Format Requirements" text in your output.
-
 BRIEF:
 """${topic}"""
-
 Output rules (strict markdown):
 - Begin with a single line: "# <Clear Professional Title>" derived from the brief (do not use the brief text as the title).
 - Use "##" for major sections and "###" for sub-sections. Make headings crisp and meaningful.
 - Use **bold** to emphasise key terms, names, and figures.
 - Use bullet lists ("- item") and numbered lists where natural.
 - When presenting comparative or tabular data (roles, payments, pricing tiers, schedules, breakdowns), use a proper markdown table with a header row and a separator row, e.g.:
-  | Role | Responsibility | Payment |
-  | --- | --- | --- |
-  | ... | ... | ... |
+
+| Role | Responsibility | Payment |
+| :--- | :--- | :--- |
+| ... | ... | ... |
+
 - Keep paragraphs short (2-4 sentences). Professional, confident tone.
 - Do NOT add a "Confidential" footer in the body — the PDF renderer adds it.
 - Do NOT use code fences or HTML. Markdown only.
 - Length: enough to fully cover the brief, typically 500-1500 words.`;
-
         const apiEndpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
         const aiResp = await fetch(apiEndpoint, {
           method: 'POST',
@@ -949,7 +796,6 @@ Output rules (strict markdown):
             createInstruction,
           }),
         });
-
         // Read full stream into a string
         let fullText = '';
         if (aiResp.body) {
@@ -970,13 +816,11 @@ Output rules (strict markdown):
             }
           }
         }
-
         if (!fullText.trim()) {
           setMessages(prev => [...prev, { role: 'assistant', content: '❌ Could not generate content. Please try again.' }]);
           setIsTyping(false);
           return;
         }
-
         let summary = '';
         if (mode === 'pdf') {
           const fname = generateArticlePdf(topic, fullText);
@@ -988,7 +832,6 @@ Output rules (strict markdown):
             ? `🗜️ **Project ZIP ready:** \`${files[0]}\`\n\nContains ${files.length - 1} files:\n\n${files.slice(1).map(f => `- \`${f}\``).join('\n')}`
             : `💻 **Code file ready:**\n\n${files.map(f => `- \`${f}\``).join('\n')}\n\nDownloaded to your Downloads folder.`;
         }
-
         const assistantMsg = { role: 'assistant' as const, content: summary + '\n\n---\n\n' + fullText };
         setMessages(prev => [...prev, assistantMsg]);
         speak(mode === 'pdf' ? 'Your PDF is ready' : 'Your code files are ready');
@@ -1004,7 +847,6 @@ Output rules (strict markdown):
         return;
       }
     }
-
     // ============ CUSTOM COMMAND MATCHER (Pro/Elite only) ============
     if (isProOrElite) {
       try {
@@ -1022,13 +864,10 @@ Output rules (strict markdown):
         }
       } catch (e) { console.warn('custom cmd matcher error', e); }
     }
-
     const lowerText = text.toLowerCase();
-
     // Learn from user message for conversation memory
     parseAndLearn(text);
     trackInteraction(text);
-
     // Handle `note "..."` command — permanent memory storage
     const noteMatch = text.match(/^\s*note\s+["“'](.+?)["”']\s*$/i) || text.match(/^\s*note\s*[:\-]\s*(.+)$/i);
     if (noteMatch) {
@@ -1043,7 +882,6 @@ Output rules (strict markdown):
       }
       return;
     }
-
     // Handle memory commands
     const memoryData = parseMemoryCommand(text);
     if (memoryData) {
@@ -1053,7 +891,6 @@ Output rules (strict markdown):
       speak(response);
       return;
     }
-
     // Handle reminder commands - check if user wants to set a reminder
     const reminderPatterns = [
       /remind(?:er)?\s+(?:me\s+)?(?:to\s+)?(.+?)(?:\s+(?:at|on|in|tomorrow|today|next)\s+.+)/i,
@@ -1062,7 +899,6 @@ Output rules (strict markdown):
       /(.+?)\s+(?:ka|ke|ki)\s+reminder\s+(?:set|laga|bana)/i,
       /याद\s+दिलाना\s+(.+)/i,
     ];
-
     const isReminderRequest = reminderPatterns.some(p => p.test(text));
     if (isReminderRequest && user) {
       const reminderData = parseReminderFromText(text);
@@ -1086,7 +922,6 @@ Output rules (strict markdown):
         }
       }
     }
-
     // ── PHONE BRIDGE (Termux :5002) — intercept phone commands BEFORE AI ──
     const phoneCmd = parsePhoneCommand(text);
     if (phoneCmd && phoneBridgeConnected) {
@@ -1116,7 +951,6 @@ Output rules (strict markdown):
       speak('Phone Bridge is offline');
       return;
     }
-
     // Check for PC Bridge commands using natural language parser
     const parsedCommand = parseNaturalLanguage(text);
     if (parsedCommand && bridgeConnected) {
@@ -1137,14 +971,12 @@ Output rules (strict markdown):
         return;
       }
     }
-
     // Check for website opening - STRICT: Only open when user says EXACT "open [website name]" or "kholo" 
     // Patterns: "open youtube", "youtube kholo", "youtube open karo", "twitter ko open karo"
     const openWebsitePatterns = [
       /\b(open|launch|start)\s+(\w+)\b/i,  // "open youtube"
       /\b(\w+)\s+(kholo|kholna|open\s+karo|ko\s+open\s+karo)\b/i,  // "youtube kholo"
     ];
-
     // Check for custom user sites first
     const userSites = JSON.parse(localStorage.getItem('alsa_user_sites') || '[]');
     for (const site of userSites) {
@@ -1160,7 +992,6 @@ Output rules (strict markdown):
         return;
       }
     }
-
     // Check built-in websites - ONLY with explicit open command
     for (const [key, site] of Object.entries(WEBSITES)) {
       // Strict patterns that require explicit open intent
@@ -1170,18 +1001,14 @@ Output rules (strict markdown):
         new RegExp(`\\b${key}\\s+(kholo|kholna|open\\s+karo|ko\\s+open\\s+karo)\\b`, 'i'),
         new RegExp(`\\b${site.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+(kholo|kholna|open\\s+karo)\\b`, 'i'),
       ];
-
       const shouldOpen = strictPatterns.some(pattern => pattern.test(lowerText));
-
       if (shouldOpen) {
         // Skip if it's an app keyword (don't open website when user wants local app)
         const appKeywords = ['file explorer', 'explorer', 'notepad', 'word', 'excel', 'powerpoint', 'paint', 'calculator', 'cmd', 'terminal', 'antigravity'];
         const looksLikeAppCommand = appKeywords.some(app => lowerText.includes(app));
-
         if (looksLikeAppCommand) {
           continue; // Let PC Bridge handle local apps
         }
-
         const response = `Opening ${site.name}`;
         setMessages(prev => [...prev, { role: 'assistant', content: response }]);
         speak(response);
@@ -1192,7 +1019,6 @@ Output rules (strict markdown):
         return;
       }
     }
-
     // Call AI with streaming via edge function
     try {
       setIsTyping(true);
@@ -1200,9 +1026,7 @@ Output rules (strict markdown):
       const telegramContacts = JSON.parse(localStorage.getItem('alsa_telegram_contacts') || '[]');
       const whatsappContacts = JSON.parse(localStorage.getItem('alsa_whatsapp_contacts') || '[]');
       const crossConversationContext = await fetchCrossConversationContext();
-
       const apiEndpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
-
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
@@ -1232,13 +1056,10 @@ Output rules (strict markdown):
           userModel: localStorage.getItem('alsa_user_model') || '',
           mode: /^\/learn\b/i.test(trimmed) ? 'thinking' : aiMode,
           learnMode: /^\/learn\b/i.test(trimmed),
-
         })
       });
-
       if (!response.ok) {
         const errorStatus = response.status;
-
         // Try backup API key if available (for 429, 402, 500 errors)
         if ([429, 402, 500, 503].includes(errorStatus)) {
           const savedKeys = localStorage.getItem('alsa_backup_api_keys');
@@ -1248,14 +1069,12 @@ Output rules (strict markdown):
               k.name.toLowerCase().includes('gemini') ||
               k.name.toLowerCase().includes('google')
             );
-
             if (geminiKey) {
               setBackupKeyActive(true);
               toast({
                 title: 'Using Backup API Key',
                 description: `Primary API unavailable (${errorStatus}). Using your backup API key.`
               });
-
               // Call backup API directly with backup key
               const backupResponse = await fetch(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey.key}`,
@@ -1271,16 +1090,13 @@ Output rules (strict markdown):
                   })
                 }
               );
-
               if (backupResponse.ok) {
                 const backupData = await backupResponse.json();
                 const backupText = backupData.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from backup API';
-
                 setMessages(prev => [...prev, { role: 'assistant', content: backupText, keySource: 'user' }]);
                 speak(backupText);
                 setIsTyping(false);
                 setBackupKeyActive(false);
-
                 if (user) {
                   await saveConversation(userMessage, { role: 'assistant', content: backupText });
                 }
@@ -1289,40 +1105,31 @@ Output rules (strict markdown):
             }
           }
         }
-
         throw new Error(`API error: ${errorStatus}`);
       }
-
       if (!response.body) {
         throw new Error('No response body');
       }
-
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
       let accumulatedText = '';
-
       setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
-
         for (let line of lines) {
           line = line.trim();
           if (!line || line.startsWith(':')) continue;
           if (!line.startsWith('data: ')) continue;
-
           const data = line.slice(6);
           if (data === '[DONE]') {
             setIsTyping(false);
             break;
           }
-
           try {
             const parsed = JSON.parse(data);
             if (parsed.type === 'key_source') {
@@ -1342,20 +1149,16 @@ Output rules (strict markdown):
             }
             if (parsed.type === 'content' && parsed.delta) {
               accumulatedText += parsed.delta;
-
               setMessages(prev => {
                 const newMessages = [...prev];
                 const lastMsg = newMessages[newMessages.length - 1];
                 if (lastMsg?.role === 'assistant') {
                   // lastMsg.content = accumulatedText;
                   const isWikipedia = accumulatedText.includes("Wikipedia") || accumulatedText.length > 200;
-                  // const isWikipedia = accumulatedText.toLowerCase().includes("wikipedia result");
-
-const finalText = isWikipedia
-  ? formatWikipedia(accumulatedText, userMessage.content)
-  : accumulatedText;
-
-lastMsg.content = finalText;
+                  const finalText = isWikipedia
+                    ? formatWikipedia(accumulatedText, userMessage.content)
+                    : accumulatedText;
+                  lastMsg.content = finalText;
                 }
                 return newMessages;
               });
@@ -1487,7 +1290,8 @@ lastMsg.content = finalText;
               let result: any;
               let via = 'PC';
               if (phoneBridgeConnected) {
-                const { phoneWhatsappSend, phoneWhatsappSendByName } = await import('@/utils/pcBridge');
+                // FIX: imported from phoneBridge instead of pcBridge
+                const { phoneWhatsappSend, phoneWhatsappSendByName } = await import('@/utils/phoneBridge'); 
                 via = 'Phone';
                 if (/^\+?\d[\d\s\-]{5,}$/.test(String(parsed.phone))) {
                   result = await phoneWhatsappSend(parsed.phone, parsed.message);
@@ -1512,7 +1316,8 @@ lastMsg.content = finalText;
               });
               speak(result.success ? 'WhatsApp sent' : 'WhatsApp failed');
             } else if (parsed.type === 'email_msg') {
-              const { phoneEmailSend, phoneEmailSendByName, deriveSubject } = await import('@/utils/pcBridge');
+              // FIX: imported from phoneBridge instead of pcBridge
+              const { phoneEmailSend, phoneEmailSendByName, deriveSubject } = await import('@/utils/phoneBridge');
               const subject = parsed.subject || deriveSubject(parsed.body || '');
               let result: any;
               if (!phoneBridgeConnected) {
@@ -1551,7 +1356,8 @@ lastMsg.content = finalText;
             } else if (parsed.type === 'adb_command') {
               let result: any;
               if (phoneBridgeConnected) {
-                const { phoneShell } = await import('@/utils/pcBridge');
+                // FIX: imported from phoneBridge instead of pcBridge
+                const { phoneShell } = await import('@/utils/phoneBridge');
                 result = await phoneShell(parsed.command);
                 result.success = result?.ok !== false;
                 result.output = result.output;
@@ -1784,12 +1590,13 @@ lastMsg.content = finalText;
             }
           } catch (parseError) {
             // Ignore JSON parse errors for malformed chunks
+            if (!(parseError instanceof SyntaxError)) {
+              console.error("Chat Stream Tool Execution Error:", parseError);
+            }
           }
         }
       }
-
       setIsTyping(false);
-
       if (accumulatedText.trim()) {
         speak(accumulatedText);
         if (user) {
@@ -1808,7 +1615,6 @@ lastMsg.content = finalText;
       console.error('Chat error:', error);
       setIsTyping(false);
       setBackupKeyActive(false);
-
       const errorMessage = `❌ I'm having trouble responding right now. Please try again or contact support at support@alsa-ai.in for assistance.`;
       setMessages(prev => {
         const next = [...prev];
@@ -1816,7 +1622,6 @@ lastMsg.content = finalText;
         if (last?.role === 'assistant' && !last.content.trim()) next.pop();
         return [...next, { role: 'assistant', content: errorMessage }];
       });
-
       toast({
         title: "AI Response Error",
         description: "Something went wrong. Contact support@alsa-ai.in if the issue persists.",
@@ -1824,15 +1629,11 @@ lastMsg.content = finalText;
       });
     }
   };
-
   const hasMessages = messages.length > 0;
-
   // Mobile UI
   if (isMobile) {
     return (
-      // <div className="flex flex-col h-[100dvh] w-full bg-[#0d0d0d] text-white overflow-hidden">
       <div className="flex flex-col h-[100dvh] w-full bg-[#0d0d0d] text-white overflow-hidden max-w-full">
-
         {/* Scheduled Message Checker - Background Component */}
         <ScheduledMessageChecker userId={user?.id || null} />
         {/* Mobile Top Bar */}
@@ -1855,11 +1656,7 @@ lastMsg.content = finalText;
             <Settings className="w-5 h-5" />
           </Button>
         </div>
-
         {/* Chat Area */}
-        {/* <ScrollArea className="flex-1"> */}
-          {/* <div className="p-4 space-y-4"> */}
-
           <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain">
   <div className="px-3 py-3 space-y-4 overflow-x-hidden max-w-full w-full">
             {!hasMessages && (
@@ -1885,8 +1682,6 @@ lastMsg.content = finalText;
             <div ref={messagesEndRef} className="h-2" />
           </div>
         </div>
-
-
         {/* Mobile Input */}
         <div className="shrink-0 p-2 border-t border-white/5 bg-black/60 backdrop-blur-xl">
           {/* Voice Feedback - Top Left */}
@@ -1895,7 +1690,6 @@ lastMsg.content = finalText;
               <TranscriptionFeedback transcript={transcript} isListening={isListening} />
             </div>
           )}
-
           {uploadedFiles.length > 0 && (
             <div className="flex gap-2 mb-2 flex-wrap">
               {uploadedFiles.map((f, i) => (
@@ -1966,7 +1760,6 @@ lastMsg.content = finalText;
     >
       <Paperclip className="w-[18px] h-[18px]" />
     </button>
-
     <Textarea
       value={inputText}
       disabled={isTyping}
@@ -1990,7 +1783,6 @@ lastMsg.content = finalText;
       className="flex-1 min-w-0 bg-transparent border-none text-white text-[15px] focus-visible:ring-0 resize-none overflow-y-auto max-h-[140px] min-h-[38px] py-2 px-1"
       rows={1}
     />
-
     <button
       type="button"
       onClick={toggleVoice}
@@ -2022,7 +1814,6 @@ lastMsg.content = finalText;
     </button>
   )}
 </div>
-
         {/* Mobile Sidebar Overlay */}
         {showSidebar && (
           <div className="fixed inset-0 z-50 bg-black/80" onClick={() => setShowSidebar(false)}>
@@ -2037,7 +1828,6 @@ lastMsg.content = finalText;
             </div>
           </div>
         )}
-
         {/* Mobile Right Panel Overlay */}
         {showRightPanel && (
           <div className="fixed inset-0 z-50 bg-black/80" onClick={() => setShowRightPanel(false)}>
@@ -2054,7 +1844,6 @@ lastMsg.content = finalText;
             </div>
           </div>
         )}
-
         {/* File Upload Dialog */}
         <Dialog open={showFileUpload} onOpenChange={setShowFileUpload}>
           <DialogContent className="bg-[#0a0a0a] border-white/10 text-white">
@@ -2064,7 +1853,6 @@ lastMsg.content = finalText;
             <FileUpload onFilesSelected={handleFilesSelected} maxFiles={10} />
           </DialogContent>
         </Dialog>
-
         {/* Memory Manager */}
         <Dialog open={showMemoryManager} onOpenChange={setShowMemoryManager}>
           <DialogContent className="bg-[#0a0a0a] border-white/10 text-white max-w-2xl">
@@ -2074,7 +1862,6 @@ lastMsg.content = finalText;
             <MemoryManager />
           </DialogContent>
         </Dialog>
-
         <MusicPlayer song={currentSong} onClose={() => setCurrentSong(null)} />
         <GameLauncher game={currentGame as any} onClose={() => setCurrentGame(null)} />
       </div>
@@ -2094,12 +1881,10 @@ lastMsg.content = finalText;
         onToggleBridge={phoneBridgeConnected ? togglePhoneBridgeConnection : toggleBridgeConnection}
         currentConversationId={currentConversationId}
       />
-
       {/* ========== CENTER CHAT AREA ========= */}
       <div className="flex-[1_1_0%] min-w-0 relative flex flex-col overflow-hidden">
         {/* Background Gradient */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(17,24,39,1)_0%,rgba(0,0,0,1)_100%)]" />
-
         <div className="relative z-10 flex-1 flex flex-col overflow-hidden">
           {/* EMPTY STATE */}
           {!messages.length ? (
@@ -2110,7 +1895,6 @@ lastMsg.content = finalText;
               <p className="mt-3 text-blue-500/50 font-mono text-[10px] tracking-[0.5em] uppercase">
                 Alsa AI From Chat To Execution 5.1
               </p>
-
               <div className="mt-14 w-full max-w-2xl">
                 <div className="flex items-center bg-black/50 border border-white/10 rounded-2xl px-6 py-4 backdrop-blur-xl gap-3">
                   <Textarea
@@ -2150,7 +1934,6 @@ lastMsg.content = finalText;
                   {messages.map((m, i) => (
                     <ChatMessage key={i} role={m.role} content={m.content} files={m.files as any} keySource={m.keySource} />
                   ))}
-
                   {isTyping && (
                     <div className="flex gap-2 ml-12">
                       <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" />
@@ -2161,14 +1944,12 @@ lastMsg.content = finalText;
                   <div ref={messagesEndRef} />
                 </div>
               </div>
-
               {/* VOICE FEEDBACK - TOP LEFT OF CHAT */}
               {isListening && (
                 <div className="px-6 pt-2 pb-2">
                   <TranscriptionFeedback transcript={transcript} isListening={isListening} />
                 </div>
               )}
-
               {/* INPUT BAR (DURING CHAT) */}
 <div className="px-6 py-4 bg-gradient-to-t from-black via-black/80 to-transparent">
   <div className="max-w-5xl mx-auto">
@@ -2289,7 +2070,6 @@ lastMsg.content = finalText;
           {activeTool === 'image' ? 'Image' : activeTool === 'deep' ? 'Deep Research' : activeTool === 'learn' ? 'Smart Learning' : 'Create'} ✕
         </button>
       )}
-
       <Textarea
         value={inputText}
         disabled={isTyping}
@@ -2330,7 +2110,6 @@ lastMsg.content = finalText;
           )}
         </div>
       </div>
-
       {/* ========== RIGHT PANEL ========= */}
       <div className={`shrink-0 border-l border-white/5 bg-black/40 backdrop-blur-md transition-all duration-300 ${rightPanelCollapsed ? 'w-[50px]' : 'w-[260px]'}`}>
         <RightPanel
@@ -2345,9 +2124,7 @@ lastMsg.content = finalText;
           onToggleCollapse={() => setRightPanelCollapsed(!rightPanelCollapsed)}
         />
       </div>
-
       {/* ========== ALL MODALS & OVERLAYS ========= */}
-
       {/* Memory Manager Modal */}
       <Dialog open={showMemoryManager} onOpenChange={setShowMemoryManager}>
         <DialogContent className="bg-[#0a0a0a] border-white/10 text-white max-w-2xl">
@@ -2359,21 +2136,17 @@ lastMsg.content = finalText;
           <MemoryManager />
         </DialogContent>
       </Dialog>
-
       {/* File Upload Modal */}
       <Dialog open={showFileUpload} onOpenChange={setShowFileUpload}>
         <DialogContent className="bg-[#0a0a0a] border-white/10 text-white">
           <FileUpload onFilesSelected={handleFilesSelected} maxFiles={10} />
         </DialogContent>
       </Dialog>
-
       {/* Players & Tools */}
       <MusicPlayer song={currentSong} onClose={() => setCurrentSong(null)} />
       <GameLauncher game={currentGame as any} onClose={() => setCurrentGame(null)} />
-
       {/* Reminder Notification System */}
       <ReminderNotification userId={user?.id || null} />
-
       {/* 4.0 Update Notice — shown once per user on first open */}
       <Dialog open={show40Update} onOpenChange={(o) => {
         setShow40Update(o);
@@ -2421,8 +2194,5 @@ lastMsg.content = finalText;
       </Dialog>
     </div>
   );
-
-
 };
-
 export default Chat;
