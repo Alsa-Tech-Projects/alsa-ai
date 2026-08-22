@@ -931,9 +931,14 @@ ${String(customInstructions).slice(0, 2000)}
 
     // Helper function to try API request with fallback
     // Try the chosen model first; if all keys exhaust on Pro (free-tier 0 quota), fall back to flash.
-    const modelChain = geminiModel === "gemini-2.5-pro"
-      ? ["gemini-2.5-pro", "gemini-2.5-flash"]
-      : [geminiModel];
+    // Variant 1: Array assignment
+const modelChain = ["gemini-3.6-flash", "gemini-1.5-flash"];
+
+// Variant 2: Conditional assignment
+const modelChain = geminiModel === "gemini-3.6-flash" 
+  ? ["gemini-3.6-flash", "gemini-1.5-flash"] 
+  : ["gemini-2.0-flash", "gemini-1.5-flash"];
+
 
     const makeGeminiRequest = async (): Promise<Response> => {
       let lastError: Error | null = null;
