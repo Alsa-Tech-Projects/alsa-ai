@@ -18,6 +18,7 @@ export const GEMINI_MODELS: { value: string; label: string }[] = [
   { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite' },
   { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Recommended)' },
   { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Most Powerful)' },
+  { value: 'gemini-3.6-flash', label: 'Gemini 3.6 flash (Most Powerful & Latest Model of Gemini)' },
 ];
 
 const LS_KEY = 'alsa_user_api_key';

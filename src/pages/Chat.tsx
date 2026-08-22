@@ -299,7 +299,7 @@ ${bullets.join('\n\n')}
       toast({ title: '🎙️ Mic Off', description: 'Voice input stopped' });
     } else {
       startListening();
-      toast({ title: '🎙️ Listening...', description: 'Bolna shuru karo — 2.5s chup rehne par message chala jaayega' });
+      toast({ title: '🎙️ Listening...', description: 'The Mic Has Started, Try to speak —' });
     }
   }, [isListening, startListening, stopListening, toast]);
 
@@ -360,7 +360,7 @@ ${bullets.join('\n\n')}
           description: 'Recording for up to 60 seconds'
         });
         speak('Screen recording started');
-      } else {
+      } else {()
         toast({
           title: 'Recording Failed',
           description: result.message,
