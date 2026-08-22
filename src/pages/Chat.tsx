@@ -120,10 +120,7 @@ const Chat = () => {
       const targetState = location.state as { autoOpenFromWake?: boolean; wakeTranscript?: string };
       
       if (targetState.autoOpenFromWake && targetState.wakeTranscript) {
-        // Spoken text ko seedhe input me set karega
         setInputText(targetState.wakeTranscript);
-        
-        // History state clear karega taaki page refresh par loop na ho
         try {
           window.history.replaceState({}, document.title);
         } catch (e) {
@@ -137,30 +134,22 @@ const Chat = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSavedPath, setRecordingSavedPath] = useState<string | null>(null);
   const [aiMode, setAiMode] = useState<'fast' | 'thinking'>(() => (localStorage.getItem('alsa_ai_mode') as 'fast' | 'thinking') || 'fast');
-  // const [screenshotPending, setScreenshotPending] = useState(false);
-const formatWikipedia = (text: string, query: string) => {
-  const cleaned = text
-    .replace("📖 Wikipedia Result:", "")
-    .replace("Thoda intezaar karein, main action le raha hoon..", "")
-    .replace("⚙️", "");
-  const lines = cleaned
-    .split(/\. |\n/)
-    .map(line => line.trim())
-    .filter(line => line.length > 25);
-  // First line = intro paragraph
-  const intro = lines[0] ? (lines[0].endsWith('.') ? lines[0] : lines[0] + '.') : "";
-  // Remaining = bullets
-  const bullets = lines.slice(1, 6).map(line => {
-    if (!line.endsWith('.')) line += '.';
-    return `• ${line}`;
-  });
-  return `
-## ${query}
-${intro}
-${bullets.join('\n\n')}
-`;
-};
-  // Subscription hook for free tier restrictions
+  const formatWikipedia = (text: string, query: string) => {
+    const cleaned = text
+      .replace("📖 Wikipedia Result:", "")
+      .replace("Thoda intezaar karein, main action le raha hoon..", "")
+      .replace("⚙️", "");
+    const lines = cleaned
+      .split(/\. |\n/)
+      .map(line => line.trim())
+      .filter(line => line.length > 25);
+    const intro = lines[0] ? (lines[0].endsWith('.') ? lines[0] : lines[0] + '.') : "";
+    const bullets = lines.slice(1, 6).map(line => {
+      if (!line.endsWith('.')) line += '.';
+      return `• ${line}`;
+    });
+    return `\n## ${query}\n\n${intro}\n\n${bullets.join('\n\n')}\n`;
+  };
   const subscription = useSubscription();
   const { toast } = useToast();
   const {
@@ -171,28 +160,22 @@ ${bullets.join('\n\n')}
     resetTranscript
   } = useSpeechRecognition();
   const { speak: ttsSpeak, stop, isSpeaking } = useTextToSpeech();
-  // Wrapper for speak — TTS is temporarily DISABLED (voice output off in this build)
   const TTS_ENABLED = false;
   const speak = useCallback((text: string) => {
     if (!TTS_ENABLED) return;
     const voiceEnabled = localStorage.getItem('alsa_voice_enabled') !== 'false';
-    if (voiceEnabled) {
-      ttsSpeak(text);
-    }
+    if (voiceEnabled) ttsSpeak(text);
   }, [ttsSpeak]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const listeningTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const lastProcessedRef = useRef<string>('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const loadedConvIdRef = useRef<string | null>(null);
-  // Toggle PC Bridge connection
   const toggleBridgeConnection = useCallback(async () => {
     if (bridgeConnected) {
-      // Disconnect - just set state, bridge keeps running
       setBridgeConnected(false);
       toast({ title: 'PC Bridge Disconnected', description: 'Click again to reconnect' });
     } else {
-      // Try to connect
       const status = await checkBridgeConnection();
       setBridgeConnected(status.connected);
       if (status.connected) {
@@ -206,7 +189,6 @@ ${bullets.join('\n\n')}
       }
     }
   }, [bridgeConnected, toast]);
-  // Toggle Phone Bridge (Termux :5002)
   const togglePhoneBridgeConnection = useCallback(async () => {
     if (phoneBridgeConnected) {
       setPhoneBridgeConnected(false);
@@ -225,7 +207,6 @@ ${bullets.join('\n\n')}
       }
     }
   }, [phoneBridgeConnected, toast]);
-  // Toggle voice — sabhi users ke liye available (mic input)
   const toggleVoice = useCallback(() => {
     if (isListening) {
       stopListening();
@@ -235,7 +216,6 @@ ${bullets.join('\n\n')}
       toast({ title: '🎙️ Listening...', description: 'Bolna shuru karo — 2.5s chup rehne par message chala jaayega' });
     }
   }, [isListening, startListening, stopListening, toast]);
-  // New conversation handler
   const handleNewConversation = useCallback(() => {
     setMessages([]);
     setCurrentConversationId(null);
@@ -247,45 +227,29 @@ ${bullets.join('\n\n')}
     speak('Starting a new conversation');
     toast({ title: 'New Chat', description: 'Ready for a new conversation' });
   }, [resetTranscript, speak, toast, navigate]);
-  // Screen recording handler - DISABLED FOR FREE TIER USERS
   const handleRecording = useCallback(async () => {
     if (subscription.isFree) {
-      toast({
-        title: 'Premium Feature',
-        description: 'Screen recording requires Pro or Elite subscription',
-        variant: 'destructive'
-      });
+      toast({ title: 'Premium Feature', description: 'Screen recording requires Pro or Elite subscription', variant: 'destructive' });
       navigate('/pricing');
       return;
     }
     if (isRecording) {
       const result = await stopScreenRecording();
       setIsRecording(false);
-      toast({
-        title: 'Recording Stopped',
-        description: result.message
-      });
+      toast({ title: 'Recording Stopped', description: result.message });
       speak('Recording stopped and saved');
     } else {
-      setRecordingSavedPath(null); // Clear previous path
-      const result = await startScreenRecording(60); // 60 seconds max
+      setRecordingSavedPath(null);
+      const result = await startScreenRecording(60);
       if (result.success) {
         setIsRecording(true);
-        toast({
-          title: 'Recording Started',
-          description: 'Recording for up to 60 seconds'
-        });
+        toast({ title: 'Recording Started', description: 'Recording for up to 60 seconds' });
         speak('Screen recording started');
       } else {
-        toast({
-          title: 'Recording Failed',
-          description: result.message,
-          variant: 'destructive'
-        });
+        toast({ title: 'Recording Failed', description: result.message, variant: 'destructive' });
       }
     }
   }, [isRecording, toast, speak, subscription.isFree, navigate]);
-  // Listen for recording saved event
   useEffect(() => {
     const handleRecordingSaved = (event: CustomEvent) => {
       const { success, folderPath } = event.detail;
@@ -311,16 +275,13 @@ ${bullets.join('\n\n')}
     window.addEventListener('recording-saved', handleRecordingSaved as EventListener);
     return () => window.removeEventListener('recording-saved', handleRecordingSaved as EventListener);
   }, [toast]);
-  // Keyboard shortcuts: Alt+V for voice, Ctrl+Shift+O for new chat
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Alt+V for voice toggle
       if (e.altKey && e.key.toLowerCase() === 'v') {
         e.preventDefault();
         toggleVoice();
         return;
       }
-      // Ctrl+Shift+O for new conversation
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'o') {
         e.preventDefault();
         handleNewConversation();
@@ -330,11 +291,9 @@ ${bullets.join('\n\n')}
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleVoice, handleNewConversation]);
-  // Auth state management - REDIRECT GUEST USERS
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
-        // Agar session nahi hai, matlab user guest hai -> Redirect to Home
         navigate('/Chat');
       } else {
         setUser(session.user);
@@ -342,7 +301,6 @@ ${bullets.join('\n\n')}
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
-        // Logout hone par ya session khatam hone par -> Redirect
         setUser(null);
         navigate('/Chat');
       } else if (session) {
@@ -350,13 +308,11 @@ ${bullets.join('\n\n')}
       }
     });
     return () => subscription.unsubscribe();
-  }, [navigate]); // navigate dependency add karna zaroori hai
-  // Load conversation from URL param
+  }, [navigate]);
   useEffect(() => {
     const loadConversation = async () => {
       const convId = urlConversationId || location.state?.conversationId;
       if (!convId || !user) return;
-      // Only load each conversation ONCE — re-runs would wipe local files / unsaved messages
       if (loadedConvIdRef.current === convId) return;
       try {
         const { data, error } = await supabase
@@ -382,15 +338,12 @@ ${bullets.join('\n\n')}
     };
     loadConversation();
   }, [urlConversationId, location.state, user]);
-  // Initial greeting
   useEffect(() => {
     if (!hasGreeted && messages.length === 0) {
       const greeting = getTimeBasedGreeting();
-      const fullGreeting = `${greeting}! I'm ALSA, your AI assistant. How can I help you today?`;
       setHasGreeted(true);
     }
   }, [hasGreeted, messages.length]);
-  // Check bridge connection on mount
   useEffect(() => {
     const checkBridge = async () => {
       const status = await checkBridgeConnection();
@@ -401,7 +354,6 @@ ${bullets.join('\n\n')}
           setSystemData(scanResult.data);
         }
       }
-      // Also check Phone Bridge (Termux :5002)
       const phoneStatus = await checkPhoneBridgeConnection();
       setPhoneBridgeConnected(phoneStatus.connected);
     };
@@ -409,9 +361,6 @@ ${bullets.join('\n\n')}
     const interval = setInterval(checkBridge, 30000);
     return () => clearInterval(interval);
   }, [systemData]);
-  // ==========================================================
-  // VOICE COMMAND PROCESSING
-  // ==========================================================
   useEffect(() => {
     if (!isListening) return;
     const currentText = transcript.trim();
@@ -419,14 +368,12 @@ ${bullets.join('\n\n')}
     setInputText(currentText);
     if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current);
     const lowerText = currentText.toLowerCase();
-    // Voice control commands
     if (lowerText === 'stop listening' || lowerText === 'voice off' || lowerText === 'mic off') {
       stopListening();
       resetTranscript();
       setInputText('');
       return;
     }
-    // Transcript aa gaya matlab user chup ho chuka hai -> turant send
     listeningTimeoutRef.current = setTimeout(() => {
       if (currentText === lastProcessedRef.current) return;
       lastProcessedRef.current = currentText;
@@ -439,14 +386,12 @@ ${bullets.join('\n\n')}
       if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current);
     };
   }, [transcript, isListening, stopListening, resetTranscript]);
-  // Scroll to bottom logic
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, []);
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
-  // "Edit" button on a generated image -> switch composer into image-edit mode
   useEffect(() => {
     const onEditImage = (e: any) => {
       const src = e?.detail?.src;
@@ -459,7 +404,7 @@ ${bullets.join('\n\n')}
     return () => window.removeEventListener('alsa-edit-image', onEditImage as EventListener);
   }, [toast]);
   const saveConversation = async (userMsg: Message, assistantMsg: Message) => {
-    if (!user) return; // Only save for logged-in users
+    if (!user) return;
     try {
       let conversationId = currentConversationId;
       if (!conversationId) {
@@ -472,8 +417,6 @@ ${bullets.join('\n\n')}
         if (convError) throw convError;
         conversationId = conv.id;
         setCurrentConversationId(conversationId);
-        // Mark as already loaded so the URL change doesn't re-fetch and wipe
-        // in-memory messages (images/attachments would disappear otherwise)
         loadedConvIdRef.current = conversationId;
         navigate(`/c/${conversationId}`, { replace: true });
       } else {
@@ -496,7 +439,6 @@ ${bullets.join('\n\n')}
       console.error('Error saving conversation:', error);
     }
   };
-  // Extract text from PDF / text files, transcribe audio via speech-to-text edge fn
   const extractFileText = async (f: any): Promise<string | undefined> => {
     const type: string = f.type || '';
     const name: string = (f.name || '').toLowerCase();
@@ -523,7 +465,7 @@ ${bullets.join('\n\n')}
     }
     if (type === 'application/pdf' || name.endsWith('.pdf')) {
       try {
-        // @ts-ignore dynamic CDN import
+        // @ts-ignore
         const pdfjs: any = await import(/* @vite-ignore */ ('https://esm.sh/pdfjs-dist@4.0.379/build/pdf.min.mjs' as any));
         pdfjs.GlobalWorkerOptions.workerSrc = 'https://esm.sh/pdfjs-dist@4.0.379/build/pdf.worker.min.mjs';
         const b64 = data.includes(',') ? data.split(',')[1] : data;
@@ -584,7 +526,6 @@ ${bullets.join('\n\n')}
     setShowFileUpload(false);
     toast({ title: 'Files ready', description: `${attachments.length} file(s) attached for AI analysis` });
   };
-  // Pull cross-conversation memory: snippet from user's last few other conversations
   const fetchCrossConversationContext = async (): Promise<string> => {
     if (!user) return '';
     try {
@@ -611,12 +552,10 @@ ${bullets.join('\n\n')}
         blocks.push(`### Past chat: "${c.title}"\n${snippet}`);
       }
       return blocks.join('\n\n');
-    } catch (e) { console.warn('cross-convo fetch failed', e); return ''; }
+    } catch (e) { return ''; }
   };
   const handleSubmit = async (text: string = inputText) => {
-    // If AI is replying or text is empty, do nothing
     if (isTyping || (!text.trim() && uploadedFiles.length === 0)) return;
-    // Check 50 message/day limit for free tier users
     if (user && subscription.isFree && !subscription.canSendMessage) {
       toast({
         title: 'Daily Limit Reached',
@@ -626,13 +565,10 @@ ${bullets.join('\n\n')}
       navigate('/pricing');
       return;
     }
-    // ====== PRO/ELITE GATED COMMANDS (/deep, /create, custom commands) ======
     let trimmed = text.trim();
-    // Tool selected from the "+" menu rewrites the message into its command
     if (activeTool === 'deep' && !/^\/deep\b/i.test(trimmed)) trimmed = `/deep ${trimmed}`;
     if (activeTool === 'learn' && !/^\/learn\b/i.test(trimmed)) trimmed = `/learn ${trimmed}`;
     if (activeTool === 'create' && !/^\/create\b/i.test(trimmed)) trimmed = `/create ${trimmed}`;
-    // ====== IMAGE GENERATION (inline, from the + menu or /image) ======
     if (activeTool === 'image' || /^\/image\b/i.test(trimmed)) {
       const prompt = trimmed.replace(/^\/image\s*/i, '').trim();
       if (!prompt) {
@@ -669,10 +605,9 @@ ${bullets.join('\n\n')}
       return;
     }
     const lower = trimmed.toLowerCase();
-    const isPremiumCmd =
-      lower.startsWith('/deep') ||
-      lower.startsWith('/create');
+    const isPremiumCmd = lower.startsWith('/deep') || lower.startsWith('/create');
     const isProOrElite = subscription.isPro || subscription.isElite || subscription.isTeam;
+    
     if (isPremiumCmd && !isProOrElite) {
       toast({
         title: 'Pro / Elite feature',
@@ -682,7 +617,6 @@ ${bullets.join('\n\n')}
       navigate('/pricing');
       return;
     }
-    // Increment message count for free users (only if logged in)
     if (user && subscription.isFree) {
       subscription.incrementMessageCount();
     }
@@ -690,10 +624,9 @@ ${bullets.join('\n\n')}
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
     setUploadedFiles([]);
-    // ====== YT-DLP: YouTube Download — Phone Bridge FIRST, then PC Bridge ======
     try {
       const { extractYouTubeUrl, ytdlpStatus, ytdlpDownload } = await import('@/utils/pcBridge');
-      const { phoneYtdlpStatus, phoneYtdlpDownload } = await import('@/utils/phoneBridge'); // FIX: CORRECTED IMPORT SOURCE
+      const { phoneYtdlpStatus, phoneYtdlpDownload } = await import('@/utils/phoneBridge'); 
       
       const ytUrl = extractYouTubeUrl(trimmed);
       const wantsDownload = /\b(download|save|grab|mp3|mp4|audio|video|playlist|yt-?dlp)\b/i.test(trimmed);
@@ -715,7 +648,6 @@ ${bullets.join('\n\n')}
           embed_metadata: true,
           playlist: /\bplaylist\b/i.test(trimmed) || /list=/.test(ytUrl),
         };
-        // Prefer Phone Bridge if connected
         if (phoneBridgeConnected) {
           const ps = await phoneYtdlpStatus();
           if (ps?.installed) {
@@ -732,7 +664,6 @@ ${bullets.join('\n\n')}
             return;
           }
         }
-        // Fallback: PC Bridge
         const status = await ytdlpStatus();
         if (!status?.installed) {
           setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ Na PC Bridge, na Phone Bridge yt-dlp de raha hai. Dono mein se ek start karo (`python phone-bridge.py` ya `pro-pc-bridge.py`).' }]);
@@ -750,10 +681,7 @@ ${bullets.join('\n\n')}
         }
         return;
       }
-    } catch (e) {
-      console.warn('yt-dlp handler skipped:', e);
-    }
-    // ====== /create COMMAND — generates downloadable PDF or code files ======
+    } catch (e) {}
     if (lower.startsWith('/create')) {
       const topic = trimmed.replace(/^\/create\s*/i, '').trim();
       if (!topic) {
@@ -764,7 +692,6 @@ ${bullets.join('\n\n')}
         setIsTyping(true);
         const { getCreateMode, generateArticlePdf, downloadCodeFiles } = await import('@/utils/createCommand');
         const mode = getCreateMode(topic);
-        // createInstruction is appended to the existing Alsa system prompt on the server
         const createInstruction = mode === 'code'
           ? `The user wants you to CREATE the following: "${topic}". Reply with ONLY clean, runnable code in fenced markdown code blocks (\`\`\`lang\\n...\\n\`\`\`). If multiple files are needed, use a separate code block per file and start each block with a comment line containing the filename. Do not add long explanations.`
           : `You are producing a polished, professional PDF document. Treat the user's message below as a BRIEF — read it carefully, understand the intent, then PRODUCE the finished document. Do NOT repeat, quote, restate, or echo the brief. Do NOT include the user's instructions, questions, or any "Format Requirements" text in your output.
@@ -796,7 +723,6 @@ Output rules (strict markdown):
             createInstruction,
           }),
         });
-        // Read full stream into a string
         let fullText = '';
         if (aiResp.body) {
           const r = aiResp.body.getReader();
@@ -847,7 +773,6 @@ Output rules (strict markdown):
         return;
       }
     }
-    // ============ CUSTOM COMMAND MATCHER (Pro/Elite only) ============
     if (isProOrElite) {
       try {
         const { matchCustomCommand, executeCustomCommand } = await import('@/utils/customCommands');
@@ -859,16 +784,12 @@ Output rules (strict markdown):
             speak(result.message);
             return;
           }
-          // forwardToAI: replace text with the mapped AI prompt and continue
           text = result.forwardToAI.prompt;
         }
-      } catch (e) { console.warn('custom cmd matcher error', e); }
+      } catch (e) {}
     }
-    const lowerText = text.toLowerCase();
-    // Learn from user message for conversation memory
     parseAndLearn(text);
     trackInteraction(text);
-    // Handle `note "..."` command — permanent memory storage
     const noteMatch = text.match(/^\s*note\s+["“'](.+?)["”']\s*$/i) || text.match(/^\s*note\s*[:\-]\s*(.+)$/i);
     if (noteMatch) {
       const noteValue = noteMatch[1].trim();
@@ -877,12 +798,9 @@ Output rules (strict markdown):
       const response = `📝 Yaad rakh liya boss! Ye baat ab hamesha mere zehen mein rahegi:\n\n> ${noteValue}`;
       setMessages(prev => [...prev, { role: 'assistant', content: response }]);
       speak('Note saved permanently');
-      if (user) {
-        await saveConversation(userMessage, { role: 'assistant', content: response });
-      }
+      if (user) await saveConversation(userMessage, { role: 'assistant', content: response });
       return;
     }
-    // Handle memory commands
     const memoryData = parseMemoryCommand(text);
     if (memoryData) {
       addMemory(memoryData.key, memoryData.value);
@@ -891,7 +809,6 @@ Output rules (strict markdown):
       speak(response);
       return;
     }
-    // Handle reminder commands - check if user wants to set a reminder
     const reminderPatterns = [
       /remind(?:er)?\s+(?:me\s+)?(?:to\s+)?(.+?)(?:\s+(?:at|on|in|tomorrow|today|next)\s+.+)/i,
       /(?:set|create|add)\s+(?:a\s+)?reminder\s+(?:for\s+)?(.+?)(?:\s+(?:at|on|in|tomorrow|today)\s+.+)/i,
@@ -904,7 +821,6 @@ Output rules (strict markdown):
       const reminderData = parseReminderFromText(text);
       if (reminderData) {
         try {
-          // createReminder signature: (userId, title, reminderTime, description?)
           await createReminder(user.id, reminderData.title, reminderData.time, reminderData.description);
           const timeStr = reminderData.time.toLocaleString('en-IN', {
             dateStyle: 'medium',
@@ -913,16 +829,14 @@ Output rules (strict markdown):
           const response = `⏰ Reminder set!\n\n**${reminderData.title}**\n📅 ${timeStr}\n\nI'll notify you 1 hour before and when it's time! 🔔`;
           setMessages(prev => [...prev, { role: 'assistant', content: response }]);
           speak(`Reminder set for ${reminderData.title}`);
-          if (user) {
-            await saveConversation(userMessage, { role: 'assistant', content: response });
-          }
+          if (user) await saveConversation(userMessage, { role: 'assistant', content: response });
           return;
         } catch (error) {
           console.error('Error creating reminder:', error);
         }
       }
     }
-    // ── PHONE BRIDGE (Termux :5002) — intercept phone commands BEFORE AI ──
+    // ── PHONE BRIDGE COMMAND PARSER ──
     const phoneCmd = parsePhoneCommand(text);
     if (phoneCmd && phoneBridgeConnected) {
       try {
@@ -951,7 +865,6 @@ Output rules (strict markdown):
       speak('Phone Bridge is offline');
       return;
     }
-    // Check for PC Bridge commands using natural language parser
     const parsedCommand = parseNaturalLanguage(text);
     if (parsedCommand && bridgeConnected) {
       try {
@@ -961,65 +874,47 @@ Output rules (strict markdown):
           : `❌ ${result.message}`;
         setMessages(prev => [...prev, { role: 'assistant', content: response }]);
         speak(result.success ? result.message : 'Command failed');
-        if (user) {
-          await saveConversation(userMessage, { role: 'assistant', content: response });
-        }
+        if (user) await saveConversation(userMessage, { role: 'assistant', content: response });
         return;
       } catch (error: any) {
-        const errorMsg = error.message || 'Failed to execute command';
-        setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${errorMsg}` }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${error.message || 'Failed'}` }]);
         return;
       }
     }
-    // Check for website opening - STRICT: Only open when user says EXACT "open [website name]" or "kholo" 
-    // Patterns: "open youtube", "youtube kholo", "youtube open karo", "twitter ko open karo"
     const openWebsitePatterns = [
-      /\b(open|launch|start)\s+(\w+)\b/i,  // "open youtube"
-      /\b(\w+)\s+(kholo|kholna|open\s+karo|ko\s+open\s+karo)\b/i,  // "youtube kholo"
+      /\b(open|launch|start)\s+(\w+)\b/i, 
+      /\b(\w+)\s+(kholo|kholna|open\s+karo|ko\s+open\s+karo)\b/i,
     ];
-    // Check for custom user sites first
     const userSites = JSON.parse(localStorage.getItem('alsa_user_sites') || '[]');
     for (const site of userSites) {
       const sitePattern = new RegExp(`\\b(open|kholo|launch)\\s+${site.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b|\\b${site.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+(kholo|open\\s+karo)\\b`, 'i');
-      if (sitePattern.test(lowerText)) {
+      if (sitePattern.test(lower)) {
         const response = `Opening ${site.name}`;
         setMessages(prev => [...prev, { role: 'assistant', content: response }]);
         speak(response);
         setTimeout(() => window.open(site.url, '_blank'), 500);
-        if (user) {
-          await saveConversation(userMessage, { role: 'assistant', content: response });
-        }
+        if (user) await saveConversation(userMessage, { role: 'assistant', content: response });
         return;
       }
     }
-    // Check built-in websites - ONLY with explicit open command
     for (const [key, site] of Object.entries(WEBSITES)) {
-      // Strict patterns that require explicit open intent
       const strictPatterns = [
         new RegExp(`\\b(open|launch|start|visit)\\s+${key}\\b`, 'i'),
         new RegExp(`\\b(open|launch|start|visit)\\s+${site.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i'),
         new RegExp(`\\b${key}\\s+(kholo|kholna|open\\s+karo|ko\\s+open\\s+karo)\\b`, 'i'),
         new RegExp(`\\b${site.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+(kholo|kholna|open\\s+karo)\\b`, 'i'),
       ];
-      const shouldOpen = strictPatterns.some(pattern => pattern.test(lowerText));
-      if (shouldOpen) {
-        // Skip if it's an app keyword (don't open website when user wants local app)
+      if (strictPatterns.some(pattern => pattern.test(lower))) {
         const appKeywords = ['file explorer', 'explorer', 'notepad', 'word', 'excel', 'powerpoint', 'paint', 'calculator', 'cmd', 'terminal', 'antigravity'];
-        const looksLikeAppCommand = appKeywords.some(app => lowerText.includes(app));
-        if (looksLikeAppCommand) {
-          continue; // Let PC Bridge handle local apps
-        }
+        if (appKeywords.some(app => lower.includes(app))) continue;
         const response = `Opening ${site.name}`;
         setMessages(prev => [...prev, { role: 'assistant', content: response }]);
         speak(response);
         setTimeout(() => window.open(site.url, '_blank'), 500);
-        if (user) {
-          await saveConversation(userMessage, { role: 'assistant', content: response });
-        }
+        if (user) await saveConversation(userMessage, { role: 'assistant', content: response });
         return;
       }
     }
-    // Call AI with streaming via edge function
     try {
       setIsTyping(true);
       const memory = getMemory();
@@ -1059,57 +954,9 @@ Output rules (strict markdown):
         })
       });
       if (!response.ok) {
-        const errorStatus = response.status;
-        // Try backup API key if available (for 429, 402, 500 errors)
-        if ([429, 402, 500, 503].includes(errorStatus)) {
-          const savedKeys = localStorage.getItem('alsa_backup_api_keys');
-          if (savedKeys) {
-            const keys = JSON.parse(savedKeys);
-            const geminiKey = keys.find((k: any) =>
-              k.name.toLowerCase().includes('gemini') ||
-              k.name.toLowerCase().includes('google')
-            );
-            if (geminiKey) {
-              setBackupKeyActive(true);
-              toast({
-                title: 'Using Backup API Key',
-                description: `Primary API unavailable (${errorStatus}). Using your backup API key.`
-              });
-              // Call backup API directly with backup key
-              const backupResponse = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey.key}`,
-                {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    contents: [...messages, userMessage].map(m => ({
-                      role: m.role === 'assistant' ? 'model' : 'user',
-                      parts: [{ text: m.content }]
-                    })),
-                    generationConfig: { temperature: 0.7 }
-                  })
-                }
-              );
-              if (backupResponse.ok) {
-                const backupData = await backupResponse.json();
-                const backupText = backupData.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from backup API';
-                setMessages(prev => [...prev, { role: 'assistant', content: backupText, keySource: 'user' }]);
-                speak(backupText);
-                setIsTyping(false);
-                setBackupKeyActive(false);
-                if (user) {
-                  await saveConversation(userMessage, { role: 'assistant', content: backupText });
-                }
-                return;
-              }
-            }
-          }
-        }
-        throw new Error(`API error: ${errorStatus}`);
+        throw new Error(`API error: ${response.status}`);
       }
-      if (!response.body) {
-        throw new Error('No response body');
-      }
+      if (!response.body) throw new Error('No response body');
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
@@ -1140,7 +987,6 @@ Output rules (strict markdown):
                 if (lastMsg?.role === 'assistant') {
                   lastMsg.keySource = src;
                 } else {
-                  // No assistant placeholder yet — create one so badge attaches when text arrives
                   newMessages.push({ role: 'assistant', content: '', keySource: src });
                 }
                 return newMessages;
@@ -1153,12 +999,8 @@ Output rules (strict markdown):
                 const newMessages = [...prev];
                 const lastMsg = newMessages[newMessages.length - 1];
                 if (lastMsg?.role === 'assistant') {
-                  // lastMsg.content = accumulatedText;
                   const isWikipedia = accumulatedText.includes("Wikipedia") || accumulatedText.length > 200;
-                  const finalText = isWikipedia
-                    ? formatWikipedia(accumulatedText, userMessage.content)
-                    : accumulatedText;
-                  lastMsg.content = finalText;
+                  lastMsg.content = isWikipedia ? formatWikipedia(accumulatedText, userMessage.content) : accumulatedText;
                 }
                 return newMessages;
               });
@@ -1169,128 +1011,59 @@ Output rules (strict markdown):
               setCurrentGame(parsed.game);
               speak(`Launching ${parsed.game}`);
             } else if (parsed.type === 'create_project' && parsed.project_path && parsed.files) {
-              // Execute project creation via PC Bridge
               const result = await createProject(parsed.project_path, parsed.files);
-              const statusMsg = result.success
-                ? `✅ Project created at ${parsed.project_path}`
-                : `❌ Failed to create project: ${result.message}`;
-              accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') {
-                  lastMsg.content = accumulatedText;
-                }
-                return newMessages;
-              });
-              speak(result.success ? 'Project created successfully' : 'Project creation failed');
+              accumulatedText += `\n\n${result.success ? `✅ Project created at ${parsed.project_path}` : `❌ Failed to create project: ${result.message}`}`;
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'create_powerpoint') {
               const result = await createPowerPoint(parsed.file_path, parsed.title, parsed.slides, parsed.theme);
-              const statusMsg = result.success
-                ? `✅ PowerPoint created: ${result.file_path || parsed.file_path}`
-                : `❌ Failed: ${result.message}`;
-              accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
-              speak(result.success ? 'Presentation created' : 'Failed to create presentation');
+              accumulatedText += `\n\n${result.success ? `✅ PowerPoint created: ${result.file_path || parsed.file_path}` : `❌ Failed: ${result.message}`}`;
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'create_excel') {
               const result = await createExcel(parsed.file_path, parsed.sheet_name, parsed.headers, parsed.data, parsed.formatting);
-              const statusMsg = result.success
-                ? `✅ Excel file created: ${result.file_path || parsed.file_path}`
-                : `❌ Failed: ${result.message}`;
-              accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
-              speak(result.success ? 'Excel file created' : 'Failed to create Excel');
+              accumulatedText += `\n\n${result.success ? `✅ Excel file created: ${result.file_path || parsed.file_path}` : `❌ Failed: ${result.message}`}`;
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'create_database') {
               const result = await createDatabase(parsed.file_path, parsed.db_type, parsed.tables);
-              const statusMsg = result.success
-                ? `✅ Database created: ${result.file_path || parsed.file_path}`
-                : `❌ Failed: ${result.message}`;
-              accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
-              speak(result.success ? 'Database created' : 'Failed to create database');
+              accumulatedText += `\n\n${result.success ? `✅ Database created: ${result.file_path || parsed.file_path}` : `❌ Failed: ${result.message}`}`;
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'execute_python') {
               const result = await executePythonFile(parsed.file_path);
-              const statusMsg = result.success
-                ? `✅ Python executed:\n\`\`\`\n${result.output || 'No output'}\n\`\`\``
-                : `❌ Failed: ${result.message}`;
-              accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
+              accumulatedText += `\n\n${result.success ? `✅ Python executed:\n\`\`\`\n${result.output || 'No output'}\n\`\`\`` : `❌ Failed: ${result.message}`}`;
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'execute_cmd') {
               const result = await executeCmdCommand(parsed.command);
-              const statusMsg = result.success
-                ? `✅ Command output:\n\`\`\`\n${result.output || 'No output'}\n\`\`\``
-                : `❌ Failed: ${result.message}`;
-              accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
+              accumulatedText += `\n\n${result.success ? `✅ Command output:\n\`\`\`\n${result.output || 'No output'}\n\`\`\`` : `❌ Failed: ${result.message}`}`;
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'system_power') {
-              const result = await sendCommand(parsed.action); // shutdown, restart, sleep
-              const statusMsg = result.success
-                ? `✅ ${result.message}`
-                : `❌ ${result.message}`;
-              accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
-              speak(result.message);
+              const result = await sendCommand(parsed.action);
+              accumulatedText += `\n\n${result.success ? `✅ ${result.message}` : `❌ ${result.message}`}`;
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'run_application') {
               const result = await runCommand(parsed.command);
-              const statusMsg = result.success
-                ? `✅ Opened ${parsed.command}`
-                : `❌ ${result.message}`;
-              accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
+              accumulatedText += `\n\n${result.success ? `✅ Opened ${parsed.command}` : `❌ ${result.message}`}`;
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'telegram_msg') {
-              const result = await sendTelegramMsg(parsed.link, parsed.message);
+              // BUG FIX 3: TELEGRAM HANDLER NOW PROPERLY FALLS BACK TO PHONE BRIDGE
+              let result: any;
+              if (phoneBridgeConnected) {
+                const { phoneTelegramSend } = await import('@/utils/phoneBridge'); 
+                result = await phoneTelegramSend(parsed.link, parsed.message);
+                result.success = result?.ok !== false;
+              } else if (bridgeConnected) {
+                const { sendTelegramMsg } = await import('@/utils/pcBridge');
+                result = await sendTelegramMsg(parsed.link, parsed.message);
+              } else {
+                result = { success: false, message: 'Na PC Bridge, na Phone Bridge chalu hai.' };
+              }
               const statusMsg = result.success
                 ? `✅ Telegram message sent to ${parsed.link}`
-                : `❌ Failed to send Telegram: ${result.message || result.error}`;
+                : `❌ Failed to send Telegram: ${result.message || result.error || 'Unknown error'}`;
               accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
-              speak(result.success ? 'Telegram message sent' : 'Failed to send message');
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'whatsapp_msg') {
-              // Prefer Phone Bridge (ADB automation on the phone itself); fallback to PC Bridge
               let result: any;
               let via = 'PC';
               if (phoneBridgeConnected) {
-                // FIX: imported from phoneBridge instead of pcBridge
                 const { phoneWhatsappSend, phoneWhatsappSendByName } = await import('@/utils/phoneBridge'); 
                 via = 'Phone';
                 if (/^\+?\d[\d\s\-]{5,}$/.test(String(parsed.phone))) {
@@ -1308,15 +1081,8 @@ Output rules (strict markdown):
                 ? `✅ WhatsApp (${via} Bridge) → ${parsed.phone}`
                 : `❌ WhatsApp failed: ${result.message || result.error}`;
               accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
-              speak(result.success ? 'WhatsApp sent' : 'WhatsApp failed');
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'email_msg') {
-              // FIX: imported from phoneBridge instead of pcBridge
               const { phoneEmailSend, phoneEmailSendByName, deriveSubject } = await import('@/utils/phoneBridge');
               const subject = parsed.subject || deriveSubject(parsed.body || '');
               let result: any;
@@ -1332,31 +1098,18 @@ Output rules (strict markdown):
                 ? `✅ Email sent → ${parsed.to || result?.contact?.email || parsed.recipient_name} (Subject: ${subject})`
                 : `❌ Email failed: ${result?.error || 'unknown error'}${/not found/i.test(String(result?.error || '')) ? ' — add this contact in Settings → Email Automation.' : ''}`;
               accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
-              speak(ok ? 'Email sent' : 'Email failed');
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'adb_connect') {
-              // Phone Bridge already runs on the phone → ADB connect not needed
               const statusMsg = phoneBridgeConnected
                 ? `📱 Phone Bridge already active — ADB connect skip kiya.`
                 : (await adbConnect(parsed.device)).success
                   ? `✅ ADB connected to ${parsed.device}`
                   : `❌ ADB not available. Phone Bridge (Termux) chalu karo — behtar hai.`;
               accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'adb_command') {
               let result: any;
               if (phoneBridgeConnected) {
-                // FIX: imported from phoneBridge instead of pcBridge
                 const { phoneShell } = await import('@/utils/phoneBridge');
                 result = await phoneShell(parsed.command);
                 result.success = result?.ok !== false;
@@ -1370,226 +1123,75 @@ Output rules (strict markdown):
                 ? `✅ ${phoneBridgeConnected ? 'Phone' : 'ADB'}:\n\`\`\`\n${result.output || 'Done'}\n\`\`\``
                 : `❌ ${result.message}`;
               accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'close_window') {
               const result = await closeWindow(parsed.window_name);
-              const statusMsg = result.success
-                ? `✅ Closed ${parsed.window_name}`
-                : `❌ ${result.message}`;
-              accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
-              speak(result.success ? `Closed ${parsed.window_name}` : 'Failed to close window');
+              accumulatedText += `\n\n${result.success ? `✅ Closed ${parsed.window_name}` : `❌ ${result.message}`}`;
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'open_folder') {
               const result = await openFolder(parsed.folder_path);
-              const statusMsg = result.success
-                ? `✅ Opened ${parsed.folder_path}`
-                : `❌ ${result.message}`;
-              accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
+              accumulatedText += `\n\n${result.success ? `✅ Opened ${parsed.folder_path}` : `❌ ${result.message}`}`;
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'run_project') {
               const result = await runProject(parsed.project_path, parsed.command);
-              const statusMsg = result.success
-                ? `✅ Project running:\n\`\`\`\n${result.output || 'Started'}\n\`\`\``
-                : `❌ ${result.message}`;
-              accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
-              speak(result.success ? 'Project started' : 'Failed to start project');
+              accumulatedText += `\n\n${result.success ? `✅ Project running:\n\`\`\`\n${result.output || 'Started'}\n\`\`\`` : `❌ ${result.message}`}`;
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'create_folder') {
               const result = await createFolder(parsed.folder_path);
-              const statusMsg = result.success
-                ? `✅ Folder created: ${parsed.folder_path}`
-                : `❌ ${result.message}`;
-              accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
+              accumulatedText += `\n\n${result.success ? `✅ Folder created: ${parsed.folder_path}` : `❌ ${result.message}`}`;
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'create_file') {
               const result = await createTextFile(parsed.file_path, parsed.content || '');
-              const statusMsg = result.success
-                ? `✅ File created: ${parsed.file_path}`
-                : `❌ ${result.message}`;
-              accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
+              accumulatedText += `\n\n${result.success ? `✅ File created: ${parsed.file_path}` : `❌ ${result.message}`}`;
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'web_search') {
               const result = await openWebsiteWithSearch(parsed.query, parsed.engine || 'google') as any;
-              const statusMsg = result?.success
-                ? `✅ Searching for "${parsed.query}"`
-                : `❌ ${result?.message || 'Failed'}`;
-              accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
-              speak(`Searching for ${parsed.query}`);
+              accumulatedText += `\n\n${result?.success ? `✅ Searching for "${parsed.query}"` : `❌ ${result?.message || 'Failed'}`}`;
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'open_app') {
               const result = await openCustomApp(parsed.app_path) as any;
-              const statusMsg = result?.success
-                ? `✅ Opened ${parsed.app_path}`
-                : `❌ ${result?.message || 'Failed'}`;
-              accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
+              accumulatedText += `\n\n${result?.success ? `✅ Opened ${parsed.app_path}` : `❌ ${result?.message || 'Failed'}`}`;
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'check_installation') {
               const result = await checkInstallation(parsed.software) as any;
-              const statusMsg = result?.installed
-                ? `✅ ${parsed.software} is installed (${result.version || 'version unknown'})`
-                : `❌ ${parsed.software} is not installed`;
-              accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                return newMessages;
-              });
+              accumulatedText += `\n\n${result?.installed ? `✅ ${parsed.software} is installed (${result.version || 'version unknown'})` : `❌ ${parsed.software} is not installed`}`;
+              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'schedule_telegram_msg') {
-              // Handle scheduled telegram message
               if (user) {
                 const contactName = parsed.contact_name || 'Unknown';
-                const contactValue = parsed.link || '';
-                const scheduledTime = new Date(parsed.scheduled_time);
-                
-                // Get contact value from saved contacts if not provided
-                let finalContactValue = contactValue;
+                let finalContactValue = parsed.link || '';
                 if (!finalContactValue) {
-                  const savedContacts = JSON.parse(localStorage.getItem('alsa_telegram_contacts') || '[]');
-                  const found = savedContacts.find((c: any) => 
-                    c.name?.toLowerCase() === contactName.toLowerCase()
-                  );
+                  const found = JSON.parse(localStorage.getItem('alsa_telegram_contacts') || '[]').find((c: any) => c.name?.toLowerCase() === contactName.toLowerCase());
                   if (found) finalContactValue = found.value;
                 }
-                
                 if (finalContactValue) {
-                  const result = await createScheduledMessage(
-                    user.id,
-                    'telegram',
-                    contactName,
-                    finalContactValue,
-                    parsed.message,
-                    scheduledTime
-                  );
-                  
-                  const statusMsg = result.success
-                    ? `✅ Telegram message scheduled for ${scheduledTime.toLocaleString()}\n📧 To: ${contactName}\n💬 Message: "${parsed.message}"`
-                    : `❌ Failed to schedule: ${result.error}`;
-                  accumulatedText += `\n\n${statusMsg}`;
-                  setMessages(prev => {
-                    const newMessages = [...prev];
-                    const lastMsg = newMessages[newMessages.length - 1];
-                    if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                    return newMessages;
-                  });
-                  speak(result.success ? 'Message scheduled successfully' : 'Failed to schedule message');
+                  const scheduledTime = new Date(parsed.scheduled_time);
+                  const result = await createScheduledMessage(user.id, 'telegram', contactName, finalContactValue, parsed.message, scheduledTime);
+                  accumulatedText += `\n\n${result.success ? `✅ Telegram message scheduled for ${scheduledTime.toLocaleString()}\n📧 To: ${contactName}\n💬 Message: "${parsed.message}"` : `❌ Failed to schedule: ${result.error}`}`;
                 } else {
                   accumulatedText += `\n\n❌ Contact "${contactName}" not found. Please add them in Settings → Messaging Automation.`;
-                  setMessages(prev => {
-                    const newMessages = [...prev];
-                    const lastMsg = newMessages[newMessages.length - 1];
-                    if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                    return newMessages;
-                  });
                 }
-              } else {
-                accumulatedText += `\n\n❌ Please login to schedule messages.`;
-                setMessages(prev => {
-                  const newMessages = [...prev];
-                  const lastMsg = newMessages[newMessages.length - 1];
-                  if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                  return newMessages;
-                });
+                setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
               }
             } else if (parsed.type === 'schedule_whatsapp_msg') {
-              // Handle scheduled whatsapp message
               if (user) {
                 const contactName = parsed.contact_name || 'Unknown';
-                const contactValue = parsed.phone || '';
-                const scheduledTime = new Date(parsed.scheduled_time);
-                
-                // Get contact value from saved contacts if not provided
-                let finalContactValue = contactValue;
+                let finalContactValue = parsed.phone || '';
                 if (!finalContactValue) {
-                  const savedContacts = JSON.parse(localStorage.getItem('alsa_whatsapp_contacts') || '[]');
-                  const found = savedContacts.find((c: any) => 
-                    c.name?.toLowerCase() === contactName.toLowerCase()
-                  );
+                  const found = JSON.parse(localStorage.getItem('alsa_whatsapp_contacts') || '[]').find((c: any) => c.name?.toLowerCase() === contactName.toLowerCase());
                   if (found) finalContactValue = found.value;
                 }
-                
                 if (finalContactValue) {
-                  const result = await createScheduledMessage(
-                    user.id,
-                    'whatsapp',
-                    contactName,
-                    finalContactValue,
-                    parsed.message,
-                    scheduledTime
-                  );
-                  
-                  const statusMsg = result.success
-                    ? `✅ WhatsApp message scheduled for ${scheduledTime.toLocaleString()}\n📧 To: ${contactName}\n💬 Message: "${parsed.message}"`
-                    : `❌ Failed to schedule: ${result.error}`;
-                  accumulatedText += `\n\n${statusMsg}`;
-                  setMessages(prev => {
-                    const newMessages = [...prev];
-                    const lastMsg = newMessages[newMessages.length - 1];
-                    if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                    return newMessages;
-                  });
-                  speak(result.success ? 'Message scheduled successfully' : 'Failed to schedule message');
+                  const scheduledTime = new Date(parsed.scheduled_time);
+                  const result = await createScheduledMessage(user.id, 'whatsapp', contactName, finalContactValue, parsed.message, scheduledTime);
+                  accumulatedText += `\n\n${result.success ? `✅ WhatsApp message scheduled for ${scheduledTime.toLocaleString()}\n📧 To: ${contactName}\n💬 Message: "${parsed.message}"` : `❌ Failed to schedule: ${result.error}`}`;
                 } else {
                   accumulatedText += `\n\n❌ Contact "${contactName}" not found. Please add them in Settings → Messaging Automation.`;
-                  setMessages(prev => {
-                    const newMessages = [...prev];
-                    const lastMsg = newMessages[newMessages.length - 1];
-                    if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                    return newMessages;
-                  });
                 }
-              } else {
-                accumulatedText += `\n\n❌ Please login to schedule messages.`;
-                setMessages(prev => {
-                  const newMessages = [...prev];
-                  const lastMsg = newMessages[newMessages.length - 1];
-                  if (lastMsg?.role === 'assistant') lastMsg.content = accumulatedText;
-                  return newMessages;
-                });
+                setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
               }
             }
           } catch (parseError) {
-            // Ignore JSON parse errors for malformed chunks
             if (!(parseError instanceof SyntaxError)) {
               console.error("Chat Stream Tool Execution Error:", parseError);
             }
@@ -1603,7 +1205,6 @@ Output rules (strict markdown):
           await saveConversation(userMessage, { role: 'assistant', content: accumulatedText });
         }
       } else {
-        // Empty assistant placeholder ko permanent "Neural Processing" state me mat chhodo.
         setMessages(prev => {
           const next = [...prev];
           const last = next[next.length - 1];
@@ -1622,43 +1223,24 @@ Output rules (strict markdown):
         if (last?.role === 'assistant' && !last.content.trim()) next.pop();
         return [...next, { role: 'assistant', content: errorMessage }];
       });
-      toast({
-        title: "AI Response Error",
-        description: "Something went wrong. Contact support@alsa-ai.in if the issue persists.",
-        variant: "destructive"
-      });
     }
   };
   const hasMessages = messages.length > 0;
-  // Mobile UI
   if (isMobile) {
     return (
       <div className="flex flex-col h-[100dvh] w-full bg-[#0d0d0d] text-white overflow-hidden max-w-full">
-        {/* Scheduled Message Checker - Background Component */}
         <ScheduledMessageChecker userId={user?.id || null} />
-        {/* Mobile Top Bar */}
         <div className="flex items-center justify-between p-3 border-b border-white/5 bg-black/40 backdrop-blur-xl">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowSidebar(true)}
-            className="text-white/60"
-          >
+          <Button variant="ghost" size="icon" onClick={() => setShowSidebar(true)} className="text-white/60">
             <Menu className="w-5 h-5" />
           </Button>
           <span className="text-sm font-bold tracking-wider text-blue-400">ALSA</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowRightPanel(true)}
-            className="text-white/60"
-          >
+          <Button variant="ghost" size="icon" onClick={() => setShowRightPanel(true)} className="text-white/60">
             <Settings className="w-5 h-5" />
           </Button>
         </div>
-        {/* Chat Area */}
-          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain">
-  <div className="px-3 py-3 space-y-4 overflow-x-hidden max-w-full w-full">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain">
+          <div className="px-3 py-3 space-y-4 overflow-x-hidden max-w-full w-full">
             {!hasMessages && (
               <div className="flex flex-col items-center justify-center py-24">
                 <h1 className="text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20">
@@ -1682,9 +1264,7 @@ Output rules (strict markdown):
             <div ref={messagesEndRef} className="h-2" />
           </div>
         </div>
-        {/* Mobile Input */}
         <div className="shrink-0 p-2 border-t border-white/5 bg-black/60 backdrop-blur-xl">
-          {/* Voice Feedback - Top Left */}
           {isListening && (
             <div className="mb-2">
               <TranscriptionFeedback transcript={transcript} isListening={isListening} />
@@ -1710,7 +1290,6 @@ Output rules (strict markdown):
                   <button
                     onClick={() => setUploadedFiles(prev => prev.filter((_, idx) => idx !== i))}
                     className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 hover:scale-110 transition"
-                    aria-label="Remove file"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -1718,147 +1297,120 @@ Output rules (strict markdown):
               ))}
             </div>
           )}
-  <div className="flex items-end gap-1.5 bg-[#1e1f20] border border-white/10 rounded-[26px] px-2 py-1.5">
-    <input
-      ref={fileInputRef}
-      type="file"
-      multiple
-      accept="image/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.md,.csv,.json,.xml"
-      className="hidden"
-      onChange={(e) => { handleNativeFiles(e.target.files); e.target.value = ''; }}
-    />
-    {/* + : premium tools */}
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild disabled={isTyping}>
-        <button
-          type="button"
-          aria-label="Premium tools"
-          className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center transition ${
-            activeTool ? 'bg-blue-500/20 text-blue-300' : 'text-white/60 hover:text-white hover:bg-white/10'
-          }`}
-        >
-          <Plus className="w-5 h-5" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="top" align="start" className="bg-[#141414] border-white/10 text-white w-56">
-        <DropdownMenuItem onClick={() => setActiveTool('image')} className="cursor-pointer">🖼️ Image Generation</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setActiveTool('deep')} className="cursor-pointer">🔍 Deep Research</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setActiveTool('learn')} className="cursor-pointer">🎓 Smart Learning</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setActiveTool('create')} className="cursor-pointer">📄 Create (file / PDF)</DropdownMenuItem>
-        {activeTool && (
-          <DropdownMenuItem onClick={() => setActiveTool(null)} className="cursor-pointer text-white/50">✕ Clear tool</DropdownMenuItem>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
-    {/* attach any file */}
-    <button
-      type="button"
-      disabled={isTyping}
-      onClick={() => fileInputRef.current?.click()}
-      title="Attach images, PDFs, documents, code files"
-      className="shrink-0 h-9 w-9 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition disabled:opacity-40"
-    >
-      <Paperclip className="w-[18px] h-[18px]" />
-    </button>
-    <Textarea
-      value={inputText}
-      disabled={isTyping}
-      onChange={(e) => {
-        setInputText(e.target.value);
-        e.target.style.height = 'auto';
-        e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px';
-      }}
-      onKeyPress={(e) => {
-        if (e.key === 'Enter' && !e.shiftKey && !isTyping) {
-          e.preventDefault();
-          handleSubmit();
-        }
-      }}
-      placeholder={
-        isListening ? 'Listening... please speak'
-          : isTyping ? 'Alsa is responding...'
-          : activeTool ? `${activeTool === 'image' ? 'Describe the image' : activeTool === 'deep' ? 'What should I research' : activeTool === 'learn' ? 'What should I teach you' : 'What should I create'}...`
-          : 'Ask Alsa AI'
-      }
-      className="flex-1 min-w-0 bg-transparent border-none text-white text-[15px] focus-visible:ring-0 resize-none overflow-y-auto max-h-[140px] min-h-[38px] py-2 px-1"
-      rows={1}
-    />
-    <button
-      type="button"
-      onClick={toggleVoice}
-      title={isListening ? 'Stop mic' : 'Voice input'}
-      className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center transition ${
-        isListening ? 'text-red-400 bg-red-500/10 animate-pulse' : 'text-white/60 hover:text-white hover:bg-white/10'
-      }`}
-    >
-      <Mic className="w-[18px] h-[18px]" />
-    </button>
-    <button
-      type="button"
-      disabled={isTyping}
-      onClick={() => handleSubmit()}
-      className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center transition ${
-        isTyping ? 'bg-white/10 text-white/30' : 'bg-blue-600 text-white hover:bg-blue-500'
-      }`}
-    >
-      <Send className="w-[17px] h-[17px]" />
-    </button>
-  </div>
-  {activeTool && (
-    <button
-      type="button"
-      onClick={() => setActiveTool(null)}
-      className="mt-1.5 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-200"
-    >
-      {activeTool === 'image' ? 'Image' : activeTool === 'deep' ? 'Deep Research' : activeTool === 'learn' ? 'Smart Learning' : 'Create'} ✕
-    </button>
-  )}
-</div>
-        {/* Mobile Sidebar Overlay */}
+          <div className="flex items-end gap-1.5 bg-[#1e1f20] border border-white/10 rounded-[26px] px-2 py-1.5">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.md,.csv,.json,.xml"
+              className="hidden"
+              onChange={(e) => { handleNativeFiles(e.target.files); e.target.value = ''; }}
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild disabled={isTyping}>
+                <button
+                  type="button"
+                  className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center transition ${
+                    activeTool ? 'bg-blue-500/20 text-blue-300' : 'text-white/60 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="bg-[#141414] border-white/10 text-white w-56">
+                <DropdownMenuItem onClick={() => setActiveTool('image')} className="cursor-pointer">🖼️ Image Generation</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTool('deep')} className="cursor-pointer">🔍 Deep Research</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTool('learn')} className="cursor-pointer">🎓 Smart Learning</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTool('create')} className="cursor-pointer">📄 Create (file / PDF)</DropdownMenuItem>
+                {activeTool && (
+                  <DropdownMenuItem onClick={() => setActiveTool(null)} className="cursor-pointer text-white/50">✕ Clear tool</DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <button
+              type="button"
+              disabled={isTyping}
+              onClick={() => fileInputRef.current?.click()}
+              className="shrink-0 h-9 w-9 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition disabled:opacity-40"
+            >
+              <Paperclip className="w-[18px] h-[18px]" />
+            </button>
+            <Textarea
+              value={inputText}
+              disabled={isTyping}
+              onChange={(e) => {
+                setInputText(e.target.value);
+                e.target.style.height = 'auto';
+                e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px';
+              }}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey && !isTyping) {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
+              placeholder={
+                isListening ? 'Listening...'
+                  : isTyping ? 'Alsa is responding...'
+                  : activeTool ? `${activeTool === 'image' ? 'Describe the image' : activeTool === 'deep' ? 'What should I research' : activeTool === 'learn' ? 'What should I teach you' : 'What should I create'}...`
+                  : 'Ask Alsa AI'
+              }
+              className="flex-1 min-w-0 bg-transparent border-none text-white text-[15px] focus-visible:ring-0 resize-none overflow-y-auto max-h-[140px] min-h-[38px] py-2 px-1"
+              rows={1}
+            />
+            <button
+              type="button"
+              onClick={toggleVoice}
+              className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center transition ${
+                isListening ? 'text-red-400 bg-red-500/10 animate-pulse' : 'text-white/60 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              <Mic className="w-[18px] h-[18px]" />
+            </button>
+            <button
+              type="button"
+              disabled={isTyping}
+              onClick={() => handleSubmit()}
+              className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center transition ${
+                isTyping ? 'bg-white/10 text-white/30' : 'bg-blue-600 text-white hover:bg-blue-500'
+              }`}
+            >
+              <Send className="w-[17px] h-[17px]" />
+            </button>
+          </div>
+          {activeTool && (
+            <button
+              type="button"
+              onClick={() => setActiveTool(null)}
+              className="mt-1.5 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-200"
+            >
+              {activeTool === 'image' ? 'Image' : activeTool === 'deep' ? 'Deep Research' : activeTool === 'learn' ? 'Smart Learning' : 'Create'} ✕
+            </button>
+          )}
+        </div>
         {showSidebar && (
           <div className="fixed inset-0 z-50 bg-black/80" onClick={() => setShowSidebar(false)}>
             <div className="w-72 h-full" onClick={e => e.stopPropagation()}>
-              <Sidebar
-                bridgeConnected={bridgeConnected || phoneBridgeConnected}
-                onNewChat={handleNewConversation}
-                onOpenMemory={() => setShowMemoryManager(true)}
-                onToggleBridge={phoneBridgeConnected ? togglePhoneBridgeConnection : toggleBridgeConnection}
-                currentConversationId={currentConversationId}
-              />
+              <Sidebar bridgeConnected={bridgeConnected || phoneBridgeConnected} onNewChat={handleNewConversation} onOpenMemory={() => setShowMemoryManager(true)} onToggleBridge={phoneBridgeConnected ? togglePhoneBridgeConnection : toggleBridgeConnection} currentConversationId={currentConversationId} />
             </div>
           </div>
         )}
-        {/* Mobile Right Panel Overlay */}
         {showRightPanel && (
           <div className="fixed inset-0 z-50 bg-black/80" onClick={() => setShowRightPanel(false)}>
             <div className="w-72 h-full ml-auto" onClick={e => e.stopPropagation()}>
-              <RightPanel
-                user={user}
-                bridgeConnected={bridgeConnected}
-                isListening={isListening}
-                isSpeaking={isSpeaking}
-                toggleVoice={toggleVoice}
-                onOpenMemory={() => setShowMemoryManager(true)}
-                backupKeyActive={backupKeyActive}
-              />
+              <RightPanel user={user} bridgeConnected={bridgeConnected} isListening={isListening} isSpeaking={isSpeaking} toggleVoice={toggleVoice} onOpenMemory={() => setShowMemoryManager(true)} backupKeyActive={backupKeyActive} />
             </div>
           </div>
         )}
-        {/* File Upload Dialog */}
         <Dialog open={showFileUpload} onOpenChange={setShowFileUpload}>
           <DialogContent className="bg-[#0a0a0a] border-white/10 text-white">
-            <DialogHeader>
-              <DialogTitle>Upload Files</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Upload Files</DialogTitle></DialogHeader>
             <FileUpload onFilesSelected={handleFilesSelected} maxFiles={10} />
           </DialogContent>
         </Dialog>
-        {/* Memory Manager */}
         <Dialog open={showMemoryManager} onOpenChange={setShowMemoryManager}>
           <DialogContent className="bg-[#0a0a0a] border-white/10 text-white max-w-2xl">
-            <DialogHeader>
-              <DialogTitle className="text-xs uppercase tracking-[0.3em] text-blue-500 font-bold">Neural Data Bank</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle className="text-xs uppercase tracking-[0.3em] text-blue-500 font-bold">Neural Data Bank</DialogTitle></DialogHeader>
             <MemoryManager />
           </DialogContent>
         </Dialog>
@@ -1867,68 +1419,36 @@ Output rules (strict markdown):
       </div>
     );
   }
-  // ================= DESKTOP UI =================
   return (
     <div className="flex h-[100dvh] w-full bg-[#0d0d0d] text-white overflow-hidden">
-      {/* Scheduled Message Checker - Background Component */}
       <ScheduledMessageChecker userId={user?.id || null} />
       
-      {/* ========== SIDEBAR / LEFT PANEL ========= */}
-      <Sidebar
-        bridgeConnected={bridgeConnected || phoneBridgeConnected}
-        onNewChat={handleNewConversation}
-        onOpenMemory={() => setShowMemoryManager(true)}
-        onToggleBridge={phoneBridgeConnected ? togglePhoneBridgeConnection : toggleBridgeConnection}
-        currentConversationId={currentConversationId}
-      />
-      {/* ========== CENTER CHAT AREA ========= */}
+      <Sidebar bridgeConnected={bridgeConnected || phoneBridgeConnected} onNewChat={handleNewConversation} onOpenMemory={() => setShowMemoryManager(true)} onToggleBridge={phoneBridgeConnected ? togglePhoneBridgeConnection : toggleBridgeConnection} currentConversationId={currentConversationId} />
       <div className="flex-[1_1_0%] min-w-0 relative flex flex-col overflow-hidden">
-        {/* Background Gradient */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(17,24,39,1)_0%,rgba(0,0,0,1)_100%)]" />
         <div className="relative z-10 flex-1 flex flex-col overflow-hidden">
-          {/* EMPTY STATE */}
           {!messages.length ? (
             <div className="flex-1 flex flex-col items-center justify-center px-6">
-              <h1 className="text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20">
-                ALSA AI
-              </h1>
-              <p className="mt-3 text-blue-500/50 font-mono text-[10px] tracking-[0.5em] uppercase">
-                Alsa AI From Chat To Execution 5.1
-              </p>
+              <h1 className="text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20">ALSA AI</h1>
+              <p className="mt-3 text-blue-500/50 font-mono text-[10px] tracking-[0.5em] uppercase">Alsa AI From Chat To Execution 5.1</p>
               <div className="mt-14 w-full max-w-2xl">
                 <div className="flex items-center bg-black/50 border border-white/10 rounded-2xl px-6 py-4 backdrop-blur-xl gap-3">
                   <Textarea
                     ref={inputRef}
                     value={inputText}
-                    onChange={(e) => {
-                      setInputText(e.target.value);
-                      e.target.style.height = 'auto';
-                      e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
-                    }}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSubmit();
-                      }
-                    }}
+                    onChange={(e) => { setInputText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px'; }}
+                    onKeyPress={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
                     placeholder={isListening ? "Listening... Please Speak" : "Enter Command..."}
                     className="bg-transparent border-none text-white text-sm flex-1 focus-visible:ring-0 resize-none overflow-y-auto max-h-[150px] min-h-[40px]"
                     rows={1}
                   />
-                  <Mic
-                    className={`w-6 h-6 cursor-pointer transition-colors ${isListening ? 'text-red-400 animate-pulse' : 'text-white/60 hover:text-blue-400'}`}
-                    onClick={toggleVoice}
-                  />
-                  <Send
-                    className="w-6 h-6 cursor-pointer hover:text-blue-400 transition-colors"
-                    onClick={() => handleSubmit()}
-                  />
+                  <Mic className={`w-6 h-6 cursor-pointer transition-colors ${isListening ? 'text-red-400 animate-pulse' : 'text-white/60 hover:text-blue-400'}`} onClick={toggleVoice} />
+                  <Send className="w-6 h-6 cursor-pointer hover:text-blue-400 transition-colors" onClick={() => handleSubmit()} />
                 </div>
               </div>
             </div>
           ) : (
             <>
-              {/* CHAT MESSAGES */}
               <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-6">
                 <div className="max-w-5xl mx-auto py-8 space-y-8 w-full min-w-0">
                   {messages.map((m, i) => (
@@ -1944,220 +1464,91 @@ Output rules (strict markdown):
                   <div ref={messagesEndRef} />
                 </div>
               </div>
-              {/* VOICE FEEDBACK - TOP LEFT OF CHAT */}
               {isListening && (
                 <div className="px-6 pt-2 pb-2">
                   <TranscriptionFeedback transcript={transcript} isListening={isListening} />
                 </div>
               )}
-              {/* INPUT BAR (DURING CHAT) */}
-<div className="px-6 py-4 bg-gradient-to-t from-black via-black/80 to-transparent">
-  <div className="max-w-5xl mx-auto">
-    {uploadedFiles.length > 0 && (
-      <div className="flex gap-2 mb-2 flex-wrap">
-        {uploadedFiles.map((f, i) => (
-          <div key={i} className="relative group bg-[#1a1a1a]/80 border border-white/10 rounded-xl p-1.5 flex items-center gap-2 pr-6 backdrop-blur-xl">
-            {f.preview || f.type.startsWith('image/') ? (
-              <img src={f.preview || f.data} alt={f.name} className="w-12 h-12 rounded-lg object-cover" />
-            ) : (
-              <div className="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 text-[10px] font-bold uppercase">
-                {f.name.split('.').pop()?.slice(0, 4) || 'FILE'}
+              <div className="px-6 py-4 bg-gradient-to-t from-black via-black/80 to-transparent">
+                <div className="max-w-5xl mx-auto">
+                  {uploadedFiles.length > 0 && (
+                    <div className="flex gap-2 mb-2 flex-wrap">
+                      {uploadedFiles.map((f, i) => (
+                        <div key={i} className="relative group bg-[#1a1a1a]/80 border border-white/10 rounded-xl p-1.5 flex items-center gap-2 pr-6 backdrop-blur-xl">
+                          {f.preview || f.type.startsWith('image/') ? (
+                            <img src={f.preview || f.data} alt={f.name} className="w-12 h-12 rounded-lg object-cover" />
+                          ) : (
+                            <div className="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 text-[10px] font-bold uppercase">{f.name.split('.').pop()?.slice(0, 4) || 'FILE'}</div>
+                          )}
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-xs text-white truncate max-w-[140px]">{f.name}</span>
+                            <span className="text-[10px] text-white/40">{(f.size / 1024).toFixed(0)} KB{f.extractedText ? ' · text ✓' : ''}</span>
+                          </div>
+                          <button onClick={() => setUploadedFiles(prev => prev.filter((_, idx) => idx !== i))} className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 hover:scale-110 transition"><X className="w-3 h-3" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 mb-2 px-1">
+                    <button type="button" onClick={() => { setAiMode('fast'); localStorage.setItem('alsa_ai_mode', 'fast'); }} className={`text-[10px] uppercase tracking-widest px-3 py-1 rounded-full border transition ${aiMode === 'fast' ? 'bg-blue-500/20 border-blue-400/40 text-blue-200' : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'}`}>⚡ Fast</button>
+                    <button type="button" onClick={() => { setAiMode('thinking'); localStorage.setItem('alsa_ai_mode', 'thinking'); }} className={`text-[10px] uppercase tracking-widest px-3 py-1 rounded-full border transition ${aiMode === 'thinking' ? 'bg-purple-500/20 border-purple-400/40 text-purple-200' : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'}`}>🧠 Thinking</button>
+                  </div>
+                  <div className="flex items-center gap-3 bg-[#1a1a1a]/80 border border-white/10 rounded-2xl px-5 py-3 backdrop-blur-xl">
+                    <input ref={fileInputRef} type="file" multiple accept="image/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.md,.csv,.json,.xml" className="hidden" onChange={(e) => { handleNativeFiles(e.target.files); e.target.value = ''; }} />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild disabled={isTyping}>
+                        <button type="button" className={`flex-shrink-0 rounded-full p-1 transition ${activeTool ? 'bg-blue-500/20 text-blue-300' : 'text-white/30 hover:text-white'} ${isTyping ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}><Plus className="w-5 h-5" /></button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent side="top" align="start" className="bg-[#141414] border-white/10 text-white w-56">
+                        <DropdownMenuItem onClick={() => setActiveTool('image')} className="cursor-pointer">🖼️ Image Generation</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setActiveTool('deep')} className="cursor-pointer">🔍 Deep Research</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setActiveTool('learn')} className="cursor-pointer">🎓 Smart Learning</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setActiveTool('create')} className="cursor-pointer">📄 Create (file / PDF)</DropdownMenuItem>
+                        {activeTool && <DropdownMenuItem onClick={() => setActiveTool(null)} className="cursor-pointer text-white/50">✕ Clear tool</DropdownMenuItem>}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <button type="button" disabled={isTyping} onClick={() => fileInputRef.current?.click()} className="flex-shrink-0 rounded-full p-1 text-white/30 hover:text-white transition disabled:opacity-40"><Paperclip className="w-5 h-5" /></button>
+                    {activeTool && <button type="button" onClick={() => setActiveTool(null)} className="flex-shrink-0 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-200">{activeTool === 'image' ? 'Image' : activeTool === 'deep' ? 'Deep Research' : activeTool === 'learn' ? 'Smart Learning' : 'Create'} ✕</button>}
+                    <Textarea
+                      value={inputText}
+                      disabled={isTyping}
+                      onChange={(e) => { setInputText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px'; }}
+                      onKeyPress={(e) => { if (e.key === 'Enter' && !e.shiftKey && !isTyping) { e.preventDefault(); handleSubmit(); } }}
+                      placeholder={isListening ? "Listening..." : isTyping ? "ALSA is responding..." : "Message ALSA..."}
+                      className="bg-transparent border-none flex-1 px-4 text-sm focus-visible:ring-0 disabled:opacity-50 resize-none overflow-y-auto max-h-[150px] min-h-[40px]"
+                      rows={1}
+                    />
+                    <Mic className={`w-5 h-5 flex-shrink-0 transition cursor-pointer ${isListening ? 'text-red-400 animate-pulse' : 'text-white/40 hover:text-white'}`} onClick={toggleVoice} />
+                    <Send className={`w-5 h-5 rounded-full p-1 transition flex-shrink-0 ${isTyping ? 'bg-gray-500 cursor-not-allowed opacity-50' : 'text-black bg-white cursor-pointer hover:scale-110'}`} onClick={() => !isTyping && handleSubmit()} />
+                  </div>
+                </div>
               </div>
-            )}
-            <div className="flex flex-col min-w-0">
-              <span className="text-xs text-white truncate max-w-[140px]">{f.name}</span>
-              <span className="text-[10px] text-white/40">
-                {(f.size / 1024).toFixed(0)} KB{f.extractedText ? ' · text ✓' : ''}
-              </span>
-            </div>
-            <button
-              onClick={() => setUploadedFiles(prev => prev.filter((_, idx) => idx !== i))}
-              className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 hover:scale-110 transition"
-              aria-label="Remove file"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </div>
-        ))}
-      </div>
-    )}
-    {/* Mode toggle: Fast vs Thinking */}
-    <div className="flex items-center gap-2 mb-2 px-1">
-      <button
-        type="button"
-        onClick={() => { setAiMode('fast'); localStorage.setItem('alsa_ai_mode', 'fast'); }}
-        className={`text-[10px] uppercase tracking-widest px-3 py-1 rounded-full border transition ${
-          aiMode === 'fast'
-            ? 'bg-blue-500/20 border-blue-400/40 text-blue-200'
-            : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'
-        }`}
-        title="Fast: quick replies, snappy"
-      >
-        ⚡ Fast
-      </button>
-      <button
-        type="button"
-        onClick={() => { setAiMode('thinking'); localStorage.setItem('alsa_ai_mode', 'thinking'); }}
-        className={`text-[10px] uppercase tracking-widest px-3 py-1 rounded-full border transition ${
-          aiMode === 'thinking'
-            ? 'bg-purple-500/20 border-purple-400/40 text-purple-200'
-            : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'
-        }`}
-        title="Thinking: deeper reasoning + latest info"
-      >
-        🧠 Thinking
-      </button>
-      <span className="text-[9px] text-white/30 ml-auto hidden sm:inline">
-        {aiMode === 'thinking' ? 'Deeper reasoning · slower' : 'Quick & snappy'}
-      </span>
-    </div>
-    <div className="flex items-center gap-3 bg-[#1a1a1a]/80 border border-white/10 rounded-2xl px-5 py-3 backdrop-blur-xl">
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        accept="image/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.md,.csv,.json,.xml"
-        className="hidden"
-        onChange={(e) => { handleNativeFiles(e.target.files); e.target.value = ''; }}
-      />
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild disabled={isTyping}>
-          <button
-            type="button"
-            aria-label="Add attachment or tool"
-            className={`flex-shrink-0 rounded-full p-1 transition ${
-              activeTool ? 'bg-blue-500/20 text-blue-300' : 'text-white/30 hover:text-white'
-            } ${isTyping ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-          >
-            <Plus className="w-5 h-5" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent side="top" align="start" className="bg-[#141414] border-white/10 text-white w-56">
-          <DropdownMenuItem onClick={() => setActiveTool('image')} className="cursor-pointer">
-            🖼️ Image Generation
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setActiveTool('deep')} className="cursor-pointer">
-            🔍 Deep Research
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setActiveTool('learn')} className="cursor-pointer">
-            🎓 Smart Learning
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setActiveTool('create')} className="cursor-pointer">
-            📄 Create (file / PDF)
-          </DropdownMenuItem>
-          {activeTool && (
-            <DropdownMenuItem onClick={() => setActiveTool(null)} className="cursor-pointer text-white/50">
-              ✕ Clear tool
-            </DropdownMenuItem>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <button
-        type="button"
-        disabled={isTyping}
-        onClick={() => fileInputRef.current?.click()}
-        title="Attach images, PDFs, documents, code files"
-        className="flex-shrink-0 rounded-full p-1 text-white/30 hover:text-white transition disabled:opacity-40"
-      >
-        <Paperclip className="w-5 h-5" />
-      </button>
-      {activeTool && (
-        <button
-          type="button"
-          onClick={() => setActiveTool(null)}
-          className="flex-shrink-0 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-200"
-        >
-          {activeTool === 'image' ? 'Image' : activeTool === 'deep' ? 'Deep Research' : activeTool === 'learn' ? 'Smart Learning' : 'Create'} ✕
-        </button>
-      )}
-      <Textarea
-        value={inputText}
-        disabled={isTyping}
-        onChange={(e) => {
-          setInputText(e.target.value);
-          e.target.style.height = 'auto';
-          e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
-        }}
-        onKeyPress={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey && !isTyping) {
-            e.preventDefault();
-            handleSubmit();
-          }
-        }}
-        placeholder={isListening ? "Listening... please speak" : isTyping ? "ALSA is responding..." : "Message ALSA... (try /deep <query> or /create <topic>)"}
-        className="bg-transparent border-none flex-1 px-4 text-sm focus-visible:ring-0 disabled:opacity-50 resize-none overflow-y-auto max-h-[150px] min-h-[40px]"
-        rows={1}
-      />
-      <Mic
-        className={`w-5 h-5 flex-shrink-0 transition cursor-pointer ${
-          isListening ? 'text-red-400 animate-pulse' : 'text-white/40 hover:text-white'
-        }`}
-        onClick={toggleVoice}
-      />
-      <Send
-        className={`w-5 h-5 rounded-full p-1 transition flex-shrink-0 ${
-          isTyping
-            ? 'bg-gray-500 cursor-not-allowed opacity-50'
-            : 'text-black bg-white cursor-pointer hover:scale-110'
-        }`}
-        onClick={() => !isTyping && handleSubmit()}
-      />
-    </div>
-  </div>
-</div>
-        
             </>
           )}
         </div>
       </div>
-      {/* ========== RIGHT PANEL ========= */}
       <div className={`shrink-0 border-l border-white/5 bg-black/40 backdrop-blur-md transition-all duration-300 ${rightPanelCollapsed ? 'w-[50px]' : 'w-[260px]'}`}>
-        <RightPanel
-          user={user}
-          bridgeConnected={bridgeConnected}
-          isListening={isListening}
-          isSpeaking={isSpeaking}
-          toggleVoice={toggleVoice}
-          onOpenMemory={() => setShowMemoryManager(true)}
-          backupKeyActive={backupKeyActive}
-          isCollapsed={rightPanelCollapsed}
-          onToggleCollapse={() => setRightPanelCollapsed(!rightPanelCollapsed)}
-        />
+        <RightPanel user={user} bridgeConnected={bridgeConnected} isListening={isListening} isSpeaking={isSpeaking} toggleVoice={toggleVoice} onOpenMemory={() => setShowMemoryManager(true)} backupKeyActive={backupKeyActive} isCollapsed={rightPanelCollapsed} onToggleCollapse={() => setRightPanelCollapsed(!rightPanelCollapsed)} />
       </div>
-      {/* ========== ALL MODALS & OVERLAYS ========= */}
-      {/* Memory Manager Modal */}
       <Dialog open={showMemoryManager} onOpenChange={setShowMemoryManager}>
         <DialogContent className="bg-[#0a0a0a] border-white/10 text-white max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-xs tracking-[0.3em] uppercase text-blue-500">
-              Neural Data Bank
-            </DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle className="text-xs tracking-[0.3em] uppercase text-blue-500">Neural Data Bank</DialogTitle></DialogHeader>
           <MemoryManager />
         </DialogContent>
       </Dialog>
-      {/* File Upload Modal */}
       <Dialog open={showFileUpload} onOpenChange={setShowFileUpload}>
         <DialogContent className="bg-[#0a0a0a] border-white/10 text-white">
           <FileUpload onFilesSelected={handleFilesSelected} maxFiles={10} />
         </DialogContent>
       </Dialog>
-      {/* Players & Tools */}
       <MusicPlayer song={currentSong} onClose={() => setCurrentSong(null)} />
       <GameLauncher game={currentGame as any} onClose={() => setCurrentGame(null)} />
-      {/* Reminder Notification System */}
       <ReminderNotification userId={user?.id || null} />
-      {/* 4.0 Update Notice — shown once per user on first open */}
-      <Dialog open={show40Update} onOpenChange={(o) => {
-        setShow40Update(o);
-        if (!o) { try { localStorage.setItem('alsa_seen_update_v4', '1'); } catch {} }
-      }}>
+      <Dialog open={show40Update} onOpenChange={(o) => { setShow40Update(o); if (!o) { try { localStorage.setItem('alsa_seen_update_v4', '1'); } catch {} } }}>
         <DialogContent className="bg-gradient-to-br from-[#0a0a0a] to-[#0d1425] border-blue-500/30 text-white max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
-              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500">
-                <Sparkles className="w-4 h-4 text-white" />
-              </span>
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500"><Sparkles className="w-4 h-4 text-white" /></span>
               Alsa AI 4.0 — What's New
             </DialogTitle>
           </DialogHeader>
@@ -2165,8 +1556,6 @@ Output rules (strict markdown):
             <p>A big update just landed. Highlights:</p>
             <ul className="list-disc list-inside space-y-1 text-white/60">
               <li>Bring Your Own API Key (BYOK)</li>
-              <li>First 50 signups → 1 month Pro FREE</li>
-              <li>Avatar Chat (Mira) fixed</li>
               <li>Phone Bridge for Android via Termux</li>
               <li>Call / WhatsApp by contact name</li>
               <li>yt-dlp → videos to DCIM, audio to Music</li>
@@ -2175,20 +1564,8 @@ Output rules (strict markdown):
             </ul>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="ghost" onClick={() => {
-              try { localStorage.setItem('alsa_seen_update_v4', '1'); } catch {}
-              setShow40Update(false);
-            }}>Dismiss</Button>
-            <Button
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90"
-              onClick={() => {
-                try { localStorage.setItem('alsa_seen_update_v4', '1'); } catch {}
-                setShow40Update(false);
-                navigate('/update-history');
-              }}
-            >
-              See full update history →
-            </Button>
+            <Button variant="ghost" onClick={() => { try { localStorage.setItem('alsa_seen_update_v4', '1'); } catch {} setShow40Update(false); }}>Dismiss</Button>
+            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90" onClick={() => { try { localStorage.setItem('alsa_seen_update_v4', '1'); } catch {} setShow40Update(false); navigate('/update-history'); }}>See full update history →</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
