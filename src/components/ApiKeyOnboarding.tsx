@@ -51,14 +51,14 @@ const ApiKeyOnboarding = () => {
     localStorage.setItem(LS_KEY, apiKey.trim());
     localStorage.setItem(LS_MODEL, model);
     localStorage.setItem(LS_SEEN, '1');
-    toast({ title: '✅ Key Saved', description: 'Ab tumhari personal API key use hogi.' });
+    toast({ title: '✅ Key Saved', description: 'Your personal API key will now be used.' });
     setOpen(false);
   };
 
   const skip = () => {
     localStorage.setItem(LS_SEEN, '1');
     setOpen(false);
-    toast({ title: 'Skipped', description: 'Baad mein Settings se add kar sakte ho.' });
+    toast({ title: 'Skipped', description: 'You can add it later from Settings.' });
   };
 
   return (
@@ -69,7 +69,7 @@ const ApiKeyOnboarding = () => {
             <Sparkles className="w-5 h-5 text-primary" /> Welcome to Alsa AI!
           </DialogTitle>
           <DialogDescription>
-            Apni khud ki Google AI API key add karo — isse tumhare chats bilkul private aur unlimited rahenge (hamari quota use nahi hogi).
+            Add your own Google AI API key — this keeps your chats completely private and unlimited (without using our quota).
           </DialogDescription>
         </DialogHeader>
 
@@ -93,7 +93,7 @@ const ApiKeyOnboarding = () => {
               rel="noopener noreferrer"
               className="text-xs text-primary flex items-center gap-1 mt-2 hover:underline"
             >
-              Free key yahan se banao <ExternalLink className="w-3 h-3" />
+              Get your free key here <ExternalLink className="w-3 h-3" />
             </a>
           </div>
 
