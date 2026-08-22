@@ -11,7 +11,7 @@ export interface BridgeStatus {
 export const PHONE_BRIDGE_URL = 'http://127.0.0.1:5002';
 
 // FIX: Increased timeout for heavy Android automation payloads
-const PHONE_REQUEST_TIMEOUT_MS = 60000; 
+const PHONE_REQUEST_TIMEOUT_MS = 65000; 
 
 // --- HELPER: Phone number sanitizer and strict string validator ---
 const sanitizePhoneNumber = (input: string): string => {
