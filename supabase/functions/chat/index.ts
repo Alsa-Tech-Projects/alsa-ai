@@ -135,7 +135,7 @@ async function deepWebSearch(query: string): Promise<string> {
 
 async function generateProjectFiles(input: { project_type: string; description: string }): Promise<Record<string, string>> {
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: `Return ONLY valid JSON: {"files": {"path": "content"}}. No markdown. Project: ${input.project_type}. Description: ${input.description}` }] }] }),
@@ -178,10 +178,10 @@ serve(async (req) => {
 
     // Pick Gemini model based on mode (or user's chosen BYOK model)
     // thinking → gemini-2.5-pro (deeper reasoning, slower)
-    // fast     → gemini-2.5-flash (default, snappy)
+    // fast     → gemini-3.6-flash (default, snappy)
     const geminiModel = userModel && String(userModel).startsWith("gemini")
       ? String(userModel)
-      : (mode === "thinking" ? "gemini-2.5-pro" : "gemini-2.5-flash");
+      : (mode === "thinking" ? "gemini-2.5-pro" : "gemini-3.6-flash");
 
     // === /deep COMMAND: Web search + scraping context injection ===
     let deepWebContext = "";
@@ -1064,7 +1064,7 @@ const modelChain = geminiModel === "gemini-3.6-flash"
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${lovableKey}` },
         body: JSON.stringify({
-          model: mode === "thinking" ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash",
+          model: mode === "thinking" ? "google/gemini-2.5-pro" : "google/gemini-3.6-flash",
           messages: [
             { role: "system", content: systemPrompt },
             ...messages.map((m: any) => ({ role: m.role, content: String(m.content || "") })),

@@ -508,7 +508,7 @@ const Settings = () => {
                       <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro</SelectItem>
                       <SelectItem value="gemini-2.0-flash">Gemini 2.0 Flash</SelectItem>
                       <SelectItem value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</SelectItem>
-                      <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</SelectItem>
+                      <SelectItem value="gemini-3.6-flash">Gemini 2.5 Flash (Recommended)</SelectItem>
                       <SelectItem value="gemini-2.5-pro">Gemini 2.5 Pro (Most Powerful)</SelectItem>
                     </SelectContent>
                   </Select>

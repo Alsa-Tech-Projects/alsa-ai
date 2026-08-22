@@ -124,7 +124,7 @@ async function streamChat(
   thinking: boolean,
   memoryContext: string,
 ) {
-  const model = thinking ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash";
+  const model = thinking ? "google/gemini-2.5-pro" : "google/gemini-3.6-flash";
 
   const body = {
     model,
