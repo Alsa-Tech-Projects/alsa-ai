@@ -934,9 +934,7 @@ ${String(customInstructions).slice(0, 2000)}
 
 
     // Variant 2: Conditional assignment
-    const modelChain = geminiModel === "gemini-3.6-flash"
-      ? ["gemini-3.6-flash", "gemini-1.5-flash"]
-      : ["gemini-2.0-flash", "gemini-1.5-flash"];
+    const modelChain = ["gemini-3.6-flash"];
 
 
     const makeGeminiRequest = async (): Promise<Response> => {
