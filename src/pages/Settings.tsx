@@ -77,7 +77,7 @@ const Settings = () => {
     typeof window !== 'undefined' ? (localStorage.getItem('alsa_user_api_key') || '') : ''
   );
   const [userModel, setUserModel] = useState<string>(
-    typeof window !== 'undefined' ? (localStorage.getItem('alsa_user_model') || 'gemini-2.5-flash') : 'gemini-2.5-flash'
+    typeof window !== 'undefined' ? (localStorage.getItem('alsa_user_model') || 'gemini-3.6-flash') : 'gemini-3.6-flash'
   );
 
   // Output paths state
