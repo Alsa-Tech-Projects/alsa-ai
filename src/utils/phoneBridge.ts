@@ -10,9 +10,6 @@ export interface BridgeStatus {
 
 export const PHONE_BRIDGE_URL = 'http://127.0.0.1:5002';
 
-// FIX: Increased timeout for heavy Android automation payloads
-const PHONE_REQUEST_TIMEOUT_MS = 65000; 
-
 // --- HELPER: Phone number sanitizer and strict string validator ---
 const sanitizePhoneNumber = (input: string): string => {
   const digitsOnly = String(input || '').replace(/[^\d+]/g, '');
@@ -29,7 +26,14 @@ const isDirectPhoneNumber = (val: string): boolean => {
 
 const phonePost = async (path: string, body: any = {}) => {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), PHONE_REQUEST_TIMEOUT_MS);
+  
+  // FIX: DYNAMIC TIMEOUT. Heavy UI automation (like sending long stories on WhatsApp) takes time.
+  // Standard commands get 60s, but WhatsApp/Telegram get 5 Minutes (300,000ms) to prevent "Broken pipe".
+  const isMessaging = path.includes('/whatsapp') || path.includes('/telegram') || path.includes('/send');
+  const timeoutLimit = isMessaging ? 300000 : 60000; 
+  
+  const timeout = setTimeout(() => controller.abort(), timeoutLimit);
+  
   try {
     const r = await fetch(`${PHONE_BRIDGE_URL}${path}`, {
       method: 'POST',
@@ -43,7 +47,7 @@ const phonePost = async (path: string, body: any = {}) => {
     }
     const res = await r.json();
     
-    // FIX: Strict success evaluation against Accessibility/Bridge callbacks
+    // Strict success evaluation against Accessibility/Bridge callbacks
     const isSuccess = res.ok === true || res.success === true || res.status === 'sent' || res.status === 'queued';
     return { ...res, ok: isSuccess, success: isSuccess };
   } catch (e: any) {
@@ -229,13 +233,6 @@ export const phoneShell = (command: string) => phonePost('/shell', { command });
 // WhatsApp Automation
 const phonePostWithFallback = async (paths: string[], body: any) => {
   let last: any = null;
-  
-  // FIX: Handle Heavy Payloads using Clipboard buffer to prevent UI freeze/timeout
-  if (body.text && body.text.length > 300) {
-    await phoneClipboardSet(body.text);
-    body.use_clipboard = true;
-  }
-
   for (const p of paths) {
     const res = await phonePost(p, body);
     if (res && (res.ok === true || res.success === true)) return res;
@@ -250,7 +247,7 @@ export const phoneWhatsappSend = (number: string, text: string) =>
   phonePostWithFallback(['/whatsapp/send', '/send'], { platform: 'whatsapp', number: sanitizePhoneNumber(number), text });
 
 export const phoneWhatsappSendByName = async (name: string, text: string) => {
-  // FIX: Direct Number Check bypasses Fuzzy Search to prevent MULTIPLE_MATCHES
+  // Direct Number Check bypasses Fuzzy Search
   if (isDirectPhoneNumber(name)) {
     return phoneWhatsappSend(name, text);
   }
@@ -329,41 +326,46 @@ export const phoneYtdlpDownload = (opts: {
   output_dir?: string;
 }) => phonePost('/ytdlp/download', opts);
 
-// Smart App Aliases
-const APP_ALIASES: Record<string, string> = {
-  fb: "facebook",
-  facebookapp: "facebook",
-  yt: "youtube",
-  youtubeapp: "youtube",
-  insta: "instagram",
-  ig: "instagram",
-  wa: "whatsapp",
-  whatsappapp: "whatsapp",
-  chromebrowser: "chrome",
-  playstore: "play store",
-  play: "play store",
-  mapsapp: "maps",
-  gps: "maps",
-  galleryapp: "gallery",
-  photos: "gallery",
-  cam: "camera",
-  settingsapp: "settings",
-  calc: "calculator",
-  contactsapp: "contacts",
-  filesapp: "files",
-  filemanager: "files",
-  musicplayer: "music",
-  videoplayer: "video",
-  gmailapp: "gmail",
-  googlemail: "gmail",
-  driveapp: "drive",
-  googlephotos: "photos",
-  playmusic: "youtube music"
-};
 
-function normalizeAppName(name: string): string {
-  const key = name.toLowerCase().trim().replace(/\s+/g, "");
-  return APP_ALIASES[key] || name.toLowerCase().trim();
+// ── App Opening Helpers ────────────────────────────────
+async function smartOpenApp(appName: string) {
+  // FIX: Pre-mapped explicit packages to prevent NOT_FOUND when Termux /app/list fails
+  const COMMON_PACKAGES: Record<string, string> = {
+    facebook: "com.facebook.katana",
+    fb: "com.facebook.katana",
+    whatsapp: "com.whatsapp",
+    wa: "com.whatsapp",
+    youtube: "com.google.android.youtube",
+    yt: "com.google.android.youtube",
+    instagram: "com.instagram.android",
+    insta: "com.instagram.android",
+    chrome: "com.android.chrome",
+    gmail: "com.google.android.gm",
+    maps: "com.google.android.apps.maps",
+    spotify: "com.spotify.music"
+  };
+
+  const target = appName.toLowerCase().trim();
+  
+  // 1. Try exact package mapping first (Fastest & most reliable)
+  if (COMMON_PACKAGES[target]) {
+    let res = await phoneAppOpen(COMMON_PACKAGES[target]);
+    if (res?.ok || res?.success) return res;
+  }
+
+  // 2. Fallback to searching the installed apps list
+  const list = await phoneAppList();
+  const apps = list?.data || list?.apps || [];
+  if (!Array.isArray(apps)) return { ok: false, success: false, message: `App "${appName}" not found` };
+
+  const match = apps.find((app: any) => {
+    const label = (app.label || app.name || "").toLowerCase();
+    const pkg = (app.package || "").toLowerCase();
+    return label.includes(target) || pkg.includes(target);
+  });
+
+  if (!match) return { ok: false, success: false, message: `App "${appName}" not found` };
+  return phoneAppOpen(match.package);
 }
 
 // ── Phone natural-language parser + executor ────────────────────────────────
@@ -375,9 +377,9 @@ export interface PhoneCommand {
 
 export const parsePhoneCommand = (input: string): PhoneCommand | null => {
   const t = input.trim();
+  const lowerT = t.toLowerCase(); 
 
   // 📧 EMAIL AUTOMATION PARSING 
-  // FIX: Added ^ anchors. Conversational prompts ("Send this to...") will skip this and go to AI properly.
   const emailDirectM = t.match(/^(?:email|mail)\s+(?:to\s+)?([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\s+(?:subject\s+["']?([^"'\n]+)["']?\s+)?(?:body|text|msg|message)\s+([\s\S]+)$/i);
   if (emailDirectM) {
     return { action: 'email-send', params: { to: emailDirectM[1], subject: emailDirectM[2] || undefined, body: emailDirectM[3].trim() }, label: `Email to ${emailDirectM[1]}` };
@@ -392,7 +394,6 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
   }
 
   // 💬 WHATSAPP AUTOMATION PARSING 
-  // FIX: Forced strict formats. Loose commands like "Send That Details On Whatsapp To..." will now be gracefully handled by the AI to fetch context.
   const waNumM = t.match(/^(?:whatsapp|wa)\s+(?:to\s+)?(\+?\d[\d\s\-]{6,15})\s+(?:msg|message|text|saying)\s+([\s\S]+)$/i);
   if (waNumM) {
     return { action: 'whatsapp-num', params: { number: sanitizePhoneNumber(waNumM[1]), text: waNumM[2].trim() }, label: `WhatsApp to ${waNumM[1]}` };
@@ -410,55 +411,55 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
     }
   }
 
-  // Torch
-  if (/\b(torch|flashlight|flash|light)\b.*\b(on|chalu|jala|jalao|start|open)\b/.test(t)
-      || /\b(on|chalu|jalao|start)\b.*\b(torch|flashlight|flash)\b/.test(t)) {
+  // Torch 
+  if (/\b(torch|flashlight|flash|light)\b.*\b(on|chalu|jala|jalao|start|open)\b/.test(lowerT)
+      || /\b(on|chalu|jalao|start)\b.*\b(torch|flashlight|flash)\b/.test(lowerT)) {
     return { action: 'torch', params: { on: true }, label: 'turn torch ON' };
   }
-  if (/\b(torch|flashlight|flash|light)\b.*\b(off|band|bandh|close|stop)\b/.test(t)
-      || /\b(off|band|bandh|stop)\b.*\b(torch|flashlight|flash)\b/.test(t)) {
+  if (/\b(torch|flashlight|flash|light)\b.*\b(off|band|bandh|close|stop)\b/.test(lowerT)
+      || /\b(off|band|bandh|stop)\b.*\b(torch|flashlight|flash)\b/.test(lowerT)) {
     return { action: 'torch', params: { on: false }, label: 'turn torch OFF' };
   }
 
   // Vibrate
-  if (/\b(vibrate|vibration|kampan|thartharao|thartharaho)\b/.test(t)) {
-    const m = t.match(/(\d{2,5})\s*(ms|milli|second|sec)?/);
+  if (/\b(vibrate|vibration|kampan|thartharao|thartharaho)\b/.test(lowerT)) {
+    const m = lowerT.match(/(\d{2,5})\s*(ms|milli|second|sec)?/);
     const dur = m ? Math.min(5000, parseInt(m[1])) : 1000;
     return { action: 'vibrate', params: { duration: dur }, label: `vibrate phone (${dur}ms)` };
   }
 
   // Battery
-  if (/\bbattery\b|\bbatri\b|\bbattry\b|battery\s*(status|level|percent)|kitni.*battery|battery.*kitni/.test(t)) {
+  if (/\bbattery\b|\bbatri\b|\bbattry\b|battery\s*(status|level|percent)|kitni.*battery|battery.*kitni/.test(lowerT)) {
     return { action: 'battery', label: 'get battery status' };
   }
 
   // Brightness
-  const brightM = t.match(/brightness\s*(?:ko|to|=)?\s*(\d{1,3})/) || t.match(/(\d{1,3})\s*%?\s*brightness/);
+  const brightM = lowerT.match(/brightness\s*(?:ko|to|=)?\s*(\d{1,3})/) || lowerT.match(/(\d{1,3})\s*%?\s*brightness/);
   if (brightM) {
     const lvl = Math.max(0, Math.min(255, parseInt(brightM[1]) > 100 ? parseInt(brightM[1]) : Math.round(parseInt(brightM[1]) * 2.55)));
     return { action: 'brightness', params: { level: lvl }, label: `set brightness ${brightM[1]}` };
   }
 
   // Volume
-  const volM = t.match(/volume\s*(?:ko|to|=)?\s*(\d{1,3})/);
+  const volM = lowerT.match(/volume\s*(?:ko|to|=)?\s*(\d{1,3})/);
   if (volM) return { action: 'volume', params: { stream: 'music', level: parseInt(volM[1]) }, label: `set volume ${volM[1]}` };
 
   // Location
-  if (/\b(location|gps|kaha hu|kahan hoon|where am i|meri location)\b/.test(t)) {
+  if (/\b(location|gps|kaha hu|kahan hoon|where am i|meri location)\b/.test(lowerT)) {
     return { action: 'location', label: 'get GPS location' };
   }
 
   // Wi-Fi
-  if (/\bwifi\b.*\b(on|chalu|start)\b/.test(t)) return { action: 'wifi', params: { on: true }, label: 'wifi ON' };
-  if (/\bwifi\b.*\b(off|band|stop)\b/.test(t))  return { action: 'wifi', params: { on: false }, label: 'wifi OFF' };
-  if (/\bwifi\b.*(info|details|status)/.test(t)) return { action: 'wifi-info', label: 'wifi info' };
+  if (/\bwifi\b.*\b(on|chalu|start)\b/.test(lowerT)) return { action: 'wifi', params: { on: true }, label: 'wifi ON' };
+  if (/\bwifi\b.*\b(off|band|stop)\b/.test(lowerT))  return { action: 'wifi', params: { on: false }, label: 'wifi OFF' };
+  if (/\bwifi\b.*(info|details|status)/.test(lowerT)) return { action: 'wifi-info', label: 'wifi info' };
 
   // Clipboard
-  if (/clipboard.*(read|get|dikhao|show)/.test(t)) return { action: 'clip-get', label: 'read clipboard' };
-  const clipSet = t.match(/clipboard.*(?:set|copy|par likh|mein daal)[^"']*["'](.+?)["']/);
+  if (/clipboard.*(read|get|dikhao|show)/.test(lowerT)) return { action: 'clip-get', label: 'read clipboard' };
+  const clipSet = t.match(/clipboard.*(?:set|copy|par likh|mein daal)[^"']*["'](.+?)["']/i);
   if (clipSet) return { action: 'clip-set', params: { text: clipSet[1] }, label: 'set clipboard' };
 
-  // SMS (Strict Start)
+  // SMS 
   const smsM = t.match(/^(?:sms|text)\s+(?:to\s+)?(\+?\d[\d\s\-]{6,15})\s+(?:msg|message)\s+([\s\S]+)$/i)
              || t.match(/^(\+?\d[\d\s\-]{6,15})\s*(?:ko|par)?\s*sms\s*(?:bhejo|send|kar)\s+([\s\S]+)$/i);
   if (smsM) return { action: 'sms', params: { number: sanitizePhoneNumber(smsM[1]), text: smsM[2] || smsM[3] }, label: `SMS to ${smsM[1]}` };
@@ -478,12 +479,12 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
     }
   }
 
-  if (/^(?:end call|call end|call kaat|hang up|cut call)$/i.test(t)) return { action: 'call-end', label: 'end call' };
+  if (/^(?:end call|call end|call kaat|hang up|cut call)$/i.test(lowerT)) return { action: 'call-end', label: 'end call' };
 
   // Camera
-  if (/\b(front cam|selfie|front camera).*photo|photo.*front|selfie\s*(khinch|le|lo|lelo)/i.test(t))
+  if (/\b(front cam|selfie|front camera).*photo|photo.*front|selfie\s*(khinch|le|lo|lelo)/i.test(lowerT))
     return { action: 'photo', params: { camera: 1 }, label: 'front camera photo' };
-  if (/\b(back cam|rear cam|back camera).*photo|photo.*back|photo\s*(khinch|le|lo|lelo|click)/i.test(t))
+  if (/\b(back cam|rear cam|back camera).*photo|photo.*back|photo\s*(khinch|le|lo|lelo|click)/i.test(lowerT))
     return { action: 'photo', params: { camera: 0 }, label: 'back camera photo' };
 
   // Toast / Notify
@@ -496,7 +497,7 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
   const ttsM = t.match(/(?:speak|bolo|tts)[^"']*["'](.+?)["']/i);
   if (ttsM) return { action: 'tts', params: { text: ttsM[1] }, label: 'speak' };
 
-  // Telegram (Strict Start)
+  // Telegram 
   const tgUserM = t.match(/^(?:telegram|tg)\s+(?:to\s+)?@([a-zA-Z0-9_]+)\s+(?:msg|message|text)\s+([\s\S]+)$/i);
   if (tgUserM) {
     return { action: 'telegram-user', params: { username: tgUserM[1].trim(), text: tgUserM[2].trim() }, label: `Telegram to @${tgUserM[1]}` };
@@ -508,16 +509,16 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
 
   // YT-DLP
   const ytM = t.match(/(https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com)\/\S+)/i);
-  if (ytM && /\b(download|save|mp3|mp4|audio|video|yt-?dlp|playlist)\b/i.test(t)) {
-    const audio = /\b(mp3|audio|song|music)\b/i.test(t);
-    const q = t.match(/\b(144|240|360|480|720|1080|1440|2160|4k)\b/i);
+  if (ytM && /\b(download|save|mp3|mp4|audio|video|yt-?dlp|playlist)\b/i.test(lowerT)) {
+    const audio = /\b(mp3|audio|song|music)\b/i.test(lowerT);
+    const q = lowerT.match(/\b(144|240|360|480|720|1080|1440|2160|4k)\b/i);
     return {
       action: 'ytdlp',
       params: {
         url: ytM[1],
         mode: audio ? 'audio' : 'video',
         quality: q ? (q[1].toLowerCase() === '4k' ? '2160' : q[1]) : 'best',
-        playlist: /\bplaylist\b/i.test(t) || /list=/.test(ytM[1]),
+        playlist: /\bplaylist\b/i.test(lowerT) || /list=/.test(ytM[1]),
       },
       label: `yt-dlp ${audio ? 'audio' : 'video'} on phone`,
     };
@@ -528,8 +529,8 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
   if (cSearch) return { action: 'contact-search', params: { query: cSearch[1].trim() }, label: `search contact "${cSearch[1].trim()}"` };
 
   // Media
-  if (/\b(pause|ruk|band karo)\s*(music|song|media|gana)/i.test(t)) return { action: 'media', params: { action: 'pause' }, label: 'pause media' };
-  if (/\b(play)\s*(music|song|media|gana)/i.test(t)) return { action: 'media', params: { action: 'play' }, label: 'play media' };
+  if (/\b(pause|ruk|band karo)\s*(music|song|media|gana)/i.test(lowerT)) return { action: 'media', params: { action: 'pause' }, label: 'pause media' };
+  if (/\b(play)\s*(music|song|media|gana)/i.test(lowerT)) return { action: 'media', params: { action: 'play' }, label: 'play media' };
 
   // Smart App Open Selector
   const openAppPattern =
@@ -537,31 +538,11 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
     t.match(/(.+?)\s+(?:open\s*karo|chalu\s*karo|start\s*karo|khol|kholo)/i);
 
   if (openAppPattern) {
-    let appName = normalizeAppName(openAppPattern[1].trim().replace(/[.!?]$/, ""));
-    return { action: "app-open", params: { name: appName }, label: `open ${appName}` };
+    return { action: "app-open", params: { name: openAppPattern[1].trim() }, label: `open ${openAppPattern[1].trim()}` };
   }
 
   return null;
 };
-
-async function smartOpenApp(appName: string) {
-  let res = await phoneAppOpen(appName);
-  if (res?.ok || res?.success) return res;
-
-  const list = await phoneAppList();
-  const apps = list?.data || list?.apps || [];
-  if (!Array.isArray(apps)) return res;
-
-  const target = appName.toLowerCase();
-  const match = apps.find((app: any) => {
-    const label = (app.label || app.name || "").toLowerCase();
-    const pkg = (app.package || "").toLowerCase();
-    return label.includes(target) || pkg.includes(target);
-  });
-
-  if (!match) return { ok: false, success: false, message: `App "${appName}" not found` };
-  return phoneAppOpen(match.package);
-}
 
 function formatPhoneResult(cmd: PhoneCommand, res: any): string {
   const d = res?.data ?? res ?? {};
@@ -586,7 +567,7 @@ function formatPhoneResult(cmd: PhoneCommand, res: any): string {
     case 'whatsapp-name':
       return `💬 WhatsApp message bhej diya ${p.name || p.number} ko.`;
     case 'app-open':
-      return `📱 ${p.name} open kar di.`;
+      return `📱 ${p.name || p.package || 'App'} open kar di.`;
     default:
       return typeof d === 'string' ? d : (res?.message || `${cmd.label} ✓`);
   }
@@ -649,7 +630,7 @@ export const executePhoneCommand = async (cmd: PhoneCommand): Promise<{ success:
       default: return { success: false, message: `Unknown phone action: ${cmd.action}` };
     }
     
-    // FIX: Strict success validation
+    // Strict success validation
     const ok = res?.success !== false && res?.ok !== false && res?.status !== 'error';
     return {
       success: ok,
