@@ -96,7 +96,7 @@ const RELEASES: Release[] = [
       {
         icon: Smartphone,
         title: 'Alsa Phone Bridge APK',
-        desc: 'Termux ki jagah ab ek dedicated APK jo aapke phone par localhost:5002 par server chalati hai. Wahi purane endpoints support hain, isliye torch, brightness, SMS, call, apps, storage, sensors — sab kuch bina Termux setup ke chalta hai.',
+        desc: 'Alsa Ai Bridge Server ki jagah ab ek dedicated APK jo aapke phone par localhost:5002 par server chalati hai. Wahi purane endpoints support hain, isliye torch, brightness, SMS, call, apps, storage, sensors — sab kuch bina Alsa Ai Bridge Server setup ke chalta hai.',
         color: 'from-cyan-500 to-blue-500',
         badge: 'ELITE',
       },
@@ -198,7 +198,7 @@ const RELEASES: Release[] = [
       {
         icon: Smartphone,
         title: 'Phone Bridge (Elite)',
-        desc: 'Install phone-bridge.py inside Termux and control your own Android from Alsa — WhatsApp send by contact name, calls, torch, brightness, volume, SMS, clipboard, sensors, yt-dlp downloads and more. Runs on port 5002.',
+        desc: 'Install phone-bridge.py inside Alsa Ai Bridge Server and control your own Android from Alsa — WhatsApp send by contact name, calls, torch, brightness, volume, SMS, clipboard, sensors, yt-dlp downloads and more. Runs on port 5002.',
         color: 'from-cyan-500 to-blue-500',
         badge: 'ELITE',
       },

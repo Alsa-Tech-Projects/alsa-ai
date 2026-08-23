@@ -47,7 +47,7 @@ const Landing = () => {
     { icon: Key,        title: 'Bring Your Own API Key',      desc: 'Add your Google Gemini key in Settings — every chat runs on your own quota.' },
     { icon: Gift,       title: 'First 50 Users → Pro FREE',   desc: 'Sign up now and get a full month of Alsa Pro absolutely free — no card, no catch.' },
     { icon: Bot,        title: 'Avatar Chat (Mira) Fixed',    desc: 'Talk face-to-face with Mira in real time. The JWT / edge-function bug is history.' },
-    { icon: Smartphone, title: 'Phone Bridge for Android',    desc: 'Run phone-bridge.py in Termux and let Alsa control your own phone — Elite only.' },
+    { icon: Smartphone, title: 'Phone Bridge for Android',    desc: 'Run phone-bridge.py in Alsa Ai Bridge Server and let Alsa control your own phone — Elite only.' },
     { icon: PhoneCall,  title: 'Call & WhatsApp by Name',     desc: 'Say "call Ravi" in any language — Alsa searches contacts.json and dials for you.' },
     { icon: Youtube,    title: 'yt-dlp with Smart Folders',   desc: 'Videos land in DCIM/Videos, audio in Music. MP3, 4K, subs & playlists supported.' },
     { icon: Settings2,  title: 'Custom AI Instructions',      desc: 'Tell Alsa exactly how to behave — tone, persona, rules. Applied to every reply.' },

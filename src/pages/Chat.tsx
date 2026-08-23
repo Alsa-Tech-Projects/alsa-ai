@@ -138,7 +138,7 @@ const Chat = () => {
   const formatWikipedia = (text: string, query: string) => {
     const cleaned = text
       .replace("📖 Wikipedia Result:", "")
-      .replace("Thoda intezaar karein, main action le raha hoon..", "")
+      .replace("Wait For Result, Alsa Ai fetch these details for you...., "")
       .replace("⚙️", "");
     const lines = cleaned
       .split(/\. |\n/)
@@ -201,8 +201,8 @@ const Chat = () => {
         toast({ title: '📱 Phone Bridge Connected', description: 'Alsa can now control your phone' });
       } else {
         toast({
-          title: 'Phone Bridge Not Running',
-          description: 'In Termux run: python phone-bridge.py',
+          title: 'Phone Bridge Is Not Connected To Bridge Server',
+          description: 'In Alsa Ai Bridge App run: Click On Server',
           variant: 'destructive'
         });
       }
@@ -214,7 +214,7 @@ const Chat = () => {
       toast({ title: '🎙️ Mic Off', description: 'Voice input stopped' });
     } else {
       startListening();
-      toast({ title: '🎙️ Listening...', description: 'Bolna shuru karo — 2.5s chup rehne par message chala jaayega' });
+      toast({ title: '🎙️ Listening...', description: 'Start Speaking.....' });
     }
   }, [isListening, startListening, stopListening, toast]);
   const handleNewConversation = useCallback(() => {
@@ -667,7 +667,7 @@ const Chat = () => {
         }
         const status = await ytdlpStatus();
         if (!status?.installed) {
-          setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ Na PC Bridge, na Phone Bridge yt-dlp de raha hai. Dono mein se ek start karo (`python phone-bridge.py` ya `pro-pc-bridge.py`).' }]);
+          setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ No Pc Bridge, No Alsa Ai Server. Kindly run atleast one from them(`Alsa Ai Server(For Android) Or pc-bridge.py(For Desktop)`).' }]);
           return;
         }
         setMessages(prev => [...prev, { role: 'assistant', content: `📥 Downloading via yt-dlp (PC)...\n\n• URL: ${ytUrl}\n• Mode: ${wantsAudio ? 'audio' : 'video ' + quality + 'p'}\n• Folder: ~/Downloads/ALSA-YT\n\nThodi der lagegi...` }]);
@@ -861,7 +861,7 @@ Output rules (strict markdown):
       }
     }
     if (phoneCmd && !phoneBridgeConnected) {
-      const msg = `📴 Phone Bridge offline hai. Termux mein \`python phone-bridge.py\` chalao, phir sidebar mein Phone Bridge badge tap karke connect karo.`;
+      const msg = `📴 Alsa Ai Bridge Server Is Offline. Run Alsa Ai Bridge Server First.`;
       setMessages(prev => [...prev, { role: 'assistant', content: msg }]);
       speak('Phone Bridge is offline');
       return;
@@ -1105,7 +1105,7 @@ Output rules (strict markdown):
                 ? `📱 Phone Bridge already active — ADB connect skip kiya.`
                 : (await adbConnect(parsed.device)).success
                   ? `✅ ADB connected to ${parsed.device}`
-                  : `❌ ADB not available. Phone Bridge (Termux) chalu karo — behtar hai.`;
+                  : `❌ ADB not available. Phone Bridge (Alsa Ai Bridge Server) chalu karo — behtar hai.`;
               accumulatedText += `\n\n${statusMsg}`;
               setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'adb_command') {
@@ -1557,7 +1557,7 @@ Output rules (strict markdown):
             <p>A big update just landed. Highlights:</p>
             <ul className="list-disc list-inside space-y-1 text-white/60">
               <li>Bring Your Own API Key (BYOK)</li>
-              <li>Phone Bridge for Android via Termux</li>
+              <li>Phone Bridge for Android via Alsa Ai Bridge Server</li>
               <li>Call / WhatsApp by contact name</li>
               <li>yt-dlp → videos to DCIM, audio to Music</li>
               <li>Mic button in chat input</li>

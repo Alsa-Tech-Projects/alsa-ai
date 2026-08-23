@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// 📱 PHONE BRIDGE (Elite Only) — Termux on Android, port 5002
+// 📱 PHONE BRIDGE (Elite Only) — Alsa Ai Bridge Server on Android, port 5002
 // ═══════════════════════════════════════════════════════════════
 import { supabase } from '@/integrations/supabase/client';
 
@@ -72,7 +72,7 @@ export const checkPhoneBridgeConnection = async (): Promise<BridgeStatus> => {
     }
     return { connected: false, message: 'Phone Bridge not responding' };
   } catch {
-    return { connected: false, message: 'Phone Bridge not running (Termux)' };
+    return { connected: false, message: 'Phone Bridge Is Not Connected To Bridge Server (Alsa Ai Bridge Server)' };
   }
 };
 
@@ -329,7 +329,7 @@ export const phoneYtdlpDownload = (opts: {
 
 // ── App Opening Helpers ────────────────────────────────
 async function smartOpenApp(appName: string) {
-  // FIX: Pre-mapped explicit packages to prevent NOT_FOUND when Termux /app/list fails
+  // FIX: Pre-mapped explicit packages to prevent NOT_FOUND when Alsa Ai Bridge Server /app/list fails
   const COMMON_PACKAGES: Record<string, string> = {
     facebook: "com.facebook.katana",
     fb: "com.facebook.katana",

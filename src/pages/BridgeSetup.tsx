@@ -276,7 +276,7 @@ const BridgeSetup = () => {
             <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
               <p className="text-amber-200 font-semibold mb-2">⚡ Bridge Priority Rule</p>
               <p className="text-amber-100/80 text-xs leading-relaxed">
-                When you ask ALSA to perform any mobile-related action (WhatsApp, SMS, launching apps, downloading YouTube media directly to your phone), it will <b>ALWAYS route through the new Mobile Bridge (port 5002)</b> first. We have completely moved away from Termux and Pydroid — everything is now powered natively by our official Android App for maximum speed and security.
+                When you ask ALSA to perform any mobile-related action (WhatsApp, SMS, launching apps, downloading YouTube media directly to your phone), it will <b>ALWAYS route through the new Mobile Bridge (port 5002)</b> first. We have completely moved away from Alsa Ai Bridge Server and Pydroid — everything is now powered natively by our official Android App for maximum speed and security.
               </p>
             </div>
 
