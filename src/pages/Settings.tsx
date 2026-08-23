@@ -131,12 +131,12 @@ const Settings = () => {
         setWhatsappContacts(prev => [...prev, ...newContacts]);
         toast({ 
           title: "CSV Uploaded", 
-          description: `${newContacts.length} contacts successfully add ho gaye!` 
+          description: `${newContacts.length} contacts was added successfully` 
         });
       } else {
         toast({ 
           title: "Error", 
-          description: "CSV me koi valid contacts nahi mile.", 
+          description: "There is not any valid fields found in this CSV file.", 
           variant: "destructive" 
         });
       }
@@ -451,7 +451,7 @@ const Settings = () => {
               <CardHeader>
                 <CardTitle>Custom Instructions</CardTitle>
                 <CardDescription className="break-words">
-                  Tell ALSA how you want it to behave. Jailbreak / identity-change attempts will be safely ignored.
+                  Tell ALSA how you want it to behave.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -487,7 +487,7 @@ const Settings = () => {
                     autoComplete="off"
                   />
                   <a
-                    href="https://aistudio.google.com/app/apikey"
+                    href="https://aistudio.google.com/api-key"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs text-primary hover:underline mt-2 inline-block break-words"
@@ -510,6 +510,7 @@ const Settings = () => {
                       <SelectItem value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</SelectItem>
                       <SelectItem value="gemini-3.6-flash">Gemini 2.5 Flash (Recommended)</SelectItem>
                       <SelectItem value="gemini-2.5-pro">Gemini 2.5 Pro (Most Powerful)</SelectItem>
+                      <SelectItem value="gemini-3.6-flash">Gemini 3.6 flash (latest)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
