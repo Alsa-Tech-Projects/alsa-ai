@@ -30,7 +30,7 @@ const phonePost = async (path: string, body: any = {}) => {
   // FIX: DYNAMIC TIMEOUT. Heavy UI automation (like sending long stories on WhatsApp) takes time.
   // Standard commands get 60s, but WhatsApp/Telegram get 5 Minutes (300,000ms) to prevent "Broken pipe".
   const isMessaging = path.includes('/whatsapp') || path.includes('/telegram') || path.includes('/send');
-  const timeoutLimit = isMessaging ? 300000 : 60000; 
+  const timeoutLimit = isMessaging ? 300 : 600; 
   
   const timeout = setTimeout(() => controller.abort(), timeoutLimit);
   
