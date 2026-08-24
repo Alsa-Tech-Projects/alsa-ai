@@ -106,16 +106,14 @@ const Chat = () => {
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<FileAttachment[]>([]);
   const [showFileUpload, setShowFileUpload] = useState(false);
-  const [show40Update, setShow40Update] = useState(false);
-  // Show 4.0 update notice once per user (localStorage flag)
-  useEffect(() => {
-    try {
-      if (!localStorage.getItem('alsa_seen_update_v4')) {
-        const t = setTimeout(() => setShow40Update(true), 1200);
-        return () => clearTimeout(t);
-      }
-    } catch { /* ignore */ }
-  }, []);
+  const [show51Update, setShow51Update] = useState(false);
+
+useEffect(() => {
+  const seen = localStorage.getItem('alsa_seen_update_v51');
+  if (!seen) {
+    setShow51Update(true);
+  }
+}, []);
   useEffect(() => {
     if (location.state && typeof location.state === 'object') {
       const targetState = location.state as { autoOpenFromWake?: boolean; wakeTranscript?: string };
