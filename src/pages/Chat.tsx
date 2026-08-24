@@ -9,40 +9,40 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  checkBridgeConnection, 
-  executeSystemCommand, 
-  scanSystem, 
-  SystemScanResult, 
-  startScreenRecording, 
-  stopScreenRecording, 
-  parseNaturalLanguage, 
-  WEBSITES, 
-  createProject, 
-  createPowerPoint, 
-  createExcel, 
-  createDatabase, 
-  executePythonFile, 
-  executeCmdCommand, 
-  runCommand, 
-  checkInstallation, 
-  sendCommand, 
-  adbConnect, 
-  adbCommand, 
-  closeWindow, 
-  openFolder, 
-  runProject, 
-  createFolder, 
-  createTextFile, 
-  openWebsiteWithSearch, 
-  openCustomApp, 
-  sendTelegramMsg, 
-  sendWhatsAppMsg 
+import {
+  checkBridgeConnection,
+  executeSystemCommand,
+  scanSystem,
+  SystemScanResult,
+  startScreenRecording,
+  stopScreenRecording,
+  parseNaturalLanguage,
+  WEBSITES,
+  createProject,
+  createPowerPoint,
+  createExcel,
+  createDatabase,
+  executePythonFile,
+  executeCmdCommand,
+  runCommand,
+  checkInstallation,
+  sendCommand,
+  adbConnect,
+  adbCommand,
+  closeWindow,
+  openFolder,
+  runProject,
+  createFolder,
+  createTextFile,
+  openWebsiteWithSearch,
+  openCustomApp,
+  sendTelegramMsg,
+  sendWhatsAppMsg
 } from '@/utils/pcBridge';
-import { 
-  checkPhoneBridgeConnection, 
-  parsePhoneCommand, 
-  executePhoneCommand 
+import {
+  checkPhoneBridgeConnection,
+  parsePhoneCommand,
+  executePhoneCommand
 } from '@/utils/phoneBridge';
 import ChatMessage from '@/components/ChatMessage';
 import MemoryManager from '@/components/MemoryManager';
@@ -119,7 +119,7 @@ const Chat = () => {
   useEffect(() => {
     if (location.state && typeof location.state === 'object') {
       const targetState = location.state as { autoOpenFromWake?: boolean; wakeTranscript?: string };
-      
+
       if (targetState.autoOpenFromWake && targetState.wakeTranscript) {
         setInputText(targetState.wakeTranscript);
         try {
@@ -138,7 +138,7 @@ const Chat = () => {
   const formatWikipedia = (text: string, query: string) => {
     const cleaned = text
       .replace("📖 Wikipedia Result:", "")
-      .replace("Wait For Result, Alsa Ai fetch these details for you...., "")
+      .replace("Wait For Result, Alsa Ai fetch these details for you....", "")
       .replace("⚙️", "");
     const lines = cleaned
       .split(/\. |\n/)
@@ -467,7 +467,7 @@ const Chat = () => {
     if (type === 'application/pdf' || name.endsWith('.pdf')) {
       try {
         // @ts-ignore
-        const pdfjs: any = await import(/* @vite-ignore */ ('https://esm.sh/pdfjs-dist@4.0.379/build/pdf.min.mjs' as any));
+        const pdfjs: any = await import(/* @vite-ignore */('https://esm.sh/pdfjs-dist@4.0.379/build/pdf.min.mjs' as any));
         pdfjs.GlobalWorkerOptions.workerSrc = 'https://esm.sh/pdfjs-dist@4.0.379/build/pdf.worker.min.mjs';
         const b64 = data.includes(',') ? data.split(',')[1] : data;
         const bin = atob(b64);
@@ -608,7 +608,7 @@ const Chat = () => {
     const lower = trimmed.toLowerCase();
     const isPremiumCmd = lower.startsWith('/deep') || lower.startsWith('/create');
     const isProOrElite = subscription.isPro || subscription.isElite || subscription.isTeam;
-    
+
     if (isPremiumCmd && !isProOrElite) {
       toast({
         title: 'Pro / Elite feature',
@@ -627,8 +627,8 @@ const Chat = () => {
     setUploadedFiles([]);
     try {
       const { extractYouTubeUrl, ytdlpStatus, ytdlpDownload } = await import('@/utils/pcBridge');
-      const { phoneYtdlpStatus, phoneYtdlpDownload } = await import('@/utils/phoneBridge'); 
-      
+      const { phoneYtdlpStatus, phoneYtdlpDownload } = await import('@/utils/phoneBridge');
+
       const ytUrl = extractYouTubeUrl(trimmed);
       const wantsDownload = /\b(download|save|grab|mp3|mp4|audio|video|playlist|yt-?dlp)\b/i.test(trimmed);
       if (ytUrl && wantsDownload) {
@@ -682,7 +682,7 @@ const Chat = () => {
         }
         return;
       }
-    } catch (e) {}
+    } catch (e) { }
     if (lower.startsWith('/create')) {
       const topic = trimmed.replace(/^\/create\s*/i, '').trim();
       if (!topic) {
@@ -739,7 +739,7 @@ Output rules (strict markdown):
               if (!line.startsWith('data: ')) continue;
               const data = line.slice(6);
               if (data === '[DONE]') continue;
-              try { const p = JSON.parse(data); if (p.type === 'content' && p.delta) fullText += p.delta; } catch {}
+              try { const p = JSON.parse(data); if (p.type === 'content' && p.delta) fullText += p.delta; } catch { }
             }
           }
         }
@@ -787,7 +787,7 @@ Output rules (strict markdown):
           }
           text = result.forwardToAI.prompt;
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     parseAndLearn(text);
     trackInteraction(text);
@@ -883,7 +883,7 @@ Output rules (strict markdown):
       }
     }
     const openWebsitePatterns = [
-      /\b(open|launch|start)\s+(\w+)\b/i, 
+      /\b(open|launch|start)\s+(\w+)\b/i,
       /\b(\w+)\s+(kholo|kholna|open\s+karo|ko\s+open\s+karo)\b/i,
     ];
     const userSites = JSON.parse(localStorage.getItem('alsa_user_sites') || '[]');
@@ -1047,7 +1047,7 @@ Output rules (strict markdown):
               // BUG FIX 3: TELEGRAM HANDLER NOW PROPERLY FALLS BACK TO PHONE BRIDGE
               let result: any;
               if (phoneBridgeConnected) {
-                const { phoneTelegramSend } = await import('@/utils/phoneBridge'); 
+                const { phoneTelegramSend } = await import('@/utils/phoneBridge');
                 result = await phoneTelegramSend(parsed.link, parsed.message);
                 result.success = result?.ok !== false;
               } else if (bridgeConnected) {
@@ -1065,7 +1065,7 @@ Output rules (strict markdown):
               let result: any;
               let via = 'PC';
               if (phoneBridgeConnected) {
-                const { phoneWhatsappSend, phoneWhatsappSendByName } = await import('@/utils/phoneBridge'); 
+                const { phoneWhatsappSend, phoneWhatsappSendByName } = await import('@/utils/phoneBridge');
                 via = 'Phone';
                 if (/^\+?\d[\d\s\-]{5,}$/.test(String(parsed.phone))) {
                   result = await phoneWhatsappSend(parsed.phone, parsed.message);
@@ -1311,9 +1311,8 @@ Output rules (strict markdown):
               <DropdownMenuTrigger asChild disabled={isTyping}>
                 <button
                   type="button"
-                  className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center transition ${
-                    activeTool ? 'bg-blue-500/20 text-blue-300' : 'text-white/60 hover:text-white hover:bg-white/10'
-                  }`}
+                  className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center transition ${activeTool ? 'bg-blue-500/20 text-blue-300' : 'text-white/60 hover:text-white hover:bg-white/10'
+                    }`}
                 >
                   <Plus className="w-5 h-5" />
                 </button>
@@ -1353,8 +1352,8 @@ Output rules (strict markdown):
               placeholder={
                 isListening ? 'Listening...'
                   : isTyping ? 'Alsa is responding...'
-                  : activeTool ? `${activeTool === 'image' ? 'Describe the image' : activeTool === 'deep' ? 'What should I research' : activeTool === 'learn' ? 'What should I teach you' : 'What should I create'}...`
-                  : 'Ask Alsa AI'
+                    : activeTool ? `${activeTool === 'image' ? 'Describe the image' : activeTool === 'deep' ? 'What should I research' : activeTool === 'learn' ? 'What should I teach you' : 'What should I create'}...`
+                      : 'Ask Alsa AI'
               }
               className="flex-1 min-w-0 bg-transparent border-none text-white text-[15px] focus-visible:ring-0 resize-none overflow-y-auto max-h-[140px] min-h-[38px] py-2 px-1"
               rows={1}
@@ -1362,9 +1361,8 @@ Output rules (strict markdown):
             <button
               type="button"
               onClick={toggleVoice}
-              className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center transition ${
-                isListening ? 'text-red-400 bg-red-500/10 animate-pulse' : 'text-white/60 hover:text-white hover:bg-white/10'
-              }`}
+              className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center transition ${isListening ? 'text-red-400 bg-red-500/10 animate-pulse' : 'text-white/60 hover:text-white hover:bg-white/10'
+                }`}
             >
               <Mic className="w-[18px] h-[18px]" />
             </button>
@@ -1372,9 +1370,8 @@ Output rules (strict markdown):
               type="button"
               disabled={isTyping}
               onClick={() => handleSubmit()}
-              className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center transition ${
-                isTyping ? 'bg-white/10 text-white/30' : 'bg-blue-600 text-white hover:bg-blue-500'
-              }`}
+              className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center transition ${isTyping ? 'bg-white/10 text-white/30' : 'bg-blue-600 text-white hover:bg-blue-500'
+                }`}
             >
               <Send className="w-[17px] h-[17px]" />
             </button>
@@ -1423,7 +1420,7 @@ Output rules (strict markdown):
   return (
     <div className="flex h-[100dvh] w-full bg-[#0d0d0d] text-white overflow-hidden">
       <ScheduledMessageChecker userId={user?.id || null} />
-      
+
       <Sidebar bridgeConnected={bridgeConnected || phoneBridgeConnected} onNewChat={handleNewConversation} onOpenMemory={() => setShowMemoryManager(true)} onToggleBridge={phoneBridgeConnected ? togglePhoneBridgeConnection : toggleBridgeConnection} currentConversationId={currentConversationId} />
       <div className="flex-[1_1_0%] min-w-0 relative flex flex-col overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(17,24,39,1)_0%,rgba(0,0,0,1)_100%)]" />
@@ -1545,7 +1542,7 @@ Output rules (strict markdown):
       <MusicPlayer song={currentSong} onClose={() => setCurrentSong(null)} />
       <GameLauncher game={currentGame as any} onClose={() => setCurrentGame(null)} />
       <ReminderNotification userId={user?.id || null} />
-      <Dialog open={show40Update} onOpenChange={(o) => { setShow40Update(o); if (!o) { try { localStorage.setItem('alsa_seen_update_v4', '1'); } catch {} } }}>
+      <Dialog open={show40Update} onOpenChange={(o) => { setShow40Update(o); if (!o) { try { localStorage.setItem('alsa_seen_update_v4', '1'); } catch { } } }}>
         <DialogContent className="bg-gradient-to-br from-[#0a0a0a] to-[#0d1425] border-blue-500/30 text-white max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
@@ -1565,8 +1562,8 @@ Output rules (strict markdown):
             </ul>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="ghost" onClick={() => { try { localStorage.setItem('alsa_seen_update_v4', '1'); } catch {} setShow40Update(false); }}>Dismiss</Button>
-            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90" onClick={() => { try { localStorage.setItem('alsa_seen_update_v4', '1'); } catch {} setShow40Update(false); navigate('/update-history'); }}>See full update history →</Button>
+            <Button variant="ghost" onClick={() => { try { localStorage.setItem('alsa_seen_update_v4', '1'); } catch { } setShow40Update(false); }}>Dismiss</Button>
+            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90" onClick={() => { try { localStorage.setItem('alsa_seen_update_v4', '1'); } catch { } setShow40Update(false); navigate('/update-history'); }}>See full update history →</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
