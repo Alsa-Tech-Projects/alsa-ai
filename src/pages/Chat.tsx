@@ -292,14 +292,17 @@ const Chat = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleVoice, handleNewConversation]);
+
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        navigate('/Chat');
-      } else {
-        setUser(session.user);
-      }
-    });
+  // 1. Fetch current session
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (!session) {
+      navigate('/Chat');
+    } else {
+      setUser(session.user);
+    }
+  });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
         setUser(null);
