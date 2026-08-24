@@ -1542,31 +1542,52 @@ Output rules (strict markdown):
       <MusicPlayer song={currentSong} onClose={() => setCurrentSong(null)} />
       <GameLauncher game={currentGame as any} onClose={() => setCurrentGame(null)} />
       <ReminderNotification userId={user?.id || null} />
-      <Dialog open={show40Update} onOpenChange={(o) => { setShow40Update(o); if (!o) { try { localStorage.setItem('alsa_seen_update_v4', '1'); } catch { } } }}>
+      <Dialog open={show51Update} onOpenChange={(o) => { setShow51Update(o); if (!o) { try { localStorage.setItem('alsa_seen_update_v51', '1'); } catch { } } }}>
         <DialogContent className="bg-gradient-to-br from-[#0a0a0a] to-[#0d1425] border-blue-500/30 text-white max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
-              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500"><Sparkles className="w-4 h-4 text-white" /></span>
-              Alsa AI 4.0 — What's New
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500">
+                <Sparkles className="w-4 h-4 text-white" />
+              </span>
+              Alsa AI 5.1 — What's New
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-2 text-sm text-white/70">
             <p>A big update just landed. Highlights:</p>
             <ul className="list-disc list-inside space-y-1 text-white/60">
-              <li>Bring Your Own API Key (BYOK)</li>
-              <li>Phone Bridge for Android via Alsa Ai Bridge Server</li>
-              <li>Call / WhatsApp by contact name</li>
-              <li>yt-dlp → videos to DCIM, audio to Music</li>
-              <li>Mic button in chat input</li>
-              <li>Custom AI instructions</li>
+              <li>Send Email by contact name</li>
+              <li>Saved contacts for WhatsApp, Telegram & Email</li>
+              <li>CSV bulk contact upload</li>
+              <li>Faster and more reliable messaging</li>
+              <li>Correct location accuracy fallback</li>
+              <li>Real-time date awareness & personal memory</li>
+              <li>Unified blue brand theme</li>
             </ul>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="ghost" onClick={() => { try { localStorage.setItem('alsa_seen_update_v4', '1'); } catch { } setShow40Update(false); }}>Dismiss</Button>
-            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90" onClick={() => { try { localStorage.setItem('alsa_seen_update_v4', '1'); } catch { } setShow40Update(false); navigate('/update-history'); }}>See full update history →</Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                try { localStorage.setItem('alsa_seen_update_v51', '1'); } catch { }
+                setShow51Update(false);
+              }}
+            >
+              Dismiss
+            </Button>
+            <Button
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90"
+              onClick={() => {
+                try { localStorage.setItem('alsa_seen_update_v51', '1'); } catch { }
+                setShow51Update(false);
+                navigate('/update-history');
+              }}
+            >
+              See full update history →
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 };
