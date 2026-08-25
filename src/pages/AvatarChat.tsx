@@ -238,7 +238,7 @@ const AvatarChat = () => {
         </button>
 
         <p className="text-[10px] text-white/30 uppercase tracking-widest text-center px-4">
-          {isSpeaking ? 'Mic locked while Mira speaks' : 'English · Deepgram Luna voice'}
+          {isSpeaking ? 'Mic locked while Mira speaks' : 'English · Alsa Ai Mira Voice'}
         </p>
       </div>
     </div>
@@ -311,4 +311,3 @@ const MiraAvatar = ({
     </div>
   );
 };
-
