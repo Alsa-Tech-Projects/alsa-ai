@@ -85,7 +85,7 @@ const ApiKeyOnboarding = () => {
               autoComplete="off"
             />
             <a
-              href="https://aistudio.google.com/app/apikey"
+              href="https://aistudio.google.com/api-key"
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-primary flex items-center gap-1 mt-2 hover:underline"
