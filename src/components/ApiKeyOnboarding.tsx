@@ -9,17 +9,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { KeyRound, Sparkles, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-// All Google Gemini models (oldest → newest)
+// Google Gemini models (Gemini 3.6 Flash as default)
 export const GEMINI_MODELS: { value: string; label: string }[] = [
-  { value: 'gemini-1.0-pro', label: 'Gemini 1.0 Pro' },
-  { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
-  { value: 'gemini-1.5-flash-8b', label: 'Gemini 1.5 Flash 8B' },
-  { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
+  { value: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash (Most Powerful & Latest Model)' },
+  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
   { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-  { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite' },
-  { value: 'gemini-3.6-flash', label: 'Gemini 2.5 Flash (Recommended)' },
-  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Most Powerful)' },
-  { value: 'gemini-3.6-flash', label: 'Gemini 3.6 flash (Most Powerful & Latest Model of Gemini)' },
+  { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
 ];
 
 const LS_KEY = 'alsa_user_api_key';
