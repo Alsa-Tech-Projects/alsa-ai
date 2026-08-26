@@ -86,7 +86,7 @@ const BridgeSetup = () => {
   const copyCommand = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
     setCopied(key);
-    toast({ title: 'Copied to clipboard!' });
+    toast({ title: 'Copied to clipboard successfully!' });
     setTimeout(() => setCopied(''), 2000);
   };
 
@@ -194,6 +194,7 @@ const BridgeSetup = () => {
           })}
         </script>
       </Helmet>
+
       {/* Animated Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 -left-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl animate-pulse"></div>
@@ -266,124 +267,150 @@ const BridgeSetup = () => {
           </div>
         </div>
 
-        {/* Phone Bridge — Native App */}
+        {/* Phone Bridge Section */}
         <h2 className="text-2xl font-bold mt-12 mb-6 flex items-center gap-3">
           <Smartphone className="w-6 h-6 text-emerald-400" />
-          📱 Mobile Bridge (Elite) — The Official ALSA App
+          📱 Mobile Bridge (Elite Only) — The Official ALSA App
         </h2>
-        <Card className="bg-gradient-to-br from-emerald-950/40 to-slate-900/50 border-emerald-500/20 backdrop-blur-xl">
-          <CardContent className="p-6 space-y-6 text-sm text-white/70">
-            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
-              <p className="text-amber-200 font-semibold mb-2">⚡ Bridge Priority Rule</p>
-              <p className="text-amber-100/80 text-xs leading-relaxed">
-                When you ask ALSA to perform any mobile-related action (WhatsApp, SMS, launching apps, downloading YouTube media directly to your phone), it will <b>ALWAYS route through the new Mobile Bridge (port 5002)</b> first. We have completely moved away from Alsa Ai Bridge Server and Pydroid — everything is now powered natively by our official Android App for maximum speed and security.
-              </p>
-            </div>
 
-            {/* Strict Disclaimer */}
-            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-3">
-              <Shield className="w-6 h-6 text-red-400 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-red-300 font-bold mb-1">STRICT SECURITY DISCLAIMER</p>
-                <p className="text-red-200/80 text-xs leading-relaxed">
-                  Never grant permission or share access to the local Bridge server (localhost:5002) with anyone other than the official ALSA AI client. Doing so may expose your personal contacts, messages, and device control to malicious third parties. <b>ALSA AI and its developers are not responsible for any data leaks or privacy compromises resulting from unauthorized access to this server.</b>
+        {tier !== 'elite' ? (
+          /* Locked State for Non-Elite Users */
+          <Card className="bg-slate-900/60 border border-purple-500/30 backdrop-blur-xl p-8 text-center relative overflow-hidden">
+            <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
+              <Crown className="w-64 h-64 text-purple-400" />
+            </div>
+            <div className="max-w-xl mx-auto space-y-4 relative z-10">
+              <div className="w-16 h-16 bg-purple-500/20 rounded-2xl flex items-center justify-center mx-auto text-purple-400 border border-purple-500/30">
+                <Lock className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-bold text-white">Exclusive to Elite Plan Members</h3>
+              <p className="text-white/70 text-sm leading-relaxed">
+                The ALSA Android Mobile Bridge APK offers direct device control, native WhatsApp messaging, contacts integration, and local media processing. Upgrade to the Elite Plan to download and unlock mobile capabilities.
+              </p>
+              <Button
+                onClick={() => navigate('/pricing')}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 text-white font-bold px-8 py-6 rounded-xl shadow-lg mt-2"
+              >
+                <Crown className="w-5 h-5 mr-2" /> Upgrade to Elite Tier
+              </Button>
+            </div>
+          </Card>
+        ) : (
+          /* Unlocked State for Elite Users */
+          <Card className="bg-gradient-to-br from-emerald-950/40 to-slate-900/50 border-emerald-500/20 backdrop-blur-xl">
+            <CardContent className="p-6 space-y-6 text-sm text-white/70">
+              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                <p className="text-amber-200 font-semibold mb-2">⚡ Bridge Priority Rule</p>
+                <p className="text-amber-100/80 text-xs leading-relaxed">
+                  When requesting ALSA to execute mobile actions (WhatsApp, SMS, launching applications, or downloading media directly to your phone), requests will <b>ALWAYS route through the Mobile Bridge (port 5002)</b> first for optimal performance and security.
                 </p>
               </div>
-            </div>
 
-            <div>
-              <h4 className="text-white font-bold mb-4 flex items-center gap-2"><Package className="w-4 h-4 text-emerald-400"/> ALSA Bridge App Installation</h4>
-              
-              <div className="space-y-4">
-                {/* Step 1 */}
-                <div className="p-4 bg-black/40 rounded-xl border border-white/10">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">1</div>
-                      <p className="text-white font-semibold text-sm">Download the Official App</p>
+              {/* Security Disclaimer */}
+              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-3">
+                <Shield className="w-6 h-6 text-red-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-red-300 font-bold mb-1">STRICT SECURITY DISCLAIMER</p>
+                  <p className="text-red-200/80 text-xs leading-relaxed">
+                    Do not share access or grant permissions to the local Bridge server (localhost:5002) to untrusted third parties. Doing so could expose your stored contacts, messages, and device settings. <b>ALSA AI and its developers assume no liability for unauthorized access resulting from user configuration errors.</b>
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-white font-bold mb-4 flex items-center gap-2"><Package className="w-4 h-4 text-emerald-400"/> ALSA Bridge App Installation</h4>
+
+                <div className="space-y-4">
+                  {/* Step 1 */}
+                  <div className="p-4 bg-black/40 rounded-xl border border-white/10">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">1</div>
+                        <p className="text-white font-semibold text-sm">Download the Official APK</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-white/60 mb-4">
+                      Download and install the native ALSA AI Bridge application on your Android device.
+                    </p>
+                    <a href="/bridges/alsa-ai-bridge.apk" download>
+                      <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg">
+                        <Download className="w-4 h-4 mr-2" /> Download ALSA Mobile Bridge APK
+                      </Button>
+                    </a>
+                  </div>
+
+                  {/* Step 2 */}
+                  <div className="p-4 bg-black/40 rounded-xl border border-white/10">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">2</div>
+                      <p className="text-white font-semibold text-sm">Login & Link Account</p>
+                    </div>
+                    <p className="text-xs text-white/60">
+                      Launch the mobile application and authenticate with your registered ALSA AI account credentials to sync with the workspace.
+                    </p>
+                  </div>
+
+                  {/* Step 3 */}
+                  <div className="p-4 bg-black/40 rounded-xl border border-white/10">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">3</div>
+                      <p className="text-white font-semibold text-sm">Configure Privacy & Permissions</p>
+                    </div>
+                    <p className="text-xs text-white/60">
+                      Adjust operational permissions (Contacts, Storage, SMS) inside the application settings based on your automated workflow preferences.
+                    </p>
+                  </div>
+
+                  {/* Step 4 */}
+                  <div className="p-4 bg-black/40 rounded-xl border border-white/10">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">4</div>
+                      <p className="text-white font-semibold text-sm">Activate Service & Authentication Header</p>
+                    </div>
+                    <p className="text-xs text-white/60 mb-2">
+                      Toggle the <b>"ALSA AI Bridge"</b> service switch to active status. This initializes a localized server running on <code>localhost:5002</code>.
+                    </p>
+                    <div className="flex items-start gap-2 mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                      <Lock className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                      <p className="text-xs text-blue-200">
+                        <b>Notice:</b> Ensure that the <b>X-alsa-header token</b> option remains enabled to restrict unauthorized request attempts.
+                      </p>
                     </div>
                   </div>
-                  <p className="text-xs text-white/60 mb-4">
-                    Download and install the native ALSA AI Bridge APK directly to your Android device. 
-                  </p>
-                  <a href="/bridges/alsa-ai-bridge.apk" download>
-                    <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg">
-                      <Download className="w-4 h-4 mr-2" /> Download ALSA Bridge App
-                    </Button>
-                  </a>
-                </div>
 
-                {/* Step 2 */}
-                <div className="p-4 bg-black/40 rounded-xl border border-white/10">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">2</div>
-                    <p className="text-white font-semibold text-sm">Login & Connect with ALSA</p>
-                  </div>
-                  <p className="text-xs text-white/60">
-                    Open the app and log in using your active ALSA AI credentials. Once authenticated, the app will securely link your device to your web ecosystem.
-                  </p>
-                </div>
-
-                {/* Step 3 */}
-                <div className="p-4 bg-black/40 rounded-xl border border-white/10">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">3</div>
-                    <p className="text-white font-semibold text-sm">Manage Privacy & Permissions</p>
-                  </div>
-                  <p className="text-xs text-white/60">
-                    You have full control. Navigate to the app's permission settings and grant access (Contacts, Storage, SMS, etc.) strictly according to your privacy preferences. Features will adapt based on the permissions you allow.
-                  </p>
-                </div>
-
-                {/* Step 4 */}
-                <div className="p-4 bg-black/40 rounded-xl border border-white/10">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">4</div>
-                    <p className="text-white font-semibold text-sm">Turn On The Bridge & Token</p>
-                  </div>
-                  <p className="text-xs text-white/60 mb-2">
-                    Toggle the <b>"ALSA AI Bridge"</b> switch to ON. This will spin up a secure background server on <code>localhost:5002</code>. 
-                  </p>
-                  <div className="flex items-start gap-2 mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                    <Lock className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-                    <p className="text-xs text-blue-200">
-                      <b>Important:</b> Ensure the <b>X-alsa-header token</b> setting is checked/enabled within the app to reject unauthorized requests automatically.
+                  {/* Step 5 */}
+                  <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">✓</div>
+                      <p className="text-emerald-300 font-semibold text-sm">Sync Contacts & Integrations</p>
+                    </div>
+                    <p className="text-xs text-white/70">
+                      To configure calling and direct email workflows, access <b>More <ArrowLeft className="w-3 h-3 inline rotate-180"/> Contacts Info</b> inside the mobile interface to define recipient lists and credentials.
                     </p>
                   </div>
                 </div>
+              </div>
 
-                {/* Step 5 */}
-                <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/30">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">✓</div>
-                    <p className="text-emerald-300 font-semibold text-sm">Add Contacts & Credentials</p>
-                  </div>
-                  <p className="text-xs text-white/70">
-                    To automate calls, emails, and specific messaging, open the app, tap on <b>More <ArrowLeft className="w-3 h-3 inline rotate-180"/> Contacts Info</b>. You can safely add and manage specific contacts, authorized email addresses, and App Passwords directly here.
-                  </p>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-xl bg-black/30 border border-white/10">
+                  <h4 className="text-white font-bold mb-2">📞 Native WhatsApp</h4>
+                  <p className="text-xs mb-2">Send messages seamlessly via native system integrations.</p>
+                  <p className="text-xs text-emerald-300">Command: <i>"Send a WhatsApp message to Alex saying let us meet at 6 PM"</i></p>
+                </div>
+                <div className="p-4 rounded-xl bg-black/30 border border-white/10">
+                  <h4 className="text-white font-bold mb-2">👥 Integrated Contacts</h4>
+                  <p className="text-xs mb-2">Contacts synced within the application allow natural voice-based search and interaction.</p>
+                  <p className="text-xs text-emerald-300">Command: <i>"Search contact information for John"</i></p>
+                </div>
+                <div className="p-4 rounded-xl bg-black/30 border border-white/10">
+                  <h4 className="text-white font-bold mb-2">🎬 Media Downloader</h4>
+                  <p className="text-xs mb-2">Download videos and audio streams directly into specified local directories.</p>
+                  <p className="text-xs text-emerald-300">Command: <i>"Download https://youtu.be/xyz as MP3 audio"</i></p>
                 </div>
               </div>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="p-4 rounded-xl bg-black/30 border border-white/10">
-                <h4 className="text-white font-bold mb-2">📞 Native WhatsApp</h4>
-                <p className="text-xs mb-2">Send messages seamlessly. ALSA utilizes native Android intents to open chats and input messages safely through the localized bridge interface.</p>
-                <p className="text-xs text-emerald-300">Try: <i>"whatsapp Rohit: kal milte hain 6 baje"</i></p>
-              </div>
-              <div className="p-4 rounded-xl bg-black/30 border border-white/10">
-                <h4 className="text-white font-bold mb-2">👥 Integrated Contacts</h4>
-                <p className="text-xs mb-2">Your contacts added via <code>More -&gt; Contacts Info</code> are securely synced locally, allowing ALSA to process voice commands without you memorizing phone numbers.</p>
-                <p className="text-xs text-emerald-300">Try: <i>"contact search Aman"</i></p>
-              </div>
-              <div className="p-4 rounded-xl bg-black/30 border border-white/10">
-                <h4 className="text-white font-bold mb-2">🎬 Automated yt-dlp</h4>
-                <p className="text-xs mb-2">Download capabilities are built right into the app framework. Videos and audio files route straight to your device's native media folders.</p>
-                <p className="text-xs text-emerald-300">Try: <i>"download https://youtu.be/xyz mp3"</i></p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Desktop PC Bridge Section */}
         <h2 className="text-2xl font-bold mt-12 mb-6 flex items-center gap-3">
@@ -410,7 +437,7 @@ const BridgeSetup = () => {
                   <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">1</div>
                   <div className="flex-1">
                     <h4 className="font-bold text-white mb-2">Install Python 3.8+</h4>
-                    <p className="text-sm text-white/60 mb-3">Download from python.org. <span className="text-amber-400 font-semibold">Important: Check "Add Python to PATH" during installation!</span></p>
+                    <p className="text-sm text-white/60 mb-3">Download the installer from python.org. <span className="text-amber-400 font-semibold">Important: Enable "Add Python to PATH" during setup.</span></p>
                     <Button variant="outline" size="sm" onClick={() => window.open('https://www.python.org/downloads/', '_blank')} className="border-white/20 hover:bg-white/5">
                       <ExternalLink className="w-4 h-4 mr-2" /> Download Python
                     </Button>
@@ -421,7 +448,7 @@ const BridgeSetup = () => {
                   <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">2</div>
                   <div className="flex-1">
                     <h4 className="font-bold text-white mb-2">Download Your PC Bridge</h4>
-                    <p className="text-sm text-white/60 mb-3">Download <code className="bg-black/50 px-2 py-0.5 rounded text-purple-400">{getBridgeFileName()}</code> to a permanent location (e.g., <code className="bg-black/50 px-2 py-0.5 rounded">C:\ALSA\</code>)</p>
+                    <p className="text-sm text-white/60 mb-3">Save <code className="bg-black/50 px-2 py-0.5 rounded text-purple-400">{getBridgeFileName()}</code> to a secure location (e.g., <code className="bg-black/50 px-2 py-0.5 rounded">C:\ALSA\</code>)</p>
                     <a href={getBridgeDownloadUrl()} download>
                       <Button className={`bg-gradient-to-r ${currentTier.gradient} hover:opacity-90`}>
                         <Download className="w-4 h-4 mr-2" /> Download {getBridgeFileName()}
@@ -433,8 +460,8 @@ const BridgeSetup = () => {
                 <div className="flex items-start gap-4 p-4 bg-black/20 rounded-xl">
                   <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">3</div>
                   <div className="flex-1">
-                    <h4 className="font-bold text-white mb-2">Install Python Packages</h4>
-                    <p className="text-sm text-white/60 mb-3">Open Command Prompt (Win+R → cmd) and run:</p>
+                    <h4 className="font-bold text-white mb-2">Install Dependencies</h4>
+                    <p className="text-sm text-white/60 mb-3">Launch Command Prompt (Win + R → cmd) and execute:</p>
                     <div className="bg-black/50 rounded-lg p-4 font-mono text-sm flex items-center justify-between">
                       <code className="text-green-400">pip install {dependencies}</code>
                       <Button variant="ghost" size="sm" onClick={() => copyCommand(`pip install ${dependencies}`, 'win-deps')}>
@@ -447,8 +474,8 @@ const BridgeSetup = () => {
                 <div className="flex items-start gap-4 p-4 bg-black/20 rounded-xl">
                   <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">4</div>
                   <div className="flex-1">
-                    <h4 className="font-bold text-white mb-2">Run the Bridge</h4>
-                    <p className="text-sm text-white/60 mb-3">Navigate to the folder and run:</p>
+                    <h4 className="font-bold text-white mb-2">Execute Bridge Server</h4>
+                    <p className="text-sm text-white/60 mb-3">Navigate to your destination directory and execute:</p>
                     <div className="bg-black/50 rounded-lg p-4 font-mono text-sm flex items-center justify-between">
                       <code className="text-green-400">python {getBridgeFileName()}</code>
                       <Button variant="ghost" size="sm" onClick={() => copyCommand(`python ${getBridgeFileName()}`, 'run-win')}>
@@ -467,15 +494,15 @@ const BridgeSetup = () => {
                 <CardTitle className="text-white flex items-center gap-2">
                   <Terminal className="w-5 h-5" /> Linux Setup Guide
                 </CardTitle>
-                <CardDescription>Complete installation for Ubuntu/Debian-based systems</CardDescription>
+                <CardDescription>Complete installation steps for Debian/Ubuntu environments</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="bg-black/50 rounded-lg p-4 font-mono text-sm space-y-2">
-                  <p className="text-white/40"># Install Python and pip</p>
+                  <p className="text-white/40"># Update system packages and install Python environment</p>
                   <p className="text-green-400">sudo apt update && sudo apt install python3 python3-pip -y</p>
-                  <p className="text-white/40 mt-4"># Install dependencies</p>
+                  <p className="text-white/40 mt-4"># Install required Python packages</p>
                   <p className="text-green-400">pip3 install {dependencies}</p>
-                  <p className="text-white/40 mt-4"># Run the bridge</p>
+                  <p className="text-white/40 mt-4"># Start the Bridge service</p>
                   <p className="text-green-400">python3 {getBridgeFileName()}</p>
                 </div>
               </CardContent>
@@ -490,7 +517,7 @@ const BridgeSetup = () => {
             size="lg"
             className={`bg-gradient-to-r ${currentTier.gradient} hover:opacity-90 text-white px-10 py-7 text-lg font-bold rounded-2xl shadow-2xl`}
           >
-            <Wifi className="w-5 h-5 mr-2" /> Start Using ALSA AI
+            <Wifi className="w-5 h-5 mr-2" /> Launch ALSA AI Workspace
           </Button>
         </div>
       </main>
