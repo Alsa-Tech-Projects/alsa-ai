@@ -45,7 +45,7 @@ async function getAuthHeaderToken(): Promise<string> {
 const phonePost = async (path: string, body: any = {}) => {
   const controller = new AbortController();
   
-  // FIX: Dynamic timeout in MILLISECONDS (not seconds).
+  // FIX: Dynamic timeout in MILLISECONDS.
   // Standard commands get 30s (30,000ms), messaging & app automations get 120s (120,000ms).
   const isMessaging = path.includes('/whatsapp') || path.includes('/telegram') || path.includes('/email') || path.includes('/send');
   const timeoutLimit = isMessaging ? 120000 : 30000; 
@@ -81,6 +81,8 @@ const phonePost = async (path: string, body: any = {}) => {
     }
 
     const res = await r.json();
+    
+    // Strict success evaluation against Accessibility/Bridge callbacks
     const isSuccess = res.ok === true || res.success === true || res.status === 'sent' || res.status === 'queued';
     return { ...res, ok: isSuccess, success: isSuccess };
   } catch (e: any) {
@@ -101,7 +103,7 @@ export const checkPhoneBridgeConnection = async (): Promise<BridgeStatus> => {
     
     const r = await fetch(`${PHONE_BRIDGE_URL}/status`, {
       method: 'GET',
-      signal: controller.signal
+      signal: controller.signal,
     });
     clearTimeout(timeout);
 
@@ -109,7 +111,7 @@ export const checkPhoneBridgeConnection = async (): Promise<BridgeStatus> => {
       const j = await r.json().catch(() => ({}));
       return { 
         connected: true, 
-        message: j?.message || 'Phone Bridge connected',
+        message: j?.message || j?.bridge || 'Phone Bridge connected',
         tier: j?.subscription_tier,
         automations_enabled: j?.automations_enabled
       };
@@ -172,7 +174,51 @@ export async function lookupTelegramContact(name: string) {
   return exactHit || hits.find((h) => h.username || h.telegram || h.phone) || null;
 }
 
-// Basic Commands
+// --- REVERSE GEOCODING HELPER ---
+async function getCityFromCoordinates(lat: number, lon: number): Promise<string> {
+  const timed = async (url: string, headers?: Record<string, string>) => {
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), 8000);
+    try {
+      const r = await fetch(url, { headers, signal: c.signal });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(t);
+    }
+  };
+
+  const data = await timed(
+    `https://nominatim.openstreetmap.org/reverse?format=json&zoom=18&addressdetails=1&lat=${lat}&lon=${lon}`,
+    { 'Accept-Language': 'en' },
+  );
+  const a = data?.address || {};
+  const parts = [
+    a.neighbourhood || a.residential || a.hamlet || a.quarter,
+    a.suburb || a.village || a.town_district || a.county,
+    a.city || a.town || a.municipality || a.city_district || a.state_district,
+    a.state,
+    a.postcode,
+  ].filter(Boolean);
+  const unique = parts.filter((p: string, i: number) => parts.indexOf(p) === i);
+  if (unique.length) return unique.join(', ');
+  if (data?.display_name) return data.display_name;
+
+  const bd = await timed(
+    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
+  );
+  if (bd) {
+    const p2 = [bd.locality, bd.city, bd.principalSubdivision, bd.countryName].filter(Boolean);
+    const u2 = p2.filter((p: string, i: number) => p2.indexOf(p) === i);
+    if (u2.length) return u2.join(', ');
+  }
+
+  return `${Number(lat).toFixed(5)}, ${Number(lon).toFixed(5)} (address lookup unavailable)`;
+}
+
+// Basic
 export const phoneNotify   = (title: string, content: string) => phonePost('/notify', { title, content });
 export const phoneToast    = (text: string) => phonePost('/toast', { text });
 export const phoneVibrate  = (duration = 1000) => phonePost('/vibrate', { duration });
@@ -206,7 +252,7 @@ export const phoneCameraPhoto = (path?: string, camera: 0|1 = 0) => phonePost('/
 export const phoneCameraInfo  = () => phonePost('/camera/info');
 
 // Apps / Intents
-export const phoneAppOpen = (pkg: string) => phonePost('/app/open', { package: pkg });
+export const phoneAppOpen = (pkgOrName: string) => phonePost('/app/open', { package: pkgOrName, name: pkgOrName });
 export const phoneAppList = () => phonePost('/app/list');
 export const phoneUrlOpen = (url: string) => phonePost('/url/open', { url });
 export const phoneShare   = (text: string, title = 'Share') => phonePost('/share', { text, title });
@@ -227,32 +273,50 @@ export const phoneStorageList  = (path = '/sdcard') => phonePost('/storage/list'
 export const phoneStorageRead  = (path: string) => phonePost('/storage/read', { path });
 export const phoneStorageWrite = (path: string, content: string) => phonePost('/storage/write', { path, content });
 
+// Shell
+export const phoneShell = (command: string) => phonePost('/shell', { command });
+
 // WhatsApp Automation
+const phonePostWithFallback = async (paths: string[], body: any) => {
+  let last: any = null;
+  for (const p of paths) {
+    const res = await phonePost(p, body);
+    if (res && (res.ok === true || res.success === true)) return res;
+    last = res;
+    const err = String(last?.error || '');
+    if (!/404|not found|405|Method Not Allowed|Unsupported|Invalid platform/i.test(err)) return last;
+  }
+  return last;
+};
+
 export const phoneWhatsappSend = (number: string, text: string) =>
-  phonePost('/whatsapp/send', { number: sanitizePhoneNumber(number), text });
+  phonePostWithFallback(['/whatsapp/send', '/send'], { platform: 'whatsapp', number: sanitizePhoneNumber(number), text });
 
 export const phoneWhatsappSendByName = async (name: string, text: string) => {
+  // Direct Number Check bypasses Fuzzy Search
   if (isDirectPhoneNumber(name)) {
     return phoneWhatsappSend(name, text);
   }
+
   const hits = await searchContacts(name);
   if (hits.length) {
     const exactHit = hits.find(h => h.name.toLowerCase() === name.toLowerCase() && h.phone);
     const target = exactHit || hits.find(h => h.phone) || hits[0];
+    
     if (target?.phone) {
       return phoneWhatsappSend(target.phone, text);
     }
   }
-  return phonePost('/whatsapp/send-by-name', { name, text });
+  return phonePostWithFallback(['/whatsapp/send-by-name'], { name, text });
 };
 
 // Telegram Automation
 export const phoneTelegramSend = (usernameOrNumber: string, text: string) => {
   const isUsername = /^@?[a-zA-Z][a-zA-Z0-9_]{3,}$/.test(String(usernameOrNumber || ''));
   const body = isUsername
-    ? { username: String(usernameOrNumber).replace(/^@/, ''), text }
-    : { number: sanitizePhoneNumber(usernameOrNumber), text };
-  return phonePost('/telegram/send', body);
+    ? { platform: 'telegram', username: String(usernameOrNumber).replace(/^@/, ''), text }
+    : { platform: 'telegram', number: sanitizePhoneNumber(usernameOrNumber), text };
+  return phonePostWithFallback(['/telegram/send', '/send'], body);
 };
 
 export const phoneTelegramSendByName = async (name: string, text: string) => {
@@ -261,7 +325,7 @@ export const phoneTelegramSendByName = async (name: string, text: string) => {
   }
   const hit = await lookupTelegramContact(name);
   if (hit) return phoneTelegramSend(hit.username || hit.phone || '', text);
-  return phonePost('/telegram/send-by-name', { name, text });
+  return phonePostWithFallback(['/telegram/send-by-name'], { name, text });
 };
 
 // Email Automation
@@ -276,7 +340,7 @@ export const phoneEmailSend = (opts: {
 
 export const phoneEmailSendByName = async (name: string, body: string, subject?: string, html = false) => {
   const hit = await lookupEmailContact(name);
-  if (!hit?.email) {
+  if (!hit) {
     return phonePost('/email/send-by-name', { name, body, subject, html });
   }
   return phoneEmailSend({ to: hit.email, subject: subject || deriveSubject(body), body, html });
@@ -296,49 +360,301 @@ export const phoneContactsSearch  = (query: string) => phonePost('/contacts/sear
 
 // yt-dlp
 export const phoneYtdlpStatus   = () => phonePost('/ytdlp/status');
-export const phoneYtdlpDownload = (opts: any) => phonePost('/ytdlp/download', opts);
+export const phoneYtdlpDownload = (opts: {
+  url: string;
+  mode?: 'video' | 'audio';
+  quality?: string;
+  audio_format?: 'mp3' | 'm4a' | 'opus' | 'wav' | 'flac';
+  subtitles?: boolean;
+  embed_thumbnail?: boolean;
+  embed_metadata?: boolean;
+  playlist?: boolean;
+  output_dir?: string;
+}) => phonePost('/ytdlp/download', opts);
 
-// App Open Helper
-export const smartOpenApp = (appName: string) => phonePost('/app/open', { package: appName, name: appName });
+// ── App Opening Helpers (Direct to Server, No Hardcoding) ─────
+async function smartOpenApp(appName: string) {
+  return phoneAppOpen(appName.trim());
+}
 
-// ── Natural Language Command Executor ─────────────────────────
-export const executePhoneCommand = async (cmd: any): Promise<{ success: boolean; message: string; data?: any }> => {
+// ── Phone natural-language parser + executor ────────────────────────────────
+export interface PhoneCommand {
+  action: string;
+  params?: Record<string, any>;
+  label: string;
+}
+
+export const parsePhoneCommand = (input: string): PhoneCommand | null => {
+  const t = input.trim();
+  const lowerT = t.toLowerCase(); 
+
+  // 📧 EMAIL AUTOMATION PARSING 
+  const emailDirectM = t.match(/^(?:email|mail)\s+(?:to\s+)?([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\s+(?:subject\s+["']?([^"'\n]+)["']?\s+)?(?:body|text|msg|message)\s+([\s\S]+)$/i);
+  if (emailDirectM) {
+    return { action: 'email-send', params: { to: emailDirectM[1], subject: emailDirectM[2] || undefined, body: emailDirectM[3].trim() }, label: `Email to ${emailDirectM[1]}` };
+  }
+
+  const emailNameM = t.match(/^(?:email|mail)\s+(?:to\s+)?([a-zA-Z][a-zA-Z\s.'-]{1,20}?)\s+(?:subject\s+["']?([^"'\n]+)["']?\s+)?(?:body|text|msg|message|karo|bhejo)\s+([\s\S]+)$/i);
+  if (emailNameM && !/\d/.test(emailNameM[1])) {
+    const name = emailNameM[1].trim();
+    if (!/^(me|him|her|them|app|system)$/i.test(name)) {
+      return { action: 'email-name', params: { name, subject: emailNameM[2] || undefined, body: emailNameM[3].trim() }, label: `Email to ${name}` };
+    }
+  }
+
+  // 💬 WHATSAPP AUTOMATION PARSING 
+  const waNumM = t.match(/^(?:whatsapp|wa)\s+(?:to\s+)?(\+?\d[\d\s\-]{6,15})\s+(?:msg|message|text|saying)\s+([\s\S]+)$/i);
+  if (waNumM) {
+    return { action: 'whatsapp-num', params: { number: sanitizePhoneNumber(waNumM[1]), text: waNumM[2].trim() }, label: `WhatsApp to ${waNumM[1]}` };
+  }
+
+  const waNaturalM = t.match(/^(?:whatsapp|wa)\s+(?:to\s+|ko\s+|par\s+)?([a-zA-Z0-9\+\s.'-]{1,30}?)\s+(?:msg|message|massage|text|saying|karo|send|bhejo)\s+([\s\S]+)$/i);
+  if (waNaturalM) {
+    const targetName = waNaturalM[1].trim();
+    const messageText = waNaturalM[2].trim();
+    if (targetName && messageText && !/^(par|ko|msg|message|send|bhejo)$/i.test(targetName)) {
+      if (isDirectPhoneNumber(targetName)) {
+        return { action: 'whatsapp-num', params: { number: sanitizePhoneNumber(targetName), text: messageText }, label: `WhatsApp to ${targetName}` };
+      }
+      return { action: 'whatsapp-name', params: { name: targetName, text: messageText }, label: `WhatsApp to ${targetName}` };
+    }
+  }
+
+  // Torch 
+  if (/\b(torch|flashlight|flash|light)\b.*\b(on|chalu|jala|jalao|start|open)\b/.test(lowerT)
+      || /\b(on|chalu|jalao|start)\b.*\b(torch|flashlight|flash)\b/.test(lowerT)) {
+    return { action: 'torch', params: { on: true }, label: 'turn torch ON' };
+  }
+  if (/\b(torch|flashlight|flash|light)\b.*\b(off|band|bandh|close|stop)\b/.test(lowerT)
+      || /\b(off|band|bandh|stop)\b.*\b(torch|flashlight|flash)\b/.test(lowerT)) {
+    return { action: 'torch', params: { on: false }, label: 'turn torch OFF' };
+  }
+
+  // Vibrate
+  if (/\b(vibrate|vibration|kampan|thartharao|thartharaho)\b/.test(lowerT)) {
+    const m = lowerT.match(/(\d{2,5})\s*(ms|milli|second|sec)?/);
+    const dur = m ? Math.min(5000, parseInt(m[1])) : 1000;
+    return { action: 'vibrate', params: { duration: dur }, label: `vibrate phone (${dur}ms)` };
+  }
+
+  // Battery
+  if (/\bbattery\b|\bbatri\b|\bbattry\b|battery\s*(status|level|percent)|kitni.*battery|battery.*kitni/.test(lowerT)) {
+    return { action: 'battery', label: 'get battery status' };
+  }
+
+  // Brightness
+  const brightM = lowerT.match(/brightness\s*(?:ko|to|=)?\s*(\d{1,3})/) || lowerT.match(/(\d{1,3})\s*%?\s*brightness/);
+  if (brightM) {
+    const lvl = Math.max(0, Math.min(255, parseInt(brightM[1]) > 100 ? parseInt(brightM[1]) : Math.round(parseInt(brightM[1]) * 2.55)));
+    return { action: 'brightness', params: { level: lvl }, label: `set brightness ${brightM[1]}` };
+  }
+
+  // Volume
+  const volM = lowerT.match(/volume\s*(?:ko|to|=)?\s*(\d{1,3})/);
+  if (volM) return { action: 'volume', params: { stream: 'music', level: parseInt(volM[1]) }, label: `set volume ${volM[1]}` };
+
+  // Location
+  if (/\b(location|gps|kaha hu|kahan hoon|where am i|meri location)\b/.test(lowerT)) {
+    return { action: 'location', label: 'get GPS location' };
+  }
+
+  // Wi-Fi
+  if (/\bwifi\b.*\b(on|chalu|start)\b/.test(lowerT)) return { action: 'wifi', params: { on: true }, label: 'wifi ON' };
+  if (/\bwifi\b.*\b(off|band|stop)\b/.test(lowerT))  return { action: 'wifi', params: { on: false }, label: 'wifi OFF' };
+  if (/\bwifi\b.*(info|details|status)/.test(lowerT)) return { action: 'wifi-info', label: 'wifi info' };
+
+  // Clipboard
+  if (/clipboard.*(read|get|dikhao|show)/.test(lowerT)) return { action: 'clip-get', label: 'read clipboard' };
+  const clipSet = t.match(/clipboard.*(?:set|copy|par likh|mein daal)[^"']*["'](.+?)["']/i);
+  if (clipSet) return { action: 'clip-set', params: { text: clipSet[1] }, label: 'set clipboard' };
+
+  // SMS 
+  const smsM = t.match(/^(?:sms|text)\s+(?:to\s+)?(\+?\d[\d\s\-]{6,15})\s+(?:msg|message)\s+([\s\S]+)$/i)
+             || t.match(/^(\+?\d[\d\s\-]{6,15})\s*(?:ko|par)?\s*sms\s*(?:bhejo|send|kar)\s+([\s\S]+)$/i);
+  if (smsM) return { action: 'sms', params: { number: sanitizePhoneNumber(smsM[1]), text: smsM[2] || smsM[3] }, label: `SMS to ${smsM[1]}` };
+
+  // Call by number
+  const callM = t.match(/^(?:call|phone|dial)\s+(?:to\s+)?(\+?\d[\d\s\-]{6,15})$/i)
+              || t.match(/^(\+?\d[\d\s\-]{6,15})\s*(?:ko|par)?\s*(?:call|phone|dial)\s*(?:karo|kar|do)$/i);
+  if (callM) return { action: 'call', params: { number: sanitizePhoneNumber(callM[1]) }, label: `call ${callM[1]}` };
+
+  // Call by name
+  const callNameM = t.match(/^(?:call|phone|dial|ring|video\s*call)\s+(?:to\s+|karo\s+)?([a-zA-Z][a-zA-Z\s\.'-]{1,30}?)(?:\s*$|[.,!?])/i)
+                 || t.match(/^([a-zA-Z][a-zA-Z\s\.'-]{1,30}?)\s*(?:ko|par|ke|se)\s*(?:call|phone|dial)\s*(?:karo|kar|do|lagao|milao)?$/i);
+  if (callNameM && !/\d/.test(callNameM[1])) {
+    const name = callNameM[1].trim().replace(/\s+/g, ' ');
+    if (!/^(me|him|her|them|someone|anyone|nobody|end|back|now|please)$/i.test(name) && name.length >= 2) {
+      return { action: 'call-name', params: { name }, label: `call ${name}` };
+    }
+  }
+
+  if (/^(?:end call|call end|call kaat|hang up|cut call)$/i.test(lowerT)) return { action: 'call-end', label: 'end call' };
+
+  // Camera
+  if (/\b(front cam|selfie|front camera).*photo|photo.*front|selfie\s*(khinch|le|lo|lelo)/i.test(lowerT))
+    return { action: 'photo', params: { camera: 1 }, label: 'front camera photo' };
+  if (/\b(back cam|rear cam|back camera).*photo|photo.*back|photo\s*(khinch|le|lo|lelo|click)/i.test(lowerT))
+    return { action: 'photo', params: { camera: 0 }, label: 'back camera photo' };
+
+  // Toast / Notify
+  const toastM = t.match(/toast[^"']*["'](.+?)["']/i);
+  if (toastM) return { action: 'toast', params: { text: toastM[1] }, label: 'toast' };
+  const notifM = t.match(/(?:notify|notification)[^"']*["'](.+?)["']/i);
+  if (notifM) return { action: 'notify', params: { title: 'Alsa AI', content: notifM[1] }, label: 'notification' };
+
+  // TTS
+  const ttsM = t.match(/(?:speak|bolo|tts)[^"']*["'](.+?)["']/i);
+  if (ttsM) return { action: 'tts', params: { text: ttsM[1] }, label: 'speak' };
+
+  // Telegram 
+  const tgUserM = t.match(/^(?:telegram|tg)\s+(?:to\s+)?@([a-zA-Z0-9_]+)\s+(?:msg|message|text)\s+([\s\S]+)$/i);
+  if (tgUserM) {
+    return { action: 'telegram-user', params: { username: tgUserM[1].trim(), text: tgUserM[2].trim() }, label: `Telegram to @${tgUserM[1]}` };
+  }
+  const tgNameM = t.match(/^(?:telegram|tg)\s+(?:to\s+)?([a-zA-Z][a-zA-Z\s]{1,30}?)\s+(?:msg|message|text)\s+([\s\S]+)$/i);
+  if (tgNameM && !/\d/.test(tgNameM[1])) {
+    return { action: 'telegram-name', params: { name: tgNameM[1].trim(), text: tgNameM[2].trim() }, label: `Telegram to ${tgNameM[1].trim()}` };
+  }
+
+  // YT-DLP
+  const ytM = t.match(/(https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com)\/\S+)/i);
+  if (ytM && /\b(download|save|mp3|mp4|audio|video|yt-?dlp|playlist)\b/i.test(lowerT)) {
+    const audio = /\b(mp3|audio|song|music)\b/i.test(lowerT);
+    const q = lowerT.match(/\b(144|240|360|480|720|1080|1440|2160|4k)\b/i);
+    return {
+      action: 'ytdlp',
+      params: {
+        url: ytM[1],
+        mode: audio ? 'audio' : 'video',
+        quality: q ? (q[1].toLowerCase() === '4k' ? '2160' : q[1]) : 'best',
+        playlist: /\bplaylist\b/i.test(lowerT) || /list=/.test(ytM[1]),
+      },
+      label: `yt-dlp ${audio ? 'audio' : 'video'} on phone`,
+    };
+  }
+
+  // Contacts
+  const cSearch = t.match(/(?:contact|contacts)\s+(?:search|find|dhundo|dhoondo|khojo)\s+(.+)/i);
+  if (cSearch) return { action: 'contact-search', params: { query: cSearch[1].trim() }, label: `search contact "${cSearch[1].trim()}"` };
+
+  // Media
+  if (/\b(pause|ruk|band karo)\s*(music|song|media|gana)/i.test(lowerT)) return { action: 'media', params: { action: 'pause' }, label: 'pause media' };
+  if (/\b(play)\s*(music|song|media|gana)/i.test(lowerT)) return { action: 'media', params: { action: 'play' }, label: 'play media' };
+
+  // Smart App Open Selector
+  const openAppPattern =
+    t.match(/(?:open|launch|start|run|chalu\s*karo|khol|kholo|open\s+app)\s+(.+)/i) ||
+    t.match(/(.+?)\s+(?:open\s*karo|chalu\s*karo|start\s*karo|khol|kholo)/i);
+
+  if (openAppPattern) {
+    return { action: "app-open", params: { name: openAppPattern[1].trim() }, label: `open ${openAppPattern[1].trim()}` };
+  }
+
+  return null;
+};
+
+function formatPhoneResult(cmd: PhoneCommand, res: any): string {
+  const d = res?.data ?? res ?? {};
+  const p: any = cmd.params || {};
+
+  switch (cmd.action) {
+    case 'email-send':
+    case 'email-name':
+      return `📧 Email bhej diya ${p.to || p.name} ko.`;
+    case 'torch':
+      return p.on ? '🔦 Torch ON kar diya.' : '🔦 Torch OFF kar diya.';
+    case 'vibrate':
+      return `📳 Phone vibrate kar diya (${p.duration}ms).`;
+    case 'battery': {
+      const lvl = d.percentage ?? d.level ?? d.battery ?? d.percent;
+      const status = d.status ?? d.plugged ?? '';
+      return `🔋 Battery ${lvl != null ? lvl + '%' : 'status'}${status ? ` — ${status}` : ''}`;
+    }
+    case 'location':
+      return res?.place ? `📍 Location: ${res.place}` : '📍 Location nahi mil paayi.';
+    case 'whatsapp-num':
+    case 'whatsapp-name':
+      return `💬 WhatsApp message bhej diya ${p.name || p.number} ko.`;
+    case 'telegram-user':
+    case 'telegram-name':
+      return `✈️ Telegram message bhej diya ${p.username || p.name} ko.`;
+    case 'sms':
+      return `💬 SMS bhej diya ${p.number} ko.`;
+    case 'call':
+    case 'call-name':
+      return `📞 Call mila diya ${p.name || p.number} ko.`;
+    case 'app-open':
+      return `📱 ${p.name || p.package || 'App'} open kar di.`;
+    default:
+      return typeof d === 'string' ? d : (res?.message || `${cmd.label} ✓`);
+  }
+}
+
+export const executePhoneCommand = async (cmd: PhoneCommand): Promise<{ success: boolean; message: string; data?: any }> => {
   try {
     let res: any;
     switch (cmd.action) {
-      case 'email-send': res = await phoneEmailSend(cmd.params); break;
-      case 'email-name': res = await phoneEmailSendByName(cmd.params.name, cmd.params.body, cmd.params.subject); break;
-      case 'whatsapp-num':  res = await phoneWhatsappSend(cmd.params.number, cmd.params.text); break;
-      case 'whatsapp-name': res = await phoneWhatsappSendByName(cmd.params.name, cmd.params.text); break;
-      case 'telegram-user': res = await phoneTelegramSend(cmd.params.username, cmd.params.text); break;
-      case 'telegram-name': res = await phoneTelegramSendByName(cmd.params.name, cmd.params.text); break;
-      case 'torch':      res = await phoneTorch(cmd.params.on); break;
-      case 'vibrate':    res = await phoneVibrate(cmd.params.duration); break;
+      case 'email-send': res = await phoneEmailSend({ to: cmd.params!.to, subject: cmd.params!.subject, body: cmd.params!.body }); break;
+      case 'email-name': res = await phoneEmailSendByName(cmd.params!.name, cmd.params!.body, cmd.params!.subject); break;
+      case 'whatsapp-num':  res = await phoneWhatsappSend(cmd.params!.number, cmd.params!.text); break;
+      case 'whatsapp-name': res = await phoneWhatsappSendByName(cmd.params!.name, cmd.params!.text); break;
+      case 'telegram-user': res = await phoneTelegramSend(cmd.params!.username, cmd.params!.text); break;
+      case 'telegram-name': res = await phoneTelegramSendByName(cmd.params!.name, cmd.params!.text); break;
+      case 'torch':      res = await phoneTorch(cmd.params!.on); break;
+      case 'vibrate':    res = await phoneVibrate(cmd.params!.duration); break;
       case 'battery':    res = await phoneBattery(); break;
-      case 'brightness': res = await phoneBrightness(cmd.params.level); break;
-      case 'volume':     res = await phoneVolume(cmd.params.stream, cmd.params.level); break;
-      case 'location':   res = await phoneLocation(); break;
-      case 'wifi':       res = await phoneWifiToggle(cmd.params.on); break;
-      case 'sms':        res = await phoneSmsSend(cmd.params.number, cmd.params.text); break;
-      case 'call':       res = await phoneCallMake(cmd.params.number); break;
-      case 'call-name':  res = await phoneCallByName(cmd.params.name); break;
+      case 'brightness': res = await phoneBrightness(cmd.params!.level); break;
+      case 'volume':     res = await phoneVolume(cmd.params!.stream, cmd.params!.level); break;
+      case 'location': {
+        res = await phoneLocation();
+        const lat = res?.data?.latitude ?? res?.latitude;
+        const lon = res?.data?.longitude ?? res?.longitude;
+        if (lat != null && lon != null) {
+          const place = await getCityFromCoordinates(Number(lat), Number(lon));
+          if (place) {
+            res.message = `📍 ${place}`;
+            res.place = place;
+          }
+        }
+        break;
+      }
+      case 'wifi':       res = await phoneWifiToggle(cmd.params!.on); break;
+      case 'wifi-info':  res = await phoneWifiInfo(); break;
+      case 'clip-get':   res = await phoneClipboardGet(); break;
+      case 'clip-set':   res = await phoneClipboardSet(cmd.params!.text); break;
+      case 'sms':        res = await phoneSmsSend(cmd.params!.number, cmd.params!.text); break;
+      case 'call':       res = await phoneCallMake(cmd.params!.number); break;
+      case 'call-name':  res = await phoneCallByName(cmd.params!.name); break;
       case 'call-end':   res = await phoneCallEnd(); break;
-      case 'photo':      res = await phoneCameraPhoto(undefined, cmd.params.camera); break;
-      case 'toast':      res = await phoneToast(cmd.params.text); break;
-      case 'notify':     res = await phoneNotify(cmd.params.title, cmd.params.content); break;
-      case 'tts':        res = await phoneTts(cmd.params.text); break;
-      case 'ytdlp':      res = await phoneYtdlpDownload(cmd.params); break;
-      case 'contacts':   res = await phoneContacts(); break;
-      case 'contact-search': res = await phoneContactsSearch(cmd.params.query); break;
-      case 'media':      res = await phoneMediaControl(cmd.params.action); break;
-      case 'app-open':   res = await smartOpenApp(cmd.params.name); break;
-      default: return { success: false, message: `Unknown action: ${cmd.action}` };
+      case 'photo':      res = await phoneCameraPhoto(undefined, cmd.params!.camera); break;
+      case 'toast':      res = await phoneToast(cmd.params!.text); break;
+      case 'notify':     res = await phoneNotify(cmd.params!.title, cmd.params!.content); break;
+      case 'tts':        res = await phoneTts(cmd.params!.text); break;
+      case 'ytdlp':      res = await phoneYtdlpDownload(cmd.params as any); break;
+      case 'contacts':
+        res = await phoneContacts();
+        await syncContactsToDb(res?.data ?? res);
+        break;
+      case 'contact-search': {
+        const dbHits = await searchContacts(cmd.params!.query);
+        if (dbHits.length) {
+          res = { success: true, data: dbHits };
+        } else {
+          res = await phoneContactsSearch(cmd.params!.query);
+          await syncContactsToDb(res?.data ?? res);
+        }
+        break;
+      }
+      case 'media':      res = await phoneMediaControl(cmd.params!.action); break;
+      case 'app-open':   res = await smartOpenApp(cmd.params!.name); break;
+      default: return { success: false, message: `Unknown phone action: ${cmd.action}` };
     }
     
-    const ok = res?.success !== false && res?.ok !== false;
+    // Strict success validation
+    const ok = res?.success !== false && res?.ok !== false && res?.status !== 'error';
     return {
       success: ok,
-      message: res?.message || (ok ? `${cmd.label || 'Action'} completed` : (res?.error || 'Execution failed')),
+      message: ok ? formatPhoneResult(cmd, res) : (res?.error || res?.message || `${cmd.label} failed`),
       data: res,
     };
   } catch (e: any) {
