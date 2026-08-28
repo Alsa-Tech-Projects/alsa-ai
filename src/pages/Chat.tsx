@@ -1,4 +1,4 @@
-// Fix Telegram Fetching Issues & Add AI Phone Automation Fallback
+// Fix Telegram Fetching Issues
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Mic, Send, Settings, Plus, ImageIcon, Paperclip, Menu, X, Video, Camera, Lock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -107,15 +107,17 @@ const Chat = () => {
   const [uploadedFiles, setUploadedFiles] = useState<FileAttachment[]>([]);
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [show51Update, setShow51Update] = useState(false);
-  useEffect(() => {
-    const seen = localStorage.getItem('alsa_seen_update_v51');
-    if (!seen) {
-      setShow51Update(true);
-    }
-  }, []);
+
+useEffect(() => {
+  const seen = localStorage.getItem('alsa_seen_update_v51');
+  if (!seen) {
+    setShow51Update(true);
+  }
+}, []);
   useEffect(() => {
     if (location.state && typeof location.state === 'object') {
       const targetState = location.state as { autoOpenFromWake?: boolean; wakeTranscript?: string };
+
       if (targetState.autoOpenFromWake && targetState.wakeTranscript) {
         setInputText(targetState.wakeTranscript);
         try {
@@ -131,7 +133,6 @@ const Chat = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSavedPath, setRecordingSavedPath] = useState<string | null>(null);
   const [aiMode, setAiMode] = useState<'fast' | 'thinking'>(() => (localStorage.getItem('alsa_ai_mode') as 'fast' | 'thinking') || 'fast');
-  
   const formatWikipedia = (text: string, query: string) => {
     const cleaned = text
       .replace("📖 Wikipedia Result:", "")
@@ -157,7 +158,6 @@ const Chat = () => {
     stopListening,
     resetTranscript
   } = useSpeechRecognition();
-  
   const { speak: ttsSpeak, stop, isSpeaking } = useTextToSpeech();
   const TTS_ENABLED = false;
   const speak = useCallback((text: string) => {
@@ -367,14 +367,12 @@ const Chat = () => {
     setInputText(currentText);
     if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current);
     const lowerText = currentText.toLowerCase();
-    
     if (lowerText === 'stop listening' || lowerText === 'voice off' || lowerText === 'mic off') {
       stopListening();
       resetTranscript();
       setInputText('');
       return;
     }
-    
     listeningTimeoutRef.current = setTimeout(() => {
       if (currentText === lastProcessedRef.current) return;
       lastProcessedRef.current = currentText;
@@ -557,7 +555,6 @@ const Chat = () => {
   };
   const handleSubmit = async (text: string = inputText) => {
     if (isTyping || (!text.trim() && uploadedFiles.length === 0)) return;
-    
     if (user && subscription.isFree && !subscription.canSendMessage) {
       toast({
         title: 'Daily Limit Reached',
@@ -567,12 +564,10 @@ const Chat = () => {
       navigate('/pricing');
       return;
     }
-    
     let trimmed = text.trim();
     if (activeTool === 'deep' && !/^\/deep\b/i.test(trimmed)) trimmed = `/deep ${trimmed}`;
     if (activeTool === 'learn' && !/^\/learn\b/i.test(trimmed)) trimmed = `/learn ${trimmed}`;
     if (activeTool === 'create' && !/^\/create\b/i.test(trimmed)) trimmed = `/create ${trimmed}`;
-    
     if (activeTool === 'image' || /^\/image\b/i.test(trimmed)) {
       const prompt = trimmed.replace(/^\/image\s*/i, '').trim();
       if (!prompt) {
@@ -583,18 +578,15 @@ const Chat = () => {
       setActiveTool(null);
       const baseImg = editBaseImage;
       setEditBaseImage(null);
-      
       const userMsg: Message = { role: 'user', content: baseImg ? `✏️ Edit image: ${prompt}` : prompt };
       setMessages(prev => [...prev, userMsg, { role: 'assistant', content: baseImg ? '✏️ Editing image…' : '🎨 Generating image…' }]);
       setIsTyping(true);
-      
       try {
         const { data, error } = await supabase.functions.invoke('image-chat', {
           body: { prompt, inputImages: baseImg ? [baseImg] : [], aspectRatio: '1:1' },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
-        
         const assistantMsg: Message = {
           role: 'assistant',
           content: data?.text || `Here's your image for: **${prompt}**`,
@@ -602,7 +594,6 @@ const Chat = () => {
             ? [{ name: 'generated.png', type: 'image/png', size: 0, data: data.imageUrl, preview: data.imageUrl }]
             : undefined,
         };
-        
         setMessages(prev => [...prev.slice(0, -1), assistantMsg]);
         if (user) await saveConversation(userMsg, assistantMsg);
       } catch (e: any) {
@@ -615,6 +606,7 @@ const Chat = () => {
     const lower = trimmed.toLowerCase();
     const isPremiumCmd = lower.startsWith('/deep') || lower.startsWith('/create');
     const isProOrElite = subscription.isPro || subscription.isElite || subscription.isTeam;
+
     if (isPremiumCmd && !isProOrElite) {
       toast({
         title: 'Pro / Elite feature',
@@ -624,22 +616,19 @@ const Chat = () => {
       navigate('/pricing');
       return;
     }
-    
     if (user && subscription.isFree) {
       subscription.incrementMessageCount();
     }
-    
     const userMessage: Message = { role: 'user', content: text, files: uploadedFiles };
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
     setUploadedFiles([]);
-    // YT-DLP Download check
     try {
       const { extractYouTubeUrl, ytdlpStatus, ytdlpDownload } = await import('@/utils/pcBridge');
       const { phoneYtdlpStatus, phoneYtdlpDownload } = await import('@/utils/phoneBridge');
+
       const ytUrl = extractYouTubeUrl(trimmed);
       const wantsDownload = /\b(download|save|grab|mp3|mp4|audio|video|playlist|yt-?dlp)\b/i.test(trimmed);
-      
       if (ytUrl && wantsDownload) {
         if (!isProOrElite) {
           setMessages(prev => [...prev, { role: 'assistant', content: '🔒 YouTube downloader (yt-dlp) Pro & Elite plans mein available hai. Upgrade karein.' }]);
@@ -658,7 +647,6 @@ const Chat = () => {
           embed_metadata: true,
           playlist: /\bplaylist\b/i.test(trimmed) || /list=/.test(ytUrl),
         };
-        
         if (phoneBridgeConnected) {
           const ps = await phoneYtdlpStatus();
           if (ps?.installed) {
@@ -675,13 +663,11 @@ const Chat = () => {
             return;
           }
         }
-        
         const status = await ytdlpStatus();
         if (!status?.installed) {
           setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ No Pc Bridge, No Alsa Ai Server. Kindly run atleast one from them(`Alsa Ai Server(For Android) Or pc-bridge.py(For Desktop)`).' }]);
           return;
         }
-        
         setMessages(prev => [...prev, { role: 'assistant', content: `📥 Downloading via yt-dlp (PC)...\n\n• URL: ${ytUrl}\n• Mode: ${wantsAudio ? 'audio' : 'video ' + quality + 'p'}\n• Folder: ~/Downloads/ALSA-YT\n\nThodi der lagegi...` }]);
         setIsTyping(true);
         const res = await ytdlpDownload(commonOpts);
@@ -725,7 +711,6 @@ Output rules (strict markdown):
 - Do NOT add a "Confidential" footer in the body — the PDF renderer adds it.
 - Do NOT use code fences or HTML. Markdown only.
 - Length: enough to fully cover the brief, typically 500-1500 words.`;
-        
         const apiEndpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
         const aiResp = await fetch(apiEndpoint, {
           method: 'POST',
@@ -737,7 +722,6 @@ Output rules (strict markdown):
             createInstruction,
           }),
         });
-        
         let fullText = '';
         if (aiResp.body) {
           const r = aiResp.body.getReader();
@@ -757,13 +741,11 @@ Output rules (strict markdown):
             }
           }
         }
-        
         if (!fullText.trim()) {
           setMessages(prev => [...prev, { role: 'assistant', content: '❌ Could not generate content. Please try again.' }]);
           setIsTyping(false);
           return;
         }
-        
         let summary = '';
         if (mode === 'pdf') {
           const fname = generateArticlePdf(topic, fullText);
@@ -775,7 +757,6 @@ Output rules (strict markdown):
             ? `🗜️ **Project ZIP ready:** \`${files[0]}\`\n\nContains ${files.length - 1} files:\n\n${files.slice(1).map(f => `- \`${f}\``).join('\n')}`
             : `💻 **Code file ready:**\n\n${files.map(f => `- \`${f}\``).join('\n')}\n\nDownloaded to your Downloads folder.`;
         }
-        
         const assistantMsg = { role: 'assistant' as const, content: summary + '\n\n---\n\n' + fullText };
         setMessages(prev => [...prev, assistantMsg]);
         speak(mode === 'pdf' ? 'Your PDF is ready' : 'Your code files are ready');
@@ -834,7 +815,6 @@ Output rules (strict markdown):
       /(.+?)\s+(?:ka|ke|ki)\s+reminder\s+(?:set|laga|bana)/i,
       /याद\s+दिलाना\s+(.+)/i,
     ];
-    
     const isReminderRequest = reminderPatterns.some(p => p.test(text));
     if (isReminderRequest && user) {
       const reminderData = parseReminderFromText(text);
@@ -855,7 +835,7 @@ Output rules (strict markdown):
         }
       }
     }
-    // ── PHONE BRIDGE COMMAND PARSER (SUPERCHARGED HINGLISH) ──
+    // ── PHONE BRIDGE COMMAND PARSER ──
     const phoneCmd = parsePhoneCommand(text);
     if (phoneCmd && phoneBridgeConnected) {
       try {
@@ -878,9 +858,8 @@ Output rules (strict markdown):
         return;
       }
     }
-    
     if (phoneCmd && !phoneBridgeConnected) {
-      const msg = `📴 Phone Bridge is offline. Alsa Ai Bridge app chalu karein.`;
+      const msg = `📴 Alsa Ai Bridge Server Is Offline. Run Alsa Ai Bridge Server First.`;
       setMessages(prev => [...prev, { role: 'assistant', content: msg }]);
       speak('Phone Bridge is offline');
       return;
@@ -905,7 +884,6 @@ Output rules (strict markdown):
       /\b(open|launch|start)\s+(\w+)\b/i,
       /\b(\w+)\s+(kholo|kholna|open\s+karo|ko\s+open\s+karo)\b/i,
     ];
-    
     const userSites = JSON.parse(localStorage.getItem('alsa_user_sites') || '[]');
     for (const site of userSites) {
       const sitePattern = new RegExp(`\\b(open|kholo|launch)\\s+${site.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b|\\b${site.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+(kholo|open\\s+karo)\\b`, 'i');
@@ -918,7 +896,6 @@ Output rules (strict markdown):
         return;
       }
     }
-    
     for (const [key, site] of Object.entries(WEBSITES)) {
       const strictPatterns = [
         new RegExp(`\\b(open|launch|start|visit)\\s+${key}\\b`, 'i'),
@@ -943,7 +920,6 @@ Output rules (strict markdown):
       const telegramContacts = JSON.parse(localStorage.getItem('alsa_telegram_contacts') || '[]');
       const whatsappContacts = JSON.parse(localStorage.getItem('alsa_whatsapp_contacts') || '[]');
       const crossConversationContext = await fetchCrossConversationContext();
-      
       const apiEndpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
       const response = await fetch(apiEndpoint, {
         method: 'POST',
@@ -979,22 +955,18 @@ Output rules (strict markdown):
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`);
       }
-      
       if (!response.body) throw new Error('No response body');
-      
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
       let accumulatedText = '';
       setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
-      
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
-        
         for (let line of lines) {
           line = line.trim();
           if (!line || line.startsWith(':')) continue;
@@ -1006,7 +978,6 @@ Output rules (strict markdown):
           }
           try {
             const parsed = JSON.parse(data);
-            
             if (parsed.type === 'key_source') {
               const src: 'user' | 'server' = parsed.source === 'user' ? 'user' : 'server';
               setMessages(prev => {
@@ -1021,7 +992,6 @@ Output rules (strict markdown):
               });
               continue;
             }
-            
             if (parsed.type === 'content' && parsed.delta) {
               accumulatedText += parsed.delta;
               setMessages(prev => {
@@ -1072,6 +1042,7 @@ Output rules (strict markdown):
               accumulatedText += `\n\n${result.success ? `✅ Opened ${parsed.command}` : `❌ ${result.message}`}`;
               setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'telegram_msg') {
+              // BUG FIX 3: TELEGRAM HANDLER NOW PROPERLY FALLS BACK TO PHONE BRIDGE
               let result: any;
               if (phoneBridgeConnected) {
                 const { phoneTelegramSend } = await import('@/utils/phoneBridge');
@@ -1126,17 +1097,6 @@ Output rules (strict markdown):
                 ? `✅ Email sent → ${parsed.to || result?.contact?.email || parsed.recipient_name} (Subject: ${subject})`
                 : `❌ Email failed: ${result?.error || 'unknown error'}${/not found/i.test(String(result?.error || '')) ? ' — add this contact in Settings → Email Automation.' : ''}`;
               accumulatedText += `\n\n${statusMsg}`;
-              setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
-            } else if (parsed.type === 'phone_automation') {
-              // 🔴 AI Phone Automation Fallback
-              let result: any;
-              if (phoneBridgeConnected) {
-                const { executePhoneCommand } = await import('@/utils/phoneBridge');
-                result = await executePhoneCommand({ action: parsed.action, params: parsed.params, label: parsed.label || 'Automation' });
-              } else {
-                result = { success: false, message: 'Phone Bridge is offline.' };
-              }
-              accumulatedText += `\n\n${result.success ? `✅ ${result.message}` : `❌ ${result.message}`}`;
               setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'adb_connect') {
               const statusMsg = phoneBridgeConnected
@@ -1238,7 +1198,6 @@ Output rules (strict markdown):
         }
       }
       setIsTyping(false);
-      
       if (accumulatedText.trim()) {
         speak(accumulatedText);
         if (user) {
@@ -1266,7 +1225,6 @@ Output rules (strict markdown):
     }
   };
   const hasMessages = messages.length > 0;
-  
   if (isMobile) {
     return (
       <div className="flex flex-col h-[100dvh] w-full bg-[#0d0d0d] text-white overflow-hidden max-w-full">
@@ -1280,7 +1238,6 @@ Output rules (strict markdown):
             <Settings className="w-5 h-5" />
           </Button>
         </div>
-        
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain">
           <div className="px-3 py-3 space-y-4 overflow-x-hidden max-w-full w-full">
             {!hasMessages && (
@@ -1306,7 +1263,6 @@ Output rules (strict markdown):
             <div ref={messagesEndRef} className="h-2" />
           </div>
         </div>
-        
         <div className="shrink-0 p-2 border-t border-white/5 bg-black/60 backdrop-blur-xl">
           {isListening && (
             <div className="mb-2">
@@ -1340,7 +1296,6 @@ Output rules (strict markdown):
               ))}
             </div>
           )}
-          
           <div className="flex items-end gap-1.5 bg-[#1e1f20] border border-white/10 rounded-[26px] px-2 py-1.5">
             <input
               ref={fileInputRef}
@@ -1429,7 +1384,6 @@ Output rules (strict markdown):
             </button>
           )}
         </div>
-        
         {showSidebar && (
           <div className="fixed inset-0 z-50 bg-black/80" onClick={() => setShowSidebar(false)}>
             <div className="w-72 h-full" onClick={e => e.stopPropagation()}>
@@ -1437,7 +1391,6 @@ Output rules (strict markdown):
             </div>
           </div>
         )}
-        
         {showRightPanel && (
           <div className="fixed inset-0 z-50 bg-black/80" onClick={() => setShowRightPanel(false)}>
             <div className="w-72 h-full ml-auto" onClick={e => e.stopPropagation()}>
@@ -1465,8 +1418,8 @@ Output rules (strict markdown):
   return (
     <div className="flex h-[100dvh] w-full bg-[#0d0d0d] text-white overflow-hidden">
       <ScheduledMessageChecker userId={user?.id || null} />
+
       <Sidebar bridgeConnected={bridgeConnected || phoneBridgeConnected} onNewChat={handleNewConversation} onOpenMemory={() => setShowMemoryManager(true)} onToggleBridge={phoneBridgeConnected ? togglePhoneBridgeConnection : toggleBridgeConnection} currentConversationId={currentConversationId} />
-      
       <div className="flex-[1_1_0%] min-w-0 relative flex flex-col overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(17,24,39,1)_0%,rgba(0,0,0,1)_100%)]" />
         <div className="relative z-10 flex-1 flex flex-col overflow-hidden">
@@ -1507,13 +1460,11 @@ Output rules (strict markdown):
                   <div ref={messagesEndRef} />
                 </div>
               </div>
-              
               {isListening && (
                 <div className="px-6 pt-2 pb-2">
                   <TranscriptionFeedback transcript={transcript} isListening={isListening} />
                 </div>
               )}
-              
               <div className="px-6 py-4 bg-gradient-to-t from-black via-black/80 to-transparent">
                 <div className="max-w-5xl mx-auto">
                   {uploadedFiles.length > 0 && (
@@ -1534,12 +1485,10 @@ Output rules (strict markdown):
                       ))}
                     </div>
                   )}
-                  
                   <div className="flex items-center gap-2 mb-2 px-1">
                     <button type="button" onClick={() => { setAiMode('fast'); localStorage.setItem('alsa_ai_mode', 'fast'); }} className={`text-[10px] uppercase tracking-widest px-3 py-1 rounded-full border transition ${aiMode === 'fast' ? 'bg-blue-500/20 border-blue-400/40 text-blue-200' : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'}`}>⚡ Fast</button>
                     <button type="button" onClick={() => { setAiMode('thinking'); localStorage.setItem('alsa_ai_mode', 'thinking'); }} className={`text-[10px] uppercase tracking-widest px-3 py-1 rounded-full border transition ${aiMode === 'thinking' ? 'bg-purple-500/20 border-purple-400/40 text-purple-200' : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'}`}>🧠 Thinking</button>
                   </div>
-                  
                   <div className="flex items-center gap-3 bg-[#1a1a1a]/80 border border-white/10 rounded-2xl px-5 py-3 backdrop-blur-xl">
                     <input ref={fileInputRef} type="file" multiple accept="image/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.md,.csv,.json,.xml" className="hidden" onChange={(e) => { handleNativeFiles(e.target.files); e.target.value = ''; }} />
                     <DropdownMenu>
@@ -1556,7 +1505,6 @@ Output rules (strict markdown):
                     </DropdownMenu>
                     <button type="button" disabled={isTyping} onClick={() => fileInputRef.current?.click()} className="flex-shrink-0 rounded-full p-1 text-white/30 hover:text-white transition disabled:opacity-40"><Paperclip className="w-5 h-5" /></button>
                     {activeTool && <button type="button" onClick={() => setActiveTool(null)} className="flex-shrink-0 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-200">{activeTool === 'image' ? 'Image' : activeTool === 'deep' ? 'Deep Research' : activeTool === 'learn' ? 'Smart Learning' : 'Create'} ✕</button>}
-                    
                     <Textarea
                       value={inputText}
                       disabled={isTyping}
@@ -1566,7 +1514,6 @@ Output rules (strict markdown):
                       className="bg-transparent border-none flex-1 px-4 text-sm focus-visible:ring-0 disabled:opacity-50 resize-none overflow-y-auto max-h-[150px] min-h-[40px]"
                       rows={1}
                     />
-                    
                     <Mic className={`w-5 h-5 flex-shrink-0 transition cursor-pointer ${isListening ? 'text-red-400 animate-pulse' : 'text-white/40 hover:text-white'}`} onClick={toggleVoice} />
                     <Send className={`w-5 h-5 rounded-full p-1 transition flex-shrink-0 ${isTyping ? 'bg-gray-500 cursor-not-allowed opacity-50' : 'text-black bg-white cursor-pointer hover:scale-110'}`} onClick={() => !isTyping && handleSubmit()} />
                   </div>
@@ -1576,7 +1523,6 @@ Output rules (strict markdown):
           )}
         </div>
       </div>
-      
       <div className={`shrink-0 border-l border-white/5 bg-black/40 backdrop-blur-md transition-all duration-300 ${rightPanelCollapsed ? 'w-[50px]' : 'w-[260px]'}`}>
         <RightPanel user={user} bridgeConnected={bridgeConnected} isListening={isListening} isSpeaking={isSpeaking} toggleVoice={toggleVoice} onOpenMemory={() => setShowMemoryManager(true)} backupKeyActive={backupKeyActive} isCollapsed={rightPanelCollapsed} onToggleCollapse={() => setRightPanelCollapsed(!rightPanelCollapsed)} />
       </div>
@@ -1586,7 +1532,6 @@ Output rules (strict markdown):
           <MemoryManager />
         </DialogContent>
       </Dialog>
-      
       <Dialog open={showFileUpload} onOpenChange={setShowFileUpload}>
         <DialogContent className="bg-[#0a0a0a] border-white/10 text-white">
           <FileUpload onFilesSelected={handleFilesSelected} maxFiles={10} />
@@ -1595,7 +1540,6 @@ Output rules (strict markdown):
       <MusicPlayer song={currentSong} onClose={() => setCurrentSong(null)} />
       <GameLauncher game={currentGame as any} onClose={() => setCurrentGame(null)} />
       <ReminderNotification userId={user?.id || null} />
-      
       <Dialog open={show51Update} onOpenChange={(o) => { setShow51Update(o); if (!o) { try { localStorage.setItem('alsa_seen_update_v51', '1'); } catch { } } }}>
         <DialogContent className="bg-gradient-to-br from-[#0a0a0a] to-[#0d1425] border-blue-500/30 text-white max-w-md">
           <DialogHeader>
@@ -1641,6 +1585,7 @@ Output rules (strict markdown):
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 };
