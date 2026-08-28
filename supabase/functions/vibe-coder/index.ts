@@ -1,5 +1,6 @@
-// Vibe Coder — Lovable-style AI app builder edge function
-// Streams generated project files (JSON) using Lovable AI Gateway (gemini-2.5-pro)
+// Vibe Coder — Alsa AI full-stack web builder edge function
+// Powered directly by Google Gemini API with fallback & rate-limit handling
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -8,87 +9,70 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const ALSA_BADGE_HTML = `<!-- Alsa AI badge: shows for 3s with animation, then auto-hides -->
-<div id="__alsa_badge__" style="position:fixed;left:50%;bottom:18px;transform:translate(-50%,40px);opacity:0;z-index:2147483647;background:linear-gradient(135deg,#7c3aed,#ec4899);color:#fff;padding:8px 16px;border-radius:9999px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:12px;font-weight:600;letter-spacing:.3px;box-shadow:0 8px 28px rgba(124,58,237,.45);cursor:pointer;transition:opacity .5s ease,transform .6s cubic-bezier(.2,.8,.2,1);user-select:none">
-  <a href="https://www.alsa-ai.in" target="_blank" rel="noopener" style="color:#fff;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
-    <span style="width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 10px #fff;display:inline-block"></span>
-    Created by Alsa AI
-  </a>
+const ALSA_BADGE_HTML = `<div id="__alsa_badge__" style="position:fixed;left:50%;bottom:18px;transform:translate(-50%,40px);opacity:0;z-index:2147483647;background:linear-gradient(135deg,#7c3aed,#ec4899);color:#fff;padding:8px 16px;border-radius:9999px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:12px;font-weight:600;letter-spacing:.3px;box-shadow:0 8px 28px rgba(124,58,237,.45);cursor:pointer;transition:opacity .5s ease,transform .6s cubic-bezier(.2,.8,.2,1);user-select:none">
+<a href="https://www.alsa-ai.in" target="_blank" rel="noopener" style="color:#fff;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+<span style="width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 10px #fff;display:inline-block"></span>
+Created by Alsa AI
+</a>
 </div>
 <script>
 (function(){
-  var b=document.getElementById('__alsa_badge__');if(!b)return;
-  setTimeout(function(){b.style.opacity='1';b.style.transform='translate(-50%,0)';},300);
-  setTimeout(function(){b.style.opacity='0';b.style.transform='translate(-50%,40px)';setTimeout(function(){b.remove();},700);},3300);
+var b=document.getElementById('__alsa_badge__');if(!b)return;
+setTimeout(function(){b.style.opacity='1';b.style.transform='translate(-50%,0)';},300);
+setTimeout(function(){b.style.opacity='0';b.style.transform='translate(-50%,40px)';setTimeout(function(){b.remove();},700);},3300);
 })();
 </script>`;
 
-const SYSTEM_PROMPT = `You are **Alsa Vibe Coder** — a world-class senior full-stack engineer built by Zentryx Tech Solutions. You behave EXACTLY like Lovable: you generate complete, production-ready single-page web applications based on the user's prompt.
+const SYSTEM_PROMPT = `You are **Alsa Vibe Coder** — a world-class senior full-stack engineer built by Zentryx Tech Solutions. You generate complete, production-ready full-stack web applications based on the user's prompt.
 
 ## Tech Stack You ALWAYS Use
-- **React 18 + Vite + TypeScript** (or plain HTML/CSS/JS if user explicitly asks)
-- **Tailwind CSS** via CDN for styling (semantic, beautiful, modern)
-- **shadcn-style** components, hand-rolled with Tailwind when needed
-- **lucide-react** icons via CDN/ESM where possible
-- **Supabase JS client** when the user has connected Supabase (URL + anon key will be in context)
-- **Lovable AI Gateway** style edge functions when the user wants AI features
+- **React 18 + Vite + TypeScript**
+- **Tailwind CSS** via CDN for styling (semantic, beautiful, dark-mode aware)
+- **3D & Visual Effects**: Support Three.js, Lucide icons, Canvas 3D elements, and CSS animations via CDNs when standard or 3D websites are requested.
+- **Supabase JS client** when backend integration is needed (URL + anon key will be in context)
 
-## STRICT File Structure (root layout MUST be exactly this)
-Root directory contains ONLY:
+## STRICT File Structure
+Root directory MUST strictly contain:
 - \`index.html\` (entry HTML at root)
-- \`.env\` (environment variables file at root — include placeholders)
-- \`src/\` folder (all React/TS source code: App.tsx, main.tsx, components/, pages/, etc.)
-- \`public/\` folder (static assets: images, favicons, robots.txt)
-- \`supabase/\` folder (only when backend is needed: supabase/functions/<name>/index.ts, supabase/config.toml, supabase/migrations/)
+- \`.env\` (environment variables file at root)
+- \`src/\` folder (all React/TS code: App.tsx, main.tsx, components/, pages/, etc.)
+- \`public/\` folder (static assets)
+- \`supabase/\` folder (only when backend is requested: supabase/functions/<name>/index.ts, supabase/config.toml, etc.)
 
-Do NOT put package.json, README, vite.config or anything else in the file map unless the user explicitly asks. Keep it minimal: index.html + .env + src/* + public/* + supabase/* only.
+Do NOT include package.json, README, or vite.config unless explicitly requested.
 
-## Process Narration (REQUIRED)
-The "explanation" field must NARRATE step-by-step what you did and how, in friendly Hinglish, with bullet markers like:
+## Process Narration
+The "explanation" field must narrate step-by-step what you built in friendly, simple narration:
+
 \`\`\`
 🧠 Plan: ...
 📁 Structure: index.html, .env, src/, public/, supabase/
-🎨 UI: ...
+🎨 UI & 3D Styling: ...
 ⚙️ Logic: ...
-✅ Done — open Preview tab to see it live!
+✅ Complete — open Preview tab to see it live!
 \`\`\`
-This narration appears in chat so the user knows exactly what is happening.
 
-## Incremental Edits
-If the user asks to ADD or CHANGE something on an existing project, only return the files that actually changed (plus any new ones). The system will merge them. Always still return a complete fresh \`preview_html\`.
-
-## Alsa AI Badge (MANDATORY)
-Inside BOTH the generated \`index.html\` (just before \`</body>\`) AND inside \`preview_html\` (just before \`</body>\`), inject this exact snippet verbatim:
-${ALSA_BADGE_HTML}
-
-## Output Format — STRICT
-You MUST respond with ONLY a single valid JSON object, no markdown fences, no prose before or after:
+## Output Format — STRICT JSON
+Respond with ONLY a single valid JSON object, no markdown fences:
 {
-  "explanation": "Hinglish step-by-step narration as described above.",
-  "project_name": "kebab-case-name",
-  "files": {
-    "index.html": "<!doctype html>...includes Alsa badge before </body>...",
-    ".env": "VITE_APP_NAME=...\\n",
-    "src/main.tsx": "...",
-    "src/App.tsx": "...",
-    "public/robots.txt": "User-agent: *\\nAllow: /",
-    "supabase/functions/example/index.ts": "..."  // only if user needs backend
-  },
-  "preview_html": "FULL self-contained HTML using https://cdn.tailwindcss.com + https://esm.sh/react@18 + https://esm.sh/react-dom@18/client (type=module). MUST include the Alsa badge snippet before </body>."
+"explanation": "Step-by-step narration.",
+"project_name": "kebab-case-name",
+"files": {
+"index.html": "<!doctype html>...",
+".env": "VITE_APP_NAME=...\\n",
+"src/main.tsx": "...",
+"src/App.tsx": "...",
+"public/robots.txt": "User-agent: *\\nAllow: /"
+},
+"preview_html": "FULL self-contained HTML using https://cdn.tailwindcss.com + https://esm.sh/react@18 + https://esm.sh/react-dom@18/client + optional https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js for 3D elements."
 }
 
 ## CRITICAL Rules
-1. ALWAYS include "preview_html" — single self-contained HTML doc using CDNs. Iframe has no build step.
-2. Files in "files" should be a real Vite + React + TS project the user can download and run.
-3. Design must be beautiful: gradients, modern typography, proper spacing, responsive, dark-mode aware.
-4. Use semantic HTML, accessibility, clean components.
-5. If a Supabase URL + anon key was provided in context, wire up @supabase/supabase-js using them via .env vars.
-6. If the user asks for an AI feature, scaffold a Supabase edge function under \`supabase/functions/\` calling https://ai.gateway.lovable.dev/v1/chat/completions with \`Bearer \${LOVABLE_API_KEY}\`. Mention required secrets in the explanation.
-7. NEVER include backtick fences around the JSON. Pure JSON only.
-8. Keep \`preview_html\` under ~50KB.
-9. The Alsa AI badge MUST appear in both index.html and preview_html. Never remove it.
+1. ALWAYS include "preview_html" — single self-contained HTML document with CDNs for instant preview.
+2. Design must be modern, responsive, visually striking, with optional smooth 3D elements when requested.
+3. The Alsa AI badge MUST appear in both index.html and preview_html before </body>.
 
-Founder context (use only if asked): Alsa AI and Zentryx Tech Solutions are both founded by Mohd Eisa Bey.`;
+Founder context: Alsa AI and Zentryx Tech Solutions are founded by Mohd Eisa Bey.`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -97,16 +81,21 @@ Deno.serve(async (req) => {
     const { projectId, prompt, history, supabaseUrl, supabaseAnonKey, attachments } =
       await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY_VIBE_CODER");
+    if (!GEMINI_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: "Server configuration issue: GEMINI_API_KEY is missing." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    // Auth
+    // Auth verification
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Please sign in to your account first." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const supabase = createClient(
@@ -114,18 +103,19 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       { auth: { persistSession: false } }
     );
+
     const { data: userData } = await supabase.auth.getUser(
       authHeader.replace("Bearer ", "")
     );
     const user = userData?.user;
     if (!user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Session expired. Please sign in again." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Credit check (admins/team are unlimited — checked client-side too)
+    // Credit & Tier Check
     const ADMIN_EMAILS = [
       "qadrieisa@gmail.com",
       "alsa.ai.assistant@gmail.com",
@@ -134,7 +124,6 @@ Deno.serve(async (req) => {
     const isAdmin = ADMIN_EMAILS.includes((user.email || "").toLowerCase());
 
     if (!isAdmin) {
-      // Must be Elite
       const { data: profile } = await supabase
         .from("profiles")
         .select("subscription_tier, subscription_expires_at")
@@ -149,13 +138,12 @@ Deno.serve(async (req) => {
       if (!tierOk) {
         return new Response(
           JSON.stringify({
-            error: "Vibe Coding sirf Elite members ke liye hai. Pricing page se upgrade kar le bhai.",
+            error: "Vibe Coder is an Elite feature. Please upgrade your account to access it.",
           }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      // Daily 5 credit check
       const today = new Date().toISOString().split("T")[0];
       const { data: credit } = await supabase
         .from("vibecoding_credits")
@@ -168,7 +156,7 @@ Deno.serve(async (req) => {
       if (used >= 5) {
         return new Response(
           JSON.stringify({
-            error: "Aaj ke 5 Vibe credits khatam ho gaye boss. Kal subah refresh ho jayenge!",
+            error: "You have used all 5 free daily generation credits for today. They will reset tomorrow morning!",
           }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -188,25 +176,23 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Build context for the AI
+    // Context Building
     const contextLines: string[] = [];
     if (supabaseUrl && supabaseAnonKey) {
       contextLines.push(
-        `User has connected their Supabase project. Use these in the generated app:\nVITE_SUPABASE_URL=${supabaseUrl}\nVITE_SUPABASE_ANON_KEY=${supabaseAnonKey}`
+        `User connected Supabase:\nVITE_SUPABASE_URL=${supabaseUrl}\nVITE_SUPABASE_ANON_KEY=${supabaseAnonKey}`
       );
     }
+
     if (attachments && Array.isArray(attachments) && attachments.length) {
       contextLines.push(
-        `User attached files (filenames only, content may be excerpted): ${attachments
-          .map((a: any) => a.name)
-          .join(", ")}`
+        `Attached files: ${attachments.map((a: any) => a.name).join(", ")}`
       );
       for (const a of attachments) {
         if (a.text) contextLines.push(`--- ${a.name} ---\n${a.text.slice(0, 4000)}`);
       }
     }
 
-    // Pass current project files so the AI can do incremental edits
     if (projectId) {
       const { data: existing } = await supabase
         .from("vibecoding_projects")
@@ -216,10 +202,7 @@ Deno.serve(async (req) => {
       const ef = (existing?.files || {}) as Record<string, string>;
       const fileNames = Object.keys(ef).filter((f) => f !== "__preview__.html");
       if (fileNames.length) {
-        contextLines.push(
-          `EXISTING PROJECT FILES (modify only what user asks; return only changed/new files):\n${fileNames.join("\n")}`
-        );
-        // include small files inline so AI can edit them
+        contextLines.push(`EXISTING PROJECT FILES:\n${fileNames.join("\n")}`);
         for (const fn of fileNames.slice(0, 12)) {
           const c = ef[fn] || "";
           if (c.length < 6000) contextLines.push(`--- ${fn} ---\n${c}`);
@@ -227,55 +210,88 @@ Deno.serve(async (req) => {
       }
     }
 
-    const messages: any[] = [
-      { role: "system", content: SYSTEM_PROMPT },
-      ...(Array.isArray(history) ? history : []).slice(-6),
-    ];
-    if (contextLines.length) {
-      messages.push({ role: "system", content: contextLines.join("\n\n") });
-    }
-    messages.push({ role: "user", content: prompt });
+    // Native Gemini API Request construction
+    const fullSystemPrompt = SYSTEM_PROMPT + (contextLines.length ? `\n\n${contextLines.join("\n\n")}` : "");
 
-    const aiResp = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
-          messages,
-          response_format: { type: "json_object" },
-        }),
+    const contents: any[] = [];
+    if (Array.isArray(history)) {
+      for (const msg of history.slice(-6)) {
+        if (msg.role === "user" || msg.role === "assistant" || msg.role === "model") {
+          contents.push({
+            role: msg.role === "assistant" ? "model" : msg.role,
+            parts: [{ text: msg.content || "" }],
+          });
+        }
       }
-    );
+    }
 
-    if (!aiResp.ok) {
-      const txt = await aiResp.text();
-      console.error("AI gateway error:", aiResp.status, txt);
-      if (aiResp.status === 429)
-        return new Response(
-          JSON.stringify({ error: "AI rate limit. Thodi der baad try kar." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    contents.push({
+      role: "user",
+      parts: [{ text: prompt }],
+    });
+
+    // Valid Stable Gemini Models Priority List
+    const MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+    const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    let aiResp: Response | null = null;
+    let lastErrorText = "";
+
+    for (const model of MODELS) {
+      let attempt = 0;
+      while (attempt < 2) {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              system_instruction: { parts: [{ text: fullSystemPrompt }] },
+              contents,
+              generationConfig: { responseMimeType: "application/json" },
+            }),
+          }
         );
-      if (aiResp.status === 402)
-        return new Response(
-          JSON.stringify({ error: "AI credits khatam — workspace mai add kar." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+
+        if (res.ok) {
+          aiResp = res;
+          break;
+        }
+
+        lastErrorText = await res.text();
+        console.warn(`Model ${model} (attempt ${attempt + 1}) failed with status ${res.status}`);
+
+        // If 404 Not Found, skip immediately to next model
+        if (res.status === 404) {
+          break;
+        }
+
+        // If 429 Rate Limit, wait 1.5s and retry once
+        if (res.status === 429 && attempt === 0) {
+          await delay(1500);
+          attempt++;
+        } else {
+          break;
+        }
+      }
+
+      if (aiResp) break;
+    }
+
+    if (!aiResp) {
+      console.error("All Gemini API models failed. Last error:", lastErrorText);
       return new Response(
-        JSON.stringify({ error: "AI gateway error" }),
+        JSON.stringify({
+          error: "Gemini API high demand / rate limit. Please try again in a few seconds.",
+          details: lastErrorText,
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const data = await aiResp.json();
-    let raw: string = data.choices?.[0]?.message?.content || "{}";
-    console.log("vibe-coder raw response length:", raw.length);
+    let raw: string = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
 
-    // Strip markdown fences if AI wrapped JSON in ```json ... ```
     raw = raw.trim();
     if (raw.startsWith("```")) {
       raw = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
@@ -284,20 +300,12 @@ Deno.serve(async (req) => {
     let parsed: any;
     try {
       parsed = JSON.parse(raw);
-    } catch (err) {
-      console.error("JSON parse failed, attempting extraction:", err);
+    } catch {
       const m = raw.match(/\{[\s\S]*\}/);
-      try {
-        parsed = m ? JSON.parse(m[0]) : null;
-      } catch {
-        parsed = null;
-      }
-      if (!parsed) {
-        parsed = { explanation: raw.slice(0, 2000), files: {}, preview_html: "" };
-      }
+      try { parsed = m ? JSON.parse(m[0]) : null; } catch { parsed = null; }
+      if (!parsed) parsed = { explanation: raw.slice(0, 2000), files: {}, preview_html: "" };
     }
 
-    // Sanity defaults
     parsed.files = parsed.files && typeof parsed.files === "object" ? parsed.files : {};
     parsed.explanation = parsed.explanation || "Done!";
     parsed.preview_html = typeof parsed.preview_html === "string" ? parsed.preview_html : "";
@@ -309,7 +317,6 @@ Deno.serve(async (req) => {
       return html + ALSA_BADGE_HTML;
     };
 
-    // Fallback: if AI didn't return preview_html, derive it from generated index.html
     if (!parsed.preview_html) {
       const indexKey = Object.keys(parsed.files).find((k) => k.toLowerCase().endsWith("index.html"));
       if (indexKey) parsed.preview_html = parsed.files[indexKey];
@@ -322,9 +329,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log("vibe-coder result files:", Object.keys(parsed.files).length, "preview length:", parsed.preview_html.length);
-
-    // Persist to project (merge files)
     if (projectId) {
       const { data: proj } = await supabase
         .from("vibecoding_projects")
@@ -345,10 +349,11 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("vibe-coder error:", e);
+    console.error("Alsa Vibe Coder Error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown" }),
+      JSON.stringify({ error: "An unexpected error occurred. Please try again." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
+
