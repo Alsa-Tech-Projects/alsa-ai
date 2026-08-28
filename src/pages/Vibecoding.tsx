@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Send, Paperclip, Code2, Eye, Plus, Database, Github,
-  Crown, Loader2, Sparkles, Download, X, ArrowLeft, MessageSquare, Menu, MoreVertical, Home,
+  Crown, Loader2, Sparkles, Download, X, ArrowLeft, MessageSquare, Menu, MoreVertical, Home, FileCode,
 } from "lucide-react";
 
 interface VibeMessage {
@@ -54,6 +54,7 @@ export default function Vibecoding() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [progressSteps, setProgressSteps] = useState<string[]>([]);
+  const [currentlyEditingFile, setCurrentlyEditingFile] = useState<string | null>(null);
   const [creditsLeft, setCreditsLeft] = useState<number>(5);
 
   const [view, setView] = useState<"preview" | "code">("preview");
@@ -133,7 +134,13 @@ export default function Vibecoding() {
       .insert({ user_id: user.id, name: "New Vibe Project" })
       .select()
       .single();
-    if (error) return toast({ title: "Failed to create project", variant: "destructive" });
+    if (error) {
+      return toast({
+        title: "Could not create project",
+        description: "Please try again in a moment.",
+        variant: "destructive",
+      });
+    }
     setProjects(prev => [data as any, ...prev]);
     openProject(data as any);
   };
@@ -152,11 +159,19 @@ export default function Vibecoding() {
   const send = async () => {
     if (!input.trim() || !user) return;
     if (!isElite) {
-      toast({ title: "Elite members only", description: "Please upgrade from the Pricing page.", variant: "destructive" });
+      toast({
+        title: "Elite Plan Required",
+        description: "Please upgrade your account to use Vibe Coder.",
+        variant: "destructive",
+      });
       return;
     }
     if (creditsLeft <= 0) {
-      toast({ title: "Daily 5 credits used", description: "Credits will refresh tomorrow.", variant: "destructive" });
+      toast({
+        title: "Daily Limit Reached",
+        description: "You've used all 5 credits for today. Your limit will reset tomorrow.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -179,7 +194,8 @@ export default function Vibecoding() {
     setInput("");
     setAttachments([]);
     setLoading(true);
-    setProgressSteps([]);
+    setProgressSteps(["Understanding your prompt..."]);
+    setCurrentlyEditingFile(null);
 
     const tempUser: VibeMessage = {
       id: crypto.randomUUID(), role: "user", content: userMsg, created_at: new Date().toISOString(),
@@ -190,22 +206,10 @@ export default function Vibecoding() {
       attachments: userAttach.map(a => ({ name: a.name })),
     });
 
-    // Simulated step-by-step progress so user sees what's happening
-    const steps = [
-      "🧠 Analyzing your prompt...",
-      "📁 Planning file structure (index.html, .env, src/, public/, supabase/)...",
-      "🎨 Designing the UI with Tailwind...",
-      "⚙️ Wiring up logic and components...",
-      "✨ Building live preview...",
-    ];
-    let stepIdx = 0;
-    setProgressSteps([steps[0]]);
-    const stepTimer = setInterval(() => {
-      stepIdx++;
-      if (stepIdx < steps.length) {
-        setProgressSteps((prev) => [...prev, steps[stepIdx]]);
-      }
-    }, 1800);
+    // Real-time progress updates prior to response stream
+    const phaseTimer = setTimeout(() => {
+      setProgressSteps(prev => [...prev, "Planning application logic & structure..."]);
+    }, 1500);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -224,16 +228,33 @@ export default function Vibecoding() {
           attachments: userAttach,
         }),
       });
-      const body = await resp.json();
-      if (!resp.ok) throw new Error(body.error || "Generation failed");
 
-      const explanation = body.explanation || "Done!";
-      const newFiles = body.files || {};
+      const body = await resp.json();
+      if (!resp.ok) {
+        throw new Error(body.error || "Unable to complete app generation.");
+      }
+
+      const explanation = body.explanation || "App update completed successfully!";
+      const newFiles: Record<string, string> = body.files || {};
       const previewHtmlOut = body.preview_html || "";
+
+      // Display live edited files sequentially
+      const modifiedFileKeys = Object.keys(newFiles).filter(k => k !== "__preview__.html");
+      if (modifiedFileKeys.length > 0) {
+        for (let i = 0; i < modifiedFileKeys.length; i++) {
+          const fileName = modifiedFileKeys[i];
+          setCurrentlyEditingFile(fileName);
+          setProgressSteps(prev => [...prev, `Updating ${fileName}...`]);
+          await new Promise(res => setTimeout(res, 400));
+        }
+      }
+
+      setProgressSteps(prev => [...prev, "Rendering live preview..."]);
 
       const prevPreview = (project.files || {})["__preview__.html"] || "";
       const finalPreview = previewHtmlOut || prevPreview;
       const merged = { ...(project.files || {}), ...newFiles, "__preview__.html": finalPreview };
+
       await supabase.from("vibecoding_projects").update({
         files: merged,
         name: body.project_name || project.name,
@@ -243,7 +264,9 @@ export default function Vibecoding() {
       setActiveProject(updated);
       setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
       setPreviewHtml(finalPreview);
-      setActiveFile(Object.keys(newFiles)[0] || activeFile);
+
+      const firstNewFile = modifiedFileKeys[0];
+      if (firstNewFile) setActiveFile(firstNewFile);
 
       const aiMsg: VibeMessage = {
         id: crypto.randomUUID(), role: "assistant", content: explanation, created_at: new Date().toISOString(),
@@ -252,14 +275,19 @@ export default function Vibecoding() {
       await supabase.from("vibecoding_messages").insert({
         project_id: project.id, role: "assistant", content: explanation,
       });
+
       loadCredits();
-      // On mobile, jump to preview after generation
       if (isMobile && previewHtmlOut) setMobileTab("preview");
     } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      toast({
+        title: "Generation Unsuccessful",
+        description: "We couldn't update your app. Please rephrase your request and try again.",
+        variant: "destructive",
+      });
     } finally {
-      clearInterval(stepTimer);
+      clearTimeout(phaseTimer);
       setProgressSteps([]);
+      setCurrentlyEditingFile(null);
       setLoading(false);
     }
   };
@@ -271,7 +299,7 @@ export default function Vibecoding() {
     }).eq("id", activeProject.id);
     setActiveProject({ ...activeProject, supabase_url: supabaseUrl, supabase_anon_key: supabaseKey });
     setSupabaseDlg(false);
-    toast({ title: "Supabase connected!" });
+    toast({ title: "Supabase connection saved!" });
   };
 
   const pushGithub = async () => {
@@ -291,11 +319,15 @@ export default function Vibecoding() {
       });
       const body = await resp.json();
       if (!resp.ok) throw new Error(body.error);
-      toast({ title: "Pushed to GitHub!", description: body.url });
+      toast({ title: "Successfully exported to GitHub!", description: body.url });
       setGithubDlg(false);
       setGhToken("");
     } catch (e: any) {
-      toast({ title: "GitHub push failed", description: e.message, variant: "destructive" });
+      toast({
+        title: "Export to GitHub Failed",
+        description: "Please check your access token and repository details, then try again.",
+        variant: "destructive",
+      });
     } finally {
       setPushing(false);
     }
@@ -313,7 +345,7 @@ export default function Vibecoding() {
 
   const fileList = activeProject ? Object.keys(activeProject.files || {}).filter(f => f !== "__preview__.html") : [];
 
-  /* ----------------------- UI sections ----------------------- */
+  /* ----------------------- UI Sections ----------------------- */
 
   const ProjectsList = (
     <div className="flex flex-col h-full">
@@ -333,7 +365,7 @@ export default function Vibecoding() {
             </button>
           ))}
           {projects.length === 0 && (
-            <p className="text-xs text-white/30 p-3">No projects yet. Tap New Project to start.</p>
+            <p className="text-xs text-white/30 p-3">No projects yet. Click New Project to begin.</p>
           )}
         </div>
       </ScrollArea>
@@ -347,8 +379,8 @@ export default function Vibecoding() {
           {messages.length === 0 && !loading && (
             <div className="text-center py-10 text-white/40 text-sm">
               <Sparkles className="w-8 h-8 mx-auto mb-2 text-purple-400" />
-              <p>What do you want to build?</p>
-              <p className="text-xs mt-1">"Cafe website with menu and contact form"</p>
+              <p>What would you like to build?</p>
+              <p className="text-xs mt-1">"Create a landing page with a hero banner and contact form"</p>
             </div>
           )}
           {messages.map(m => (
@@ -361,16 +393,28 @@ export default function Vibecoding() {
               <div className="whitespace-pre-wrap">{m.content}</div>
             </div>
           ))}
+
           {loading && (
-            <div className="bg-white/5 border border-white/10 mr-4 sm:mr-6 p-3 rounded-xl text-sm text-white/80 space-y-1.5">
+            <div className="bg-white/5 border border-white/10 mr-4 sm:mr-6 p-3 rounded-xl text-sm text-white/80 space-y-2">
               <div className="flex items-center gap-2 text-purple-300 font-medium">
-                <Loader2 className="w-4 h-4 animate-spin" /> Vibe Coder is working...
+                <Loader2 className="w-4 h-4 animate-spin" /> Building your changes...
               </div>
-              {progressSteps.map((s, i) => (
-                <div key={i} className="text-xs text-white/70 pl-1 animate-fade-in">
-                  {s}
+
+              {currentlyEditingFile && (
+                <div className="flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 px-2.5 py-1.5 rounded text-xs text-purple-200">
+                  <FileCode className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
+                  <span>Editing: <code className="font-mono text-white">{currentlyEditingFile}</code></span>
                 </div>
-              ))}
+              )}
+
+              <div className="space-y-1">
+                {progressSteps.map((s, i) => (
+                  <div key={i} className="text-xs text-white/70 pl-1 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                    {s}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -393,7 +437,7 @@ export default function Vibecoding() {
           onKeyDown={e => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); }
           }}
-          placeholder={isElite ? "Describe your app..." : "Upgrade to Elite to use Vibe Coding"}
+          placeholder={isElite ? "Describe the features or changes you want..." : "Upgrade to Elite to unlock Vibe Coding"}
           className="min-h-[90px] bg-black/40 border-white/10 resize-none text-sm"
           disabled={!isElite || loading}
         />
@@ -436,13 +480,13 @@ export default function Vibecoding() {
             />
           ) : (
             <div className="h-full flex items-center justify-center text-white/40 text-sm p-4 text-center">
-              Preview will appear here — generate something first.
+              Your application preview will appear here once generated.
             </div>
           )
         ) : (
           <ScrollArea className="h-full">
             <pre className="p-4 text-xs text-green-300 whitespace-pre-wrap font-mono break-all">
-              {activeProject?.files?.[activeFile] || "// Select a file"}
+              {activeProject?.files?.[activeFile] || "// Select a file to view source code"}
             </pre>
           </ScrollArea>
         )}
@@ -478,27 +522,27 @@ export default function Vibecoding() {
           </div>
           <div className="min-w-0">
             <div className="text-sm font-bold truncate">Alsa Vibe Coders</div>
-            <div className="text-[10px] text-white/40 hidden sm:block">Build full apps with prompts</div>
+            <div className="text-[10px] text-white/40 hidden sm:block">Build web apps directly from prompts</div>
           </div>
         </div>
 
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
           <Badge className="bg-purple-600/20 text-purple-300 border border-purple-500/30 text-[10px] sm:text-xs px-1.5 sm:px-2.5">
             <Crown className="w-3 h-3 mr-1" />
-            <span className="hidden sm:inline">{isElite ? `${creditsLeft}/5 credits today` : "Elite Only"}</span>
+            <span className="hidden sm:inline">{isElite ? `${creditsLeft}/5 daily credits` : "Elite Only"}</span>
             <span className="sm:hidden">{isElite ? `${creditsLeft}/5` : "Elite"}</span>
           </Badge>
           {activeProject && !isMobile && (
             <>
               <Button size="sm" variant="outline" onClick={() => setSupabaseDlg(true)} className="border-white/10 bg-white/5">
                 <Database className="w-3.5 h-3.5 mr-1" />
-                {activeProject.supabase_url ? "Supabase ✓" : "Supabase"}
+                {activeProject.supabase_url ? "Supabase Connected ✓" : "Connect Supabase"}
               </Button>
               <Button size="sm" variant="outline" onClick={() => setGithubDlg(true)} className="border-white/10 bg-white/5">
-                <Github className="w-3.5 h-3.5 mr-1" /> GitHub
+                <Github className="w-3.5 h-3.5 mr-1" /> Export GitHub
               </Button>
               <Button size="sm" variant="outline" onClick={downloadZip} className="border-white/10 bg-white/5">
-                <Download className="w-3.5 h-3.5 mr-1" /> Export
+                <Download className="w-3.5 h-3.5 mr-1" /> Export Code
               </Button>
             </>
           )}
@@ -513,7 +557,6 @@ export default function Vibecoding() {
             </>
           )}
 
-          {/* 3-dot menu — always visible, includes Back to Alsa AI */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="icon" variant="ghost" className="text-white/70 h-8 w-8">
@@ -522,7 +565,7 @@ export default function Vibecoding() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-[#1a1a1a] border-white/10 text-white">
               <DropdownMenuItem onClick={() => navigate("/Chat")} className="cursor-pointer">
-                <Home className="w-4 h-4 mr-2" /> Back to Alsa AI
+                <Home className="w-4 h-4 mr-2" /> Return to Main Chat
               </DropdownMenuItem>
               {activeProject && (
                 <>
@@ -534,7 +577,7 @@ export default function Vibecoding() {
                     <Github className="w-4 h-4 mr-2" /> Push to GitHub
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={downloadZip} className="cursor-pointer">
-                    <Download className="w-4 h-4 mr-2" /> Export Project
+                    <Download className="w-4 h-4 mr-2" /> Export Project Files
                   </DropdownMenuItem>
                 </>
               )}
@@ -543,20 +586,19 @@ export default function Vibecoding() {
         </div>
       </header>
 
-      {/* Body */}
+      {/* Main Container */}
       {isMobile ? (
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 min-h-0">
             {mobileTab === "chat" && ChatPanel}
             {(mobileTab === "preview" || mobileTab === "code") && (
               <div className="h-full">
-                {/* reuse PreviewPanel; sync view with mobileTab */}
                 {(() => { if (mobileTab === "code" && view !== "code") setView("code"); if (mobileTab === "preview" && view !== "preview") setView("preview"); return null; })()}
                 {PreviewPanel}
               </div>
             )}
           </div>
-          {/* Bottom tab bar */}
+          {/* Bottom navigation */}
           <nav className="h-14 border-t border-white/10 bg-black/40 grid grid-cols-3">
             <button onClick={() => setMobileTab("chat")} className={`flex flex-col items-center justify-center text-[11px] gap-0.5 ${mobileTab === "chat" ? "text-purple-300" : "text-white/50"}`}>
               <MessageSquare className="w-4 h-4" /> Chat
@@ -577,41 +619,41 @@ export default function Vibecoding() {
         </div>
       )}
 
-      {/* Supabase dialog */}
+      {/* Supabase Dialog */}
       <Dialog open={supabaseDlg} onOpenChange={setSupabaseDlg}>
         <DialogContent className="bg-[#1a1a1a] border-white/10 text-white max-w-[95vw] sm:max-w-md">
-          <DialogHeader><DialogTitle>Connect your Supabase</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Connect Supabase Database</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <Input placeholder="https://xxx.supabase.co" value={supabaseUrl} onChange={e => setSupabaseUrl(e.target.value)} className="bg-black/40 border-white/10" />
-            <Input placeholder="anon public key" value={supabaseKey} onChange={e => setSupabaseKey(e.target.value)} className="bg-black/40 border-white/10" />
-            <p className="text-xs text-white/40">These keys will be used inside the generated app.</p>
+            <Input placeholder="https://your-project.supabase.co" value={supabaseUrl} onChange={e => setSupabaseUrl(e.target.value)} className="bg-black/40 border-white/10" />
+            <Input placeholder="Supabase Anon Key" value={supabaseKey} onChange={e => setSupabaseKey(e.target.value)} className="bg-black/40 border-white/10" />
+            <p className="text-xs text-white/40">These credentials will be injected safely into your generated application.</p>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setSupabaseDlg(false)}>Cancel</Button>
-            <Button onClick={saveSupabase} className="bg-purple-600">Save</Button>
+            <Button onClick={saveSupabase} className="bg-purple-600">Save Credentials</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* GitHub dialog */}
+      {/* GitHub Dialog */}
       <Dialog open={githubDlg} onOpenChange={setGithubDlg}>
         <DialogContent className="bg-[#1a1a1a] border-white/10 text-white max-w-[95vw] sm:max-w-md">
-          <DialogHeader><DialogTitle>Push to GitHub</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Export to GitHub</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
-              <p className="text-xs text-white/60 mb-1">Personal Access Token (Classic, scope: repo)</p>
+              <p className="text-xs text-white/60 mb-1">GitHub Personal Access Token (Scope: repo)</p>
               <Input type="password" placeholder="ghp_..." value={ghToken} onChange={e => setGhToken(e.target.value)} className="bg-black/40 border-white/10" />
               <a href="https://github.com/settings/tokens/new?scopes=repo&description=Alsa%20Vibe%20Coders" target="_blank" className="text-[11px] text-purple-300 underline">
-                Create a token here →
+                Generate token on GitHub →
               </a>
             </div>
-            <Input placeholder="repo-name" value={ghRepo} onChange={e => setGhRepo(e.target.value)} className="bg-black/40 border-white/10" />
+            <Input placeholder="Repository Name" value={ghRepo} onChange={e => setGhRepo(e.target.value)} className="bg-black/40 border-white/10" />
             <label className="flex items-center gap-2 text-xs text-white/70">
-              <input type="checkbox" checked={ghPrivate} onChange={e => setGhPrivate(e.target.checked)} /> Private repo
+              <input type="checkbox" checked={ghPrivate} onChange={e => setGhPrivate(e.target.checked)} /> Make repository private
             </label>
             {isMobile && (
               <Button variant="outline" onClick={downloadZip} className="w-full border-white/10 bg-white/5">
-                <Download className="w-4 h-4 mr-1" /> Export project
+                <Download className="w-4 h-4 mr-1" /> Export as JSON
               </Button>
             )}
           </div>
