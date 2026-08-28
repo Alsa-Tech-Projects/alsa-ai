@@ -293,11 +293,9 @@ export const phoneWhatsappSend = (number: string, text: string) =>
   phonePostWithFallback(['/whatsapp/send', '/send'], { platform: 'whatsapp', number: sanitizePhoneNumber(number), text });
 
 export const phoneWhatsappSendByName = async (name: string, text: string) => {
-  // Direct Number Check bypasses Fuzzy Search
   if (isDirectPhoneNumber(name)) {
     return phoneWhatsappSend(name, text);
   }
-
   const hits = await searchContacts(name);
   if (hits.length) {
     const exactHit = hits.find(h => h.name.toLowerCase() === name.toLowerCase() && h.phone);
@@ -372,12 +370,12 @@ export const phoneYtdlpDownload = (opts: {
   output_dir?: string;
 }) => phonePost('/ytdlp/download', opts);
 
-// ── App Opening Helpers (Direct to Server, No Hardcoding) ─────
+// ── App Opening Helpers ─────
 async function smartOpenApp(appName: string) {
   return phoneAppOpen(appName.trim());
 }
 
-// ── Phone natural-language parser + executor ────────────────────────────────
+// ── Phone natural-language parser + executor (SUPERCHARGED HINGLISH NLP) ────────────────────────────────
 export interface PhoneCommand {
   action: string;
   params?: Record<string, any>;
@@ -388,7 +386,7 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
   const t = input.trim();
   const lowerT = t.toLowerCase(); 
 
-  // 📧 EMAIL AUTOMATION PARSING 
+  // 📧 EMAIL AUTOMATION
   const emailDirectM = t.match(/^(?:email|mail)\s+(?:to\s+)?([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\s+(?:subject\s+["']?([^"'\n]+)["']?\s+)?(?:body|text|msg|message)\s+([\s\S]+)$/i);
   if (emailDirectM) {
     return { action: 'email-send', params: { to: emailDirectM[1], subject: emailDirectM[2] || undefined, body: emailDirectM[3].trim() }, label: `Email to ${emailDirectM[1]}` };
@@ -402,7 +400,7 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
     }
   }
 
-  // 💬 WHATSAPP AUTOMATION PARSING 
+  // 💬 WHATSAPP AUTOMATION
   const waNumM = t.match(/^(?:whatsapp|wa)\s+(?:to\s+)?(\+?\d[\d\s\-]{6,15})\s+(?:msg|message|text|saying)\s+([\s\S]+)$/i);
   if (waNumM) {
     return { action: 'whatsapp-num', params: { number: sanitizePhoneNumber(waNumM[1]), text: waNumM[2].trim() }, label: `WhatsApp to ${waNumM[1]}` };
@@ -420,101 +418,111 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
     }
   }
 
-  // Torch 
-  if (/\b(torch|flashlight|flash|light)\b.*\b(on|chalu|jala|jalao|start|open)\b/.test(lowerT)
-      || /\b(on|chalu|jalao|start)\b.*\b(torch|flashlight|flash)\b/.test(lowerT)) {
-    return { action: 'torch', params: { on: true }, label: 'turn torch ON' };
-  }
-  if (/\b(torch|flashlight|flash|light)\b.*\b(off|band|bandh|close|stop)\b/.test(lowerT)
-      || /\b(off|band|bandh|stop)\b.*\b(torch|flashlight|flash)\b/.test(lowerT)) {
-    return { action: 'torch', params: { on: false }, label: 'turn torch OFF' };
+  // 📱 ADVANCED HINGLISH AUTOMATION PARSERS
+
+  // -- Torch / Flashlight --
+  if (/\b(torch|flashlight|flash|light|battery light)\b/i.test(lowerT)) {
+    if (/\b(on|chalu|jala|jalao|start|open)\b/i.test(lowerT)) return { action: 'torch', params: { on: true }, label: 'turn torch ON' };
+    if (/\b(off|band|bandh|close|stop|bujha)\b/i.test(lowerT)) return { action: 'torch', params: { on: false }, label: 'turn torch OFF' };
   }
 
-  // Vibrate
-  if (/\b(vibrate|vibration|kampan|thartharao|thartharaho)\b/.test(lowerT)) {
-    const m = lowerT.match(/(\d{2,5})\s*(ms|milli|second|sec)?/);
-    const dur = m ? Math.min(5000, parseInt(m[1])) : 1000;
-    return { action: 'vibrate', params: { duration: dur }, label: `vibrate phone (${dur}ms)` };
+  // -- Vibrate --
+  if (/\b(vibrate|vibration|kampan|thartharao|vibrator)\b/i.test(lowerT)) {
+    return { action: 'vibrate', params: { duration: 1000 }, label: `vibrate phone` };
   }
 
-  // Battery
-  if (/\bbattery\b|\bbatri\b|\bbattry\b|battery\s*(status|level|percent)|kitni.*battery|battery.*kitni/.test(lowerT)) {
+  // -- Battery --
+  if (/\b(battery|batri|battry|charge|charging)\b/i.test(lowerT) && /\b(kitni|status|level|percent|kya hai|batao)\b/i.test(lowerT)) {
     return { action: 'battery', label: 'get battery status' };
   }
 
-  // Brightness
-  const brightM = lowerT.match(/brightness\s*(?:ko|to|=)?\s*(\d{1,3})/) || lowerT.match(/(\d{1,3})\s*%?\s*brightness/);
-  if (brightM) {
-    const lvl = Math.max(0, Math.min(255, parseInt(brightM[1]) > 100 ? parseInt(brightM[1]) : Math.round(parseInt(brightM[1]) * 2.55)));
-    return { action: 'brightness', params: { level: lvl }, label: `set brightness ${brightM[1]}` };
-  }
-
-  // Volume
-  const volM = lowerT.match(/volume\s*(?:ko|to|=)?\s*(\d{1,3})/);
-  if (volM) return { action: 'volume', params: { stream: 'music', level: parseInt(volM[1]) }, label: `set volume ${volM[1]}` };
-
-  // Location
-  if (/\b(location|gps|kaha hu|kahan hoon|where am i|meri location)\b/.test(lowerT)) {
-    return { action: 'location', label: 'get GPS location' };
-  }
-
-  // Wi-Fi
-  if (/\bwifi\b.*\b(on|chalu|start)\b/.test(lowerT)) return { action: 'wifi', params: { on: true }, label: 'wifi ON' };
-  if (/\bwifi\b.*\b(off|band|stop)\b/.test(lowerT))  return { action: 'wifi', params: { on: false }, label: 'wifi OFF' };
-  if (/\bwifi\b.*(info|details|status)/.test(lowerT)) return { action: 'wifi-info', label: 'wifi info' };
-
-  // Clipboard
-  if (/clipboard.*(read|get|dikhao|show)/.test(lowerT)) return { action: 'clip-get', label: 'read clipboard' };
-  const clipSet = t.match(/clipboard.*(?:set|copy|par likh|mein daal)[^"']*["'](.+?)["']/i);
-  if (clipSet) return { action: 'clip-set', params: { text: clipSet[1] }, label: 'set clipboard' };
-
-  // SMS 
-  const smsM = t.match(/^(?:sms|text)\s+(?:to\s+)?(\+?\d[\d\s\-]{6,15})\s+(?:msg|message)\s+([\s\S]+)$/i)
-             || t.match(/^(\+?\d[\d\s\-]{6,15})\s*(?:ko|par)?\s*sms\s*(?:bhejo|send|kar)\s+([\s\S]+)$/i);
-  if (smsM) return { action: 'sms', params: { number: sanitizePhoneNumber(smsM[1]), text: smsM[2] || smsM[3] }, label: `SMS to ${smsM[1]}` };
-
-  // Call by number
-  const callM = t.match(/^(?:call|phone|dial)\s+(?:to\s+)?(\+?\d[\d\s\-]{6,15})$/i)
-              || t.match(/^(\+?\d[\d\s\-]{6,15})\s*(?:ko|par)?\s*(?:call|phone|dial)\s*(?:karo|kar|do)$/i);
-  if (callM) return { action: 'call', params: { number: sanitizePhoneNumber(callM[1]) }, label: `call ${callM[1]}` };
-
-  // Call by name
-  const callNameM = t.match(/^(?:call|phone|dial|ring|video\s*call)\s+(?:to\s+|karo\s+)?([a-zA-Z][a-zA-Z\s\.'-]{1,30}?)(?:\s*$|[.,!?])/i)
-                 || t.match(/^([a-zA-Z][a-zA-Z\s\.'-]{1,30}?)\s*(?:ko|par|ke|se)\s*(?:call|phone|dial)\s*(?:karo|kar|do|lagao|milao)?$/i);
-  if (callNameM && !/\d/.test(callNameM[1])) {
-    const name = callNameM[1].trim().replace(/\s+/g, ' ');
-    if (!/^(me|him|her|them|someone|anyone|nobody|end|back|now|please)$/i.test(name) && name.length >= 2) {
-      return { action: 'call-name', params: { name }, label: `call ${name}` };
+  // -- Brightness --
+  if (/\b(brightness|roshni|screen light|display light)\b/i.test(lowerT)) {
+    if (/\b(full|max|100|tej|jyada|zyada|badha|increase|bada)\b/i.test(lowerT)) return { action: 'brightness', params: { level: 255 }, label: 'increase brightness' };
+    if (/\b(half|50|aadha|adhi)\b/i.test(lowerT)) return { action: 'brightness', params: { level: 127 }, label: 'set brightness half' };
+    if (/\b(kam|low|dim|thoda|dheere|ghatao|slow|decrease)\b/i.test(lowerT)) return { action: 'brightness', params: { level: 50 }, label: 'decrease brightness' };
+    const valMatch = lowerT.match(/(\d{1,3})/);
+    if (valMatch) {
+      let val = parseInt(valMatch[1]);
+      if (val <= 100) val = Math.round(val * 2.55);
+      return { action: 'brightness', params: { level: Math.min(255, val) }, label: `set brightness ${valMatch[1]}%` };
     }
   }
 
-  if (/^(?:end call|call end|call kaat|hang up|cut call)$/i.test(lowerT)) return { action: 'call-end', label: 'end call' };
+  // -- Volume --
+  if (/\b(volume|awaz|awaaz|sound|speaker)\b/i.test(lowerT)) {
+    if (/\b(full|max|100|tej|jyada|zyada|badha|increase|bada)\b/i.test(lowerT)) return { action: 'volume', params: { stream: 'music', level: 100 }, label: 'increase volume' };
+    if (/\b(half|50|aadha|adhi)\b/i.test(lowerT)) return { action: 'volume', params: { stream: 'music', level: 50 }, label: 'set volume half' };
+    if (/\b(kam|low|dim|thoda|dheere|ghatao|slow|decrease)\b/i.test(lowerT)) return { action: 'volume', params: { stream: 'music', level: 20 }, label: 'decrease volume' };
+    if (/\b(mute|band|zero|0)\b/i.test(lowerT)) return { action: 'volume', params: { stream: 'music', level: 0 }, label: 'mute volume' };
+    const valMatch = lowerT.match(/(\d{1,3})/);
+    if (valMatch) return { action: 'volume', params: { stream: 'music', level: Math.min(100, parseInt(valMatch[1])) }, label: `set volume ${valMatch[1]}` };
+  }
 
-  // Camera
-  if (/\b(front cam|selfie|front camera).*photo|photo.*front|selfie\s*(khinch|le|lo|lelo)/i.test(lowerT))
+  // -- Wi-Fi --
+  if (/\bwifi\b/i.test(lowerT) || /\bwi-fi\b/i.test(lowerT)) {
+    if (/\b(on|chalu|start|open)\b/i.test(lowerT)) return { action: 'wifi', params: { on: true }, label: 'wifi ON' };
+    if (/\b(off|band|stop|close)\b/i.test(lowerT)) return { action: 'wifi', params: { on: false }, label: 'wifi OFF' };
+    if (/\b(info|details|status|check)\b/i.test(lowerT)) return { action: 'wifi-info', label: 'wifi info' };
+  }
+
+  // -- Location --
+  if (/\b(location|gps|kaha hu|kahan hoon|where am i|meri location|kidhar hu)\b/i.test(lowerT)) {
+    return { action: 'location', label: 'get GPS location' };
+  }
+
+  // -- Call (Flexible Hinglish Calling) --
+  const callMatch = lowerT.match(/^(?:call|phone|dial|ring)\s+(?:to\s+|karo\s+|lagao\s+|milao\s+)?([a-z0-9\s]+)$/i) ||
+                    lowerT.match(/^([a-z0-9\s]+?)\s*(?:ko|par|ke|se)\s*(?:call|phone|dial)\s*(?:karo|kar|do|lagao|milao|karna)/i) ||
+                    lowerT.match(/^call\s+([a-z0-9\s]+)$/i);
+
+  if (callMatch) {
+    const target = callMatch[1].trim();
+    if (!/^(me|him|her|them|someone|anyone|nobody|end|back|now|please|karo|kar|do)$/i.test(target) && target.length > 1) {
+        if (/^[\d\s\-\+]+$/.test(target) && target.replace(/\D/g, '').length >= 7) {
+            return { action: 'call', params: { number: sanitizePhoneNumber(target) }, label: `call ${target}` };
+        }
+        return { action: 'call-name', params: { name: target }, label: `call ${target}` };
+    }
+  }
+  
+  if (/\b(end call|call end|call kaat|hang up|cut call|phone kaat|phone band karo)\b/i.test(lowerT)) {
+    return { action: 'call-end', label: 'end call' };
+  }
+
+  // -- App Open (Smart Natural Selection) --
+  const appMatch = lowerT.match(/(?:open|launch|start|run|chalu\s*karo|khol|kholo|app\s*kholo)\s+([a-z0-9\s]+)/i) ||
+                   lowerT.match(/([a-z0-9\s]+?)\s+(?:open|launch|start|run|chalu)\s*(?:karo|kar|do|khol|kholo)/i);
+  if (appMatch) {
+    const appName = appMatch[1].trim();
+    if (!/^(app|application|the|a|an|it|this|that|karo|kar|do|mera|apna)$/i.test(appName) && appName.length > 2) {
+        return { action: 'app-open', params: { name: appName }, label: `open ${appName}` };
+    }
+  }
+
+  // -- Media Control --
+  if (/\b(pause|ruk|band karo|stop)\s*(music|song|media|gana|gaana)\b/i.test(lowerT)) return { action: 'media', params: { action: 'pause' }, label: 'pause media' };
+  if (/\b(play|chalu karo|start)\s*(music|song|media|gana|gaana)\b/i.test(lowerT)) return { action: 'media', params: { action: 'play' }, label: 'play media' };
+  if (/\b(next|agla)\s*(music|song|media|gana|gaana)\b/i.test(lowerT)) return { action: 'media', params: { action: 'next' }, label: 'next media' };
+  if (/\b(previous|pichla)\s*(music|song|media|gana|gaana)\b/i.test(lowerT)) return { action: 'media', params: { action: 'previous' }, label: 'previous media' };
+
+  // -- Camera --
+  if (/\b(front cam|selfie|front camera)\b/i.test(lowerT) || (/\b(photo|pic|picture)\b/i.test(lowerT) && /\b(front|selfie)\b/i.test(lowerT))) {
     return { action: 'photo', params: { camera: 1 }, label: 'front camera photo' };
-  if (/\b(back cam|rear cam|back camera).*photo|photo.*back|photo\s*(khinch|le|lo|lelo|click)/i.test(lowerT))
+  }
+  if (/\b(back cam|rear cam|back camera)\b/i.test(lowerT) || (/\b(photo|pic|picture)\b/i.test(lowerT) && /\b(back|rear|khinch|click)\b/i.test(lowerT))) {
     return { action: 'photo', params: { camera: 0 }, label: 'back camera photo' };
+  }
 
-  // Toast / Notify
-  const toastM = t.match(/toast[^"']*["'](.+?)["']/i);
-  if (toastM) return { action: 'toast', params: { text: toastM[1] }, label: 'toast' };
-  const notifM = t.match(/(?:notify|notification)[^"']*["'](.+?)["']/i);
-  if (notifM) return { action: 'notify', params: { title: 'Alsa AI', content: notifM[1] }, label: 'notification' };
-
-  // TTS
-  const ttsM = t.match(/(?:speak|bolo|tts)[^"']*["'](.+?)["']/i);
-  if (ttsM) return { action: 'tts', params: { text: ttsM[1] }, label: 'speak' };
-
-  // Telegram 
+  // Telegram SMS legacy fallbacks
   const tgUserM = t.match(/^(?:telegram|tg)\s+(?:to\s+)?@([a-zA-Z0-9_]+)\s+(?:msg|message|text)\s+([\s\S]+)$/i);
-  if (tgUserM) {
-    return { action: 'telegram-user', params: { username: tgUserM[1].trim(), text: tgUserM[2].trim() }, label: `Telegram to @${tgUserM[1]}` };
-  }
+  if (tgUserM) return { action: 'telegram-user', params: { username: tgUserM[1].trim(), text: tgUserM[2].trim() }, label: `Telegram to @${tgUserM[1]}` };
+  
   const tgNameM = t.match(/^(?:telegram|tg)\s+(?:to\s+)?([a-zA-Z][a-zA-Z\s]{1,30}?)\s+(?:msg|message|text)\s+([\s\S]+)$/i);
-  if (tgNameM && !/\d/.test(tgNameM[1])) {
-    return { action: 'telegram-name', params: { name: tgNameM[1].trim(), text: tgNameM[2].trim() }, label: `Telegram to ${tgNameM[1].trim()}` };
-  }
+  if (tgNameM && !/\d/.test(tgNameM[1])) return { action: 'telegram-name', params: { name: tgNameM[1].trim(), text: tgNameM[2].trim() }, label: `Telegram to ${tgNameM[1].trim()}` };
+
+  const smsM = t.match(/^(?:sms|text)\s+(?:to\s+)?(\+?\d[\d\s\-]{6,15})\s+(?:msg|message)\s+([\s\S]+)$/i) || t.match(/^(\+?\d[\d\s\-]{6,15})\s*(?:ko|par)?\s*sms\s*(?:bhejo|send|kar)\s+([\s\S]+)$/i);
+  if (smsM) return { action: 'sms', params: { number: sanitizePhoneNumber(smsM[1]), text: smsM[2] || smsM[3] }, label: `SMS to ${smsM[1]}` };
 
   // YT-DLP
   const ytM = t.match(/(https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com)\/\S+)/i);
@@ -523,32 +531,14 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
     const q = lowerT.match(/\b(144|240|360|480|720|1080|1440|2160|4k)\b/i);
     return {
       action: 'ytdlp',
-      params: {
-        url: ytM[1],
-        mode: audio ? 'audio' : 'video',
-        quality: q ? (q[1].toLowerCase() === '4k' ? '2160' : q[1]) : 'best',
-        playlist: /\bplaylist\b/i.test(lowerT) || /list=/.test(ytM[1]),
-      },
+      params: { url: ytM[1], mode: audio ? 'audio' : 'video', quality: q ? (q[1].toLowerCase() === '4k' ? '2160' : q[1]) : 'best', playlist: /\bplaylist\b/i.test(lowerT) || /list=/.test(ytM[1]) },
       label: `yt-dlp ${audio ? 'audio' : 'video'} on phone`,
     };
   }
 
-  // Contacts
+  // Contacts Search
   const cSearch = t.match(/(?:contact|contacts)\s+(?:search|find|dhundo|dhoondo|khojo)\s+(.+)/i);
   if (cSearch) return { action: 'contact-search', params: { query: cSearch[1].trim() }, label: `search contact "${cSearch[1].trim()}"` };
-
-  // Media
-  if (/\b(pause|ruk|band karo)\s*(music|song|media|gana)/i.test(lowerT)) return { action: 'media', params: { action: 'pause' }, label: 'pause media' };
-  if (/\b(play)\s*(music|song|media|gana)/i.test(lowerT)) return { action: 'media', params: { action: 'play' }, label: 'play media' };
-
-  // Smart App Open Selector
-  const openAppPattern =
-    t.match(/(?:open|launch|start|run|chalu\s*karo|khol|kholo|open\s+app)\s+(.+)/i) ||
-    t.match(/(.+?)\s+(?:open\s*karo|chalu\s*karo|start\s*karo|khol|kholo)/i);
-
-  if (openAppPattern) {
-    return { action: "app-open", params: { name: openAppPattern[1].trim() }, label: `open ${openAppPattern[1].trim()}` };
-  }
 
   return null;
 };
