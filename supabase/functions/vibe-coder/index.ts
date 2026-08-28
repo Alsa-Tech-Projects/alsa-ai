@@ -231,7 +231,14 @@ Deno.serve(async (req) => {
     });
 
     // Valid Stable Gemini Models Priority List
-    const MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+        // Gemini API Priority Models List
+    const MODELS = [
+      "gemini-3.6-flash",
+      "gemini-2.0-flash",
+      "gemini-1.5-flash",
+      "gemini-1.5-pro"
+    ];
+    
     const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
     let aiResp: Response | null = null;
@@ -240,54 +247,58 @@ Deno.serve(async (req) => {
     for (const model of MODELS) {
       let attempt = 0;
       while (attempt < 2) {
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              system_instruction: { parts: [{ text: fullSystemPrompt }] },
-              contents,
-              generationConfig: { responseMimeType: "application/json" },
-            }),
+        try {
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                system_instruction: { parts: [{ text: fullSystemPrompt }] },
+                contents,
+                generationConfig: { responseMimeType: "application/json" },
+              }),
+            }
+          );
+
+          if (res.ok) {
+            aiResp = res;
+            break;
           }
-        );
 
-        if (res.ok) {
-          aiResp = res;
-          break;
-        }
+          lastErrorText = await res.text();
+          console.warn(`Model ${model} failed (Status ${res.status}): ${lastErrorText}`);
 
-        lastErrorText = await res.text();
-        console.warn(`Model ${model} (attempt ${attempt + 1}) failed with status ${res.status}`);
+          // Agar 404 Not Found hai toh agle model par jump karo
+          if (res.status === 404) break;
 
-        // If 404 Not Found, skip immediately to next model
-        if (res.status === 404) {
-          break;
-        }
-
-        // If 429 Rate Limit, wait 1.5s and retry once
-        if (res.status === 429 && attempt === 0) {
-          await delay(1500);
-          attempt++;
-        } else {
+          // Rate limit (429) par 1.5 second wait karke retry karo
+          if (res.status === 429 && attempt === 0) {
+            await delay(1500);
+            attempt++;
+          } else {
+            break;
+          }
+        } catch (err: any) {
+          lastErrorText = err?.message || String(err);
           break;
         }
       }
 
-      if (aiResp) break;
+      if (aiResp) break; // Request success hote hi loop stop
     }
 
     if (!aiResp) {
       console.error("All Gemini API models failed. Last error:", lastErrorText);
       return new Response(
         JSON.stringify({
-          error: "Gemini API high demand / rate limit. Please try again in a few seconds.",
+          error: "Gemini API Request Failed",
           details: lastErrorText,
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
 
     const data = await aiResp.json();
     let raw: string = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
