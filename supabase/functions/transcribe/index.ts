@@ -1,4 +1,5 @@
-// Alsa AI — Speech to Text (multipart WAV in -> { text } out)
+// Alsa AI — Speech to Text via Groq Whisper
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -8,8 +9,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    // Secret Name: GROQ_API_KEY (Aapki Groq API Key)
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+    if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY not configured");
 
     const contentType = req.headers.get("content-type") || "";
     let file: File | null = null;
@@ -19,7 +21,7 @@ Deno.serve(async (req) => {
       const f = form.get("file");
       if (f instanceof File) file = f;
     } else {
-      // base64 JSON fallback: { audio: "<base64>", mime?: "audio/wav" }
+      // Base64 JSON Fallback
       const body = await req.json().catch(() => ({}));
       if (body?.audio) {
         const bin = atob(body.audio);
@@ -36,12 +38,13 @@ Deno.serve(async (req) => {
     }
 
     const upstream = new FormData();
-    upstream.append("model", "openai/gpt-4o-transcribe");
+    upstream.append("model", "whisper-large-v3");
     upstream.append("file", file, file.name || "recording.wav");
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/audio/transcriptions", {
+    // Direct Groq Whisper Endpoint
+    const res = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}` },
+      headers: { Authorization: `Bearer ${GROQ_API_KEY}` },
       body: upstream,
     });
 

@@ -13,13 +13,14 @@ serve(async (req) => {
 
   try {
     const { messages, conversationTitle } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    
+    // Updated: GEMINI Secret Key fetch karna
+    const GEMINI_API_KEY = Deno.env.get('CONVERSATIONS_GEMINI_API_KEY');
 
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    if (!GEMINI_API_KEY) {
+      throw new Error('CONVERSATIONS_GEMINI_API_KEY not configured');
     }
 
-    // Prepare conversation summary for analysis
     const conversationText = messages
       .map((msg: any) => `${msg.role}: ${msg.content}`)
       .join('\n');
@@ -35,81 +36,74 @@ Tags should be:
 Conversation Title: ${conversationTitle}
 
 Conversation:
-${conversationText.slice(0, 4000)}`; // Limit to avoid token limits
+${conversationText.slice(0, 4000)}`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    // Updated: Direct Google Gemini REST API (gemini-1.5-flash) Endpoint
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-3.6-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: 'Analyze this conversation and suggest relevant tags.' }
+        contents: [
+          { role: 'user', parts: [{ text: `${systemPrompt}\n\nAnalyze this conversation and suggest relevant tags.` }] }
         ],
         tools: [
           {
-            type: "function",
-            function: {
-              name: "suggest_tags",
-              description: "Return 3-5 relevant tags for the conversation.",
-              parameters: {
-                type: "object",
-                properties: {
-                  tags: {
-                    type: "array",
-                    items: {
-                      type: "string"
-                    },
-                    minItems: 3,
-                    maxItems: 5
-                  }
-                },
-                required: ["tags"],
-                additionalProperties: false
+            functionDeclarations: [
+              {
+                name: "suggest_tags",
+                description: "Return 3-5 relevant tags for the conversation.",
+                parameters: {
+                  type: "OBJECT",
+                  properties: {
+                    tags: {
+                      type: "ARRAY",
+                      items: { type: "STRING" },
+                      description: "List of 3-5 tag names"
+                    }
+                  },
+                  required: ["tags"]
+                }
               }
-            }
+            ]
           }
         ],
-        tool_choice: { type: "function", function: { name: "suggest_tags" } }
+        toolConfig: {
+          functionCallingConfig: {
+            mode: "ANY",
+            allowedFunctionNames: ["suggest_tags"]
+          }
+        }
       }),
     });
 
     if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required. Please add credits to your workspace." }), {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
       const errorText = await response.text();
-      console.error('Lovable AI error:', response.status, errorText);
-      throw new Error('Failed to analyze conversation');
+      console.error('Gemini API error:', response.status, errorText);
+      throw new Error('Failed to analyze conversation with Gemini API');
     }
 
     const data = await response.json();
-    console.log('AI Response:', JSON.stringify(data, null, 2));
+    console.log('Gemini Response:', JSON.stringify(data, null, 2));
 
-    // Extract tags from tool call
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall || toolCall.function.name !== 'suggest_tags') {
-      throw new Error('Invalid response format from AI');
+    // Updated: Gemini Function Call output parse karna
+    const candidate = data.candidates?.[0];
+    const functionCall = candidate?.content?.parts?.find((part: any) => part.functionCall)?.functionCall;
+
+    if (!functionCall || functionCall.name !== 'suggest_tags') {
+      throw new Error('Invalid response format from Gemini API');
     }
 
-    const tags = JSON.parse(toolCall.function.arguments).tags;
+    const tags = functionCall.args?.tags;
 
     return new Response(
       JSON.stringify({ tags }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
   } catch (error) {
     console.error('Error analyzing conversation:', error);
     return new Response(

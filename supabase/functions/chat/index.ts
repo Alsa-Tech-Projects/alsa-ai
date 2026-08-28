@@ -178,10 +178,10 @@ serve(async (req) => {
 
     // Pick Gemini model based on mode (or user's chosen BYOK model)
     // thinking → gemini-2.5-pro (deeper reasoning, slower)
-    // fast     → gemini-3.6-flash (default, snappy)
+    // fast     → gemini-2.5-flash (default, snappy)
     const geminiModel = userModel && String(userModel).startsWith("gemini")
       ? String(userModel)
-      : (mode === "thinking" ? "gemini-2.5-pro" : "gemini-3.6-flash");
+      : (mode === "thinking" ? "gemini-3.6-pro" : "gemini-3.6-flash");
 
     // === /deep COMMAND: Web search + scraping context injection ===
     let deepWebContext = "";
@@ -403,7 +403,7 @@ CORE CAPABILITIES:
 - Wikipedia, weather, web search
 - Music (Spotify/YouTube), multiplayer games launcher
 - PC control & automation (PC Bridge on port 5001), ADB Android control, file/folder/project/document creation, window management
-- **Phone Bridge (Elite only, Alsa Ai Bridge Server on Android, port 5002)** — the FRONTEND runs phone actions locally (torch, vibrate, battery, brightness, volume, SMS, call, camera, sensors, apps, media, wifi, contacts.json, WhatsApp via ADB, yt-dlp). YOU (the AI) must NEVER pretend to have executed a phone action yourself. NEVER say "done", "ho gaya", "torch on kar diya" for phone commands — the app already intercepts those and runs them before reaching you. If a phone-related request somehow reaches you, it means Phone Bridge is offline OR the pattern didn't match — reply briefly asking the user to enable Phone Bridge in the Alsa Phone Bridge app (server on port 5002) or rephrase the command. NEVER fabricate results.
+- **Phone Bridge (Elite only, Termux on Android, port 5002)** — the FRONTEND runs phone actions locally (torch, vibrate, battery, brightness, volume, SMS, call, camera, sensors, apps, media, wifi, contacts.json, WhatsApp via ADB, yt-dlp). YOU (the AI) must NEVER pretend to have executed a phone action yourself. NEVER say "done", "ho gaya", "torch on kar diya" for phone commands — the app already intercepts those and runs them before reaching you. If a phone-related request somehow reaches you, it means Phone Bridge is offline OR the pattern didn't match — reply briefly asking the user to enable Phone Bridge in the Alsa Phone Bridge app (server on port 5002) or rephrase the command. NEVER fabricate results.
 - **BRIDGE PRIORITY RULE**: For ANY phone-related task (WhatsApp, SMS, call, contacts, ADB command, opening an Android app, yt-dlp on mobile) — always assume the Phone Bridge will be used FIRST. Do NOT ask the user to "connect ADB" or "start PC Bridge" for phone tasks. Only mention PC Bridge if the user explicitly asks a PC-only task (open Chrome on PC, create folder on PC, etc.). If BOTH bridges are offline, say so once — do not repeat the warning every turn.
 - **CALL / WHATSAPP BY NAME**: When user says "call Ravi", "phone karo Aman", "whatsapp Rohit: hi" — DO NOT ask for a phone number. The frontend intercepts these, searches ~/alsa_contacts.json on the phone and dials/sends automatically. Never fabricate that you "called someone"; the bridge reports the actual result.
 - **yt-dlp FOLDERS (Phone Bridge)**: On phone, video downloads go to DCIM/Videos and audio (mp3/m4a) goes to Music by default. Do NOT tell users things save in an "ALSA-YT" folder anymore.
@@ -931,11 +931,7 @@ ${String(customInstructions).slice(0, 2000)}
 
     // Helper function to try API request with fallback
     // Try the chosen model first; if all keys exhaust on Pro (free-tier 0 quota), fall back to flash.
-
-
-    // Variant 2: Conditional assignment
     const modelChain = ["gemini-3.6-flash"];
-
 
     const makeGeminiRequest = async (): Promise<Response> => {
       let lastError: Error | null = null;
@@ -992,7 +988,7 @@ ${String(customInstructions).slice(0, 2000)}
                   parts: buildParts(m),
                 })),
                 generationConfig: {
-                  maxOutputTokens: 65536,
+                  maxOutputTokens: 6553612,
                   temperature: ai_response_style === 'roast' || ai_response_style === 'comedian' || ai_response_style === 'creative' ? 1.1 : 0.9,
                   topP: 0.95,
                 },
@@ -1061,7 +1057,7 @@ ${String(customInstructions).slice(0, 2000)}
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${lovableKey}` },
         body: JSON.stringify({
-          model: mode === "thinking" ? "google/gemini-2.5-pro" : "google/gemini-3.6-flash",
+          model: mode === "thinking" ? "google/gemini-3.6-pro" : "google/gemini-3.6-flash",
           messages: [
             { role: "system", content: systemPrompt },
             ...messages.map((m: any) => ({ role: m.role, content: String(m.content || "") })),

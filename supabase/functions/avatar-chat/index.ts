@@ -1,6 +1,6 @@
 // Avatar Chat Edge Function — Mira (Alsa AI's avatar)
-// Uses Gemini 1.5 Flash (text). Rotates through 6 GEMINI API keys for rate limits.
-// Designed for SHORT, natural Hinglish/English replies (female voice on the client).
+// Uses Gemini 3.6 Flash (text). Rotates through 6 GEMINI API keys for rate limits.
+// Designed for SHORT, natural English replies (female voice on the client).
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,7 +16,8 @@ const GEMINI_KEYS = [
   Deno.env.get('GEMINI_API_KEY_5'),
 ].filter(Boolean) as string[];
 
-const MODEL = 'gemini-flash-latest';
+// Updated: Latest Gemini 3.6 Flash model identifier
+const MODEL = 'gemini-3.6-flash';
 
 const SYSTEM_PROMPT = `You are Mira, the friendly female avatar of Alsa AI.
 Personality: warm, witty, supportive, slightly playful — like a close friend.

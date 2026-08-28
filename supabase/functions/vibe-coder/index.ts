@@ -231,14 +231,14 @@ Deno.serve(async (req) => {
     });
 
     // Valid Stable Gemini Models Priority List
-        // Gemini API Priority Models List
+    // Gemini API Priority Models List
     const MODELS = [
       "gemini-3.6-flash",
       "gemini-2.0-flash",
       "gemini-1.5-flash",
       "gemini-1.5-pro"
     ];
-    
+
     const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
     let aiResp: Response | null = null;
