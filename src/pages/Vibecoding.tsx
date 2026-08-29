@@ -57,6 +57,9 @@ export default function Vibecoding() {
   const [currentlyEditingFile, setCurrentlyEditingFile] = useState<string | null>(null);
   const [creditsLeft, setCreditsLeft] = useState<number>(5);
 
+  // Termux / Custom Backend Endpoint State
+  const [backendUrl, setBackendUrl] = useState("http://127.0.0.1:8000");
+
   const [view, setView] = useState<"preview" | "code">("preview");
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [activeFile, setActiveFile] = useState<string>("");
@@ -244,11 +247,18 @@ export default function Vibecoding() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/vibe-coder`, {
+      
+      // Dynamic Routing: Check if local Termux endpoint or Supabase Edge function
+      const isLocal = backendUrl.includes("127.0.0.1") || backendUrl.includes("localhost") || backendUrl.includes("0.0.0.0");
+      const endpoint = backendUrl.trim() 
+        ? `${backendUrl.replace(/\/$/, '')}/api/generate` 
+        : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/vibe-coder`;
+
+      const resp = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`,
+          ...(isLocal ? {} : { Authorization: `Bearer ${session?.access_token}` }),
         },
         body: JSON.stringify({
           projectId: project.id,
@@ -498,6 +508,17 @@ export default function Vibecoding() {
       </ScrollArea>
 
       <div className="border-t border-white/10 p-3 space-y-2">
+        {/* Backend URL Endpoint Input */}
+        <div className="flex items-center gap-2 mb-1">
+          <Badge variant="outline" className="text-[10px] border-white/10 text-white/50 bg-black/40">Server</Badge>
+          <Input
+            value={backendUrl}
+            onChange={(e) => setBackendUrl(e.target.value)}
+            placeholder="http://127.0.0.1:8000"
+            className="h-7 text-xs bg-black/40 border-white/10 flex-1 font-mono"
+          />
+        </div>
+
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {attachments.map((a, i) => (
