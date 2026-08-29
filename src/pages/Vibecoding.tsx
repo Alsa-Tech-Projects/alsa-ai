@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Send, Paperclip, Code2, Eye, Plus, Database, Github,
-  Crown, Loader2, Sparkles, Download, X, ArrowLeft, MessageSquare, Menu, MoreVertical, Home, FileCode,
+  Crown, Loader2, Sparkles, Download, X, ArrowLeft, MessageSquare, Menu, MoreVertical, Home, FileCode, Edit2, Trash2
 } from "lucide-react";
 
 interface VibeMessage {
@@ -62,6 +62,12 @@ export default function Vibecoding() {
   const [activeFile, setActiveFile] = useState<string>("");
   const [mobileTab, setMobileTab] = useState<MobileTab>("chat");
   const [projectDrawer, setProjectDrawer] = useState(false);
+
+  // Chat Options (Rename/Delete) State
+  const [optionsProject, setOptionsProject] = useState<VibeProject | null>(null);
+  const [renameDlg, setRenameDlg] = useState(false);
+  const [newName, setNewName] = useState("");
+  const pressTimer = useRef<NodeJS.Timeout | null>(null);
 
   const [attachments, setAttachments] = useState<{ name: string; text: string }[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -145,6 +151,32 @@ export default function Vibecoding() {
     openProject(data as any);
   };
 
+  // Long Press & Chat Option Handlers
+  const handleTouchStart = (p: VibeProject) => {
+    pressTimer.current = setTimeout(() => setOptionsProject(p), 500);
+  };
+  const handleTouchEnd = () => {
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+  };
+
+  const deleteProject = async (p: VibeProject) => {
+    await supabase.from("vibecoding_projects").delete().eq("id", p.id);
+    setProjects(prev => prev.filter(x => x.id !== p.id));
+    if (activeProject?.id === p.id) setActiveProject(null);
+    setOptionsProject(null);
+    toast({ title: "Chat deleted permanently." });
+  };
+
+  const renameProject = async () => {
+    if (!optionsProject || !newName.trim()) return;
+    await supabase.from("vibecoding_projects").update({ name: newName }).eq("id", optionsProject.id);
+    setProjects(prev => prev.map(x => x.id === optionsProject.id ? { ...x, name: newName } : x));
+    if (activeProject?.id === optionsProject.id) setActiveProject({ ...activeProject, name: newName });
+    setRenameDlg(false);
+    setOptionsProject(null);
+    toast({ title: "Chat renamed successfully." });
+  };
+
   const handleAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const out: { name: string; text: string }[] = [];
@@ -206,7 +238,6 @@ export default function Vibecoding() {
       attachments: userAttach.map(a => ({ name: a.name })),
     });
 
-    // Real-time progress updates prior to response stream
     const phaseTimer = setTimeout(() => {
       setProgressSteps(prev => [...prev, "Planning application logic & structure..."]);
     }, 1500);
@@ -229,16 +260,46 @@ export default function Vibecoding() {
         }),
       });
 
-      const body = await resp.json();
       if (!resp.ok) {
-        throw new Error(body.error || "Unable to complete app generation.");
+        const errText = await resp.text();
+        throw new Error(errText || "Unable to complete app generation.");
       }
+
+      // Reading SSE Stream Line-by-line
+      const reader = resp.body?.getReader();
+      const decoder = new TextDecoder();
+      let finalBody: any = null;
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\n");
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const parsed = JSON.parse(line.replace("data: ", "").trim());
+                if (parsed.type === "complete") {
+                  finalBody = parsed.body;
+                } else if (parsed.type === "error") {
+                  throw new Error(parsed.message);
+                }
+              } catch (e) {
+                // partial chunks ignore
+              }
+            }
+          }
+        }
+      }
+
+      if (!finalBody) throw new Error("No response received from AI stream.");
+      const body = finalBody;
 
       const explanation = body.explanation || "App update completed successfully!";
       const newFiles: Record<string, string> = body.files || {};
       const previewHtmlOut = body.preview_html || "";
 
-      // Display live edited files sequentially
       const modifiedFileKeys = Object.keys(newFiles).filter(k => k !== "__preview__.html");
       if (modifiedFileKeys.length > 0) {
         for (let i = 0; i < modifiedFileKeys.length; i++) {
@@ -281,7 +342,7 @@ export default function Vibecoding() {
     } catch (e: any) {
       toast({
         title: "Generation Unsuccessful",
-        description: "We couldn't update your app. Please rephrase your request and try again.",
+        description: "We couldn't update your app. " + e.message,
         variant: "destructive",
       });
     } finally {
@@ -345,8 +406,6 @@ export default function Vibecoding() {
 
   const fileList = activeProject ? Object.keys(activeProject.files || {}).filter(f => f !== "__preview__.html") : [];
 
-  /* ----------------------- UI Sections ----------------------- */
-
   const ProjectsList = (
     <div className="flex flex-col h-full">
       <div className="p-3">
@@ -357,12 +416,30 @@ export default function Vibecoding() {
       <ScrollArea className="flex-1">
         <div className="px-2 space-y-1 pb-3">
           {projects.map(p => (
-            <button key={p.id} onClick={() => openProject(p)}
-              className={`w-full text-left px-3 py-2 rounded-lg text-xs truncate ${
-                activeProject?.id === p.id ? "bg-purple-600/20 text-white border border-purple-500/30" : "text-white/60 hover:bg-white/5"
-              }`}>
-              {p.name}
-            </button>
+            <div 
+              key={p.id} 
+              className="relative flex items-center group"
+              onTouchStart={() => handleTouchStart(p)}
+              onTouchEnd={handleTouchEnd}
+              onTouchMove={handleTouchEnd}
+              onContextMenu={(e) => { e.preventDefault(); setOptionsProject(p); }}
+            >
+              <button 
+                onClick={() => openProject(p)}
+                className={`w-full text-left px-3 py-2 rounded-lg text-xs truncate pr-8 transition-colors ${
+                  activeProject?.id === p.id ? "bg-purple-600/20 text-white border border-purple-500/30" : "text-white/60 hover:bg-white/5"
+                }`}>
+                {p.name}
+              </button>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className={`absolute right-1 w-6 h-6 text-white/40 hover:text-white ${isMobile ? "hidden" : "opacity-0 group-hover:opacity-100 transition-opacity"}`}
+                onClick={(e) => { e.stopPropagation(); setOptionsProject(p); }}
+              >
+                <MoreVertical className="w-3 h-3" />
+              </Button>
+            </div>
           ))}
           {projects.length === 0 && (
             <p className="text-xs text-white/30 p-3">No projects yet. Click New Project to begin.</p>
@@ -464,7 +541,7 @@ export default function Vibecoding() {
           <Code2 className="w-3.5 h-3.5 mr-1" /> Code
         </Button>
         {view === "code" && fileList.length > 0 && (
-          <select value={activeFile} onChange={e => setActiveFile(e.target.value)} className="ml-2 bg-black/50 border border-white/10 text-xs rounded px-2 py-1 max-w-[60%]">
+          <select value={activeFile} onChange={e => setActiveFile(e.target.value)} className="ml-2 bg-black/50 border border-white/10 text-xs rounded px-2 py-1 max-w-[60%] outline-none">
             {fileList.map(f => <option key={f} value={f}>{f}</option>)}
           </select>
         )}
@@ -476,7 +553,7 @@ export default function Vibecoding() {
               title="preview"
               srcDoc={previewHtml}
               sandbox="allow-scripts allow-forms allow-same-origin"
-              className="w-full h-full bg-white"
+              className="w-full h-full bg-white border-none"
             />
           ) : (
             <div className="h-full flex items-center justify-center text-white/40 text-sm p-4 text-center">
@@ -619,6 +696,37 @@ export default function Vibecoding() {
         </div>
       )}
 
+      {/* Project Options Dialog (Triggered by Long Press or Right Click) */}
+      <Dialog open={!!optionsProject && !renameDlg} onOpenChange={(val) => !val && setOptionsProject(null)}>
+        <DialogContent className="bg-[#1a1a1a] border-white/10 text-white w-64 rounded-xl px-0 py-2 top-[50%]">
+          <div className="px-4 pb-2 border-b border-white/10 text-sm font-medium truncate text-white/80">
+            {optionsProject?.name}
+          </div>
+          <div className="flex flex-col">
+            <Button variant="ghost" className="justify-start rounded-none px-4 h-11" onClick={() => { setNewName(optionsProject?.name || ""); setRenameDlg(true); }}>
+              <Edit2 className="w-4 h-4 mr-2" /> Rename Project
+            </Button>
+            <Button variant="ghost" className="justify-start rounded-none px-4 h-11 text-red-400 hover:text-red-300 hover:bg-red-900/20" onClick={() => optionsProject && deleteProject(optionsProject)}>
+              <Trash2 className="w-4 h-4 mr-2" /> Delete Project
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Dialog */}
+      <Dialog open={renameDlg} onOpenChange={setRenameDlg}>
+        <DialogContent className="bg-[#1a1a1a] border-white/10 text-white max-w-[90vw] sm:max-w-sm rounded-xl">
+          <DialogHeader><DialogTitle>Rename Project</DialogTitle></DialogHeader>
+          <div className="py-2">
+            <Input value={newName} onChange={e => setNewName(e.target.value)} className="bg-black/40 border-white/10 h-11" autoFocus placeholder="Enter new name" />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setRenameDlg(false)}>Cancel</Button>
+            <Button onClick={renameProject} className="bg-purple-600 hover:bg-purple-700">Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Supabase Dialog */}
       <Dialog open={supabaseDlg} onOpenChange={setSupabaseDlg}>
         <DialogContent className="bg-[#1a1a1a] border-white/10 text-white max-w-[95vw] sm:max-w-md">
@@ -643,7 +751,7 @@ export default function Vibecoding() {
             <div>
               <p className="text-xs text-white/60 mb-1">GitHub Personal Access Token (Scope: repo)</p>
               <Input type="password" placeholder="ghp_..." value={ghToken} onChange={e => setGhToken(e.target.value)} className="bg-black/40 border-white/10" />
-              <a href="https://github.com/settings/tokens/new?scopes=repo&description=Alsa%20Vibe%20Coders" target="_blank" className="text-[11px] text-purple-300 underline">
+              <a href="https://github.com/settings/tokens/new?scopes=repo&description=Alsa%20Vibe%20Coders" target="_blank" rel="noreferrer" className="text-[11px] text-purple-300 underline">
                 Generate token on GitHub →
               </a>
             </div>
@@ -652,7 +760,7 @@ export default function Vibecoding() {
               <input type="checkbox" checked={ghPrivate} onChange={e => setGhPrivate(e.target.checked)} /> Make repository private
             </label>
             {isMobile && (
-              <Button variant="outline" onClick={downloadZip} className="w-full border-white/10 bg-white/5">
+              <Button variant="outline" onClick={downloadZip} className="w-full border-white/10 bg-white/5 mt-2">
                 <Download className="w-4 h-4 mr-1" /> Export as JSON
               </Button>
             )}
