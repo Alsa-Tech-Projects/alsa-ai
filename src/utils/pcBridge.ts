@@ -1,32 +1,177 @@
 // pcBridge.ts - Full PC Control Bridge with Natural Language Support
 import { syncContactsToDb, searchContacts, lookupTelegramContact, lookupEmailContact } from '@/utils/contactsStore';
 
-const BRIDGE_URL = 'http://127.0.0.1:5001';
+export const DESKTOP_BRIDGE_PORT = 5001;
+export const PC_APP_BRIDGE_PORT = 5002;
 
+export const DESKTOP_BRIDGE_URL = 'http://127.0.0.1:5001';
+export const PC_APP_BRIDGE_URL = 'http://127.0.0.1:5002';
+
+export const BRIDGE_OFFLINE_FALLBACK_MESSAGE =
+  'Alsa Ai bridge server is offline: Please start either Desktop Bridge (Port 5001) or Alsa AI PC Bridge App (Port 5002).';
 
 const getHeaders = () => ({
   'Content-Type': 'application/json',
 });
 
+export interface BridgeHealthCheckResult {
+  port5001Active: boolean;
+  port5002Active: boolean;
+  activePort: 5001 | 5002 | null;
+  activeUrl: string | null;
+  bridgeName: 'Desktop Bridge' | 'Alsa AI PC Bridge App' | 'None';
+  connected: boolean;
+  message: string;
+}
+
 export interface BridgeStatus {
   connected: boolean;
   message?: string;
+  activePort?: 5001 | 5002 | null;
+  activeUrl?: string | null;
 }
 
-export const checkBridgeConnection = async (): Promise<BridgeStatus> => {
-  try {
-    const response = await fetch(`${BRIDGE_URL}/status`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    if (response.ok) {
-      const j = await response.json().catch(() => ({}));
-      return { connected: true, message: j.message || 'Bridge connected' };
+// Short-term cache for bridge health checks (2 seconds TTL)
+let cachedStatus: { result: BridgeHealthCheckResult; timestamp: number } | null = null;
+const CACHE_TTL_MS = 2000;
+
+/**
+ * Ping a specific port with a strict timeout to prevent UI lag.
+ * Probes candidate URLs (127.0.0.1 and localhost) for /status and /health endpoints.
+ */
+async function pingPort(port: number, timeoutMs = 1500): Promise<{ active: boolean; url: string; data?: any }> {
+  const candidateUrls = [`http://127.0.0.1:${port}`, `http://localhost:${port}`];
+
+  for (const url of candidateUrls) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+      let res: Response | null = null;
+      try {
+        res = await fetch(`${url}/status`, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+          signal: controller.signal,
+        });
+      } catch (err: any) {
+        if (err?.name === 'AbortError') {
+          clearTimeout(timer);
+          continue;
+        }
+        // If /status fails, try /health
+        try {
+          const controller2 = new AbortController();
+          const timer2 = setTimeout(() => controller2.abort(), timeoutMs);
+          res = await fetch(`${url}/health`, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            signal: controller2.signal,
+          });
+          clearTimeout(timer2);
+        } catch {
+          res = null;
+        }
+      } finally {
+        clearTimeout(timer);
+      }
+
+      if (res && (res.ok || res.status === 200 || res.status === 204)) {
+        const data = await res.json().catch(() => ({}));
+        return { active: true, url, data };
+      }
+    } catch {
+      // Gracefully handle CORS / connection errors
     }
-    return { connected: false, message: 'Bridge not responding' };
-  } catch (error) {
-    return { connected: false, message: 'Bridge not running' };
   }
+
+  return { active: false, url: `http://127.0.0.1:${port}` };
+}
+
+/**
+ * Pre-Execution Health Check:
+ * Asynchronously identifies active local bridge servers (Port 5001 vs Port 5002)
+ * using concurrent fetch with a 1.5s timeout.
+ */
+export const checkBridgeStatus = async (forceRefresh = false): Promise<BridgeHealthCheckResult> => {
+  const now = Date.now();
+  if (!forceRefresh && cachedStatus && (now - cachedStatus.timestamp < CACHE_TTL_MS)) {
+    return cachedStatus.result;
+  }
+
+  try {
+    const [p5001, p5002] = await Promise.all([
+      pingPort(DESKTOP_BRIDGE_PORT, 1500),
+      pingPort(PC_APP_BRIDGE_PORT, 1500),
+    ]);
+
+    let result: BridgeHealthCheckResult;
+
+    if (p5001.active) {
+      result = {
+        port5001Active: true,
+        port5002Active: p5002.active,
+        activePort: 5001,
+        activeUrl: p5001.url,
+        bridgeName: 'Desktop Bridge',
+        connected: true,
+        message: 'Desktop Bridge (Port 5001) connected',
+      };
+    } else if (p5002.active) {
+      result = {
+        port5001Active: false,
+        port5002Active: true,
+        activePort: 5002,
+        activeUrl: p5002.url,
+        bridgeName: 'Alsa AI PC Bridge App',
+        connected: true,
+        message: 'Alsa AI PC Bridge App (Port 5002) connected',
+      };
+    } else {
+      result = {
+        port5001Active: false,
+        port5002Active: false,
+        activePort: null,
+        activeUrl: null,
+        bridgeName: 'None',
+        connected: false,
+        message: BRIDGE_OFFLINE_FALLBACK_MESSAGE,
+      };
+    }
+
+    cachedStatus = { result, timestamp: now };
+    return result;
+  } catch {
+    const fallback: BridgeHealthCheckResult = {
+      port5001Active: false,
+      port5002Active: false,
+      activePort: null,
+      activeUrl: null,
+      bridgeName: 'None',
+      connected: false,
+      message: BRIDGE_OFFLINE_FALLBACK_MESSAGE,
+    };
+    cachedStatus = { result: fallback, timestamp: now };
+    return fallback;
+  }
+};
+
+/**
+ * Returns the active bridge URL or null if both ports are offline.
+ */
+export const getActiveBridgeUrl = async (forceRefresh = false): Promise<string | null> => {
+  const status = await checkBridgeStatus(forceRefresh);
+  return status.activeUrl;
+};
+
+export const checkBridgeConnection = async (forceRefresh = false): Promise<BridgeStatus> => {
+  const status = await checkBridgeStatus(forceRefresh);
+  return {
+    connected: status.connected,
+    message: status.message,
+    activePort: status.activePort,
+    activeUrl: status.activeUrl,
+  };
 };
 
 // 110+ Website URLs for opening via PC Bridge
@@ -227,15 +372,58 @@ export const WEBSITES: Record<string, { name: string; url: string; category: str
   'crazygames': { name: 'CrazyGames', url: 'https://www.crazygames.com', category: 'Gaming' },
 };
 
-// Universal command execution - no whitelist restrictions
+// Universal command execution - dynamically routes to active bridge (Port 5001 or 5002)
 export const sendCommand = async (command: string): Promise<{ success: boolean; message: string; output?: string }> => {
   try {
-    console.log('Sending command to bridge:', command);
-    const response = await fetch(`${BRIDGE_URL}/execute`, {
+    const bridgeStatus = await checkBridgeStatus();
+    if (!bridgeStatus.connected || !bridgeStatus.activeUrl) {
+      return {
+        success: false,
+        message: BRIDGE_OFFLINE_FALLBACK_MESSAGE,
+      };
+    }
+
+    console.log(`Sending command to bridge (${bridgeStatus.bridgeName} on ${bridgeStatus.activeUrl}):`, command);
+
+    const response = await fetch(`${bridgeStatus.activeUrl}/execute`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ command }),
     });
+
+    // If 404/405 on Port 5002 (e.g. Phone Bridge API), fallback to /app/open or /shell
+    if ((response.status === 404 || response.status === 405) && bridgeStatus.activePort === 5002) {
+      const cleaned = command.replace(/^start\s+/i, '').trim();
+      const appRes = await fetch(`${bridgeStatus.activeUrl}/app/open`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ package: cleaned, name: cleaned }),
+      }).catch(() => null);
+
+      if (appRes && appRes.ok) {
+        const appData = await appRes.json().catch(() => ({}));
+        return {
+          success: appData.ok !== false && appData.success !== false,
+          message: appData.message || `Opened ${cleaned} via Alsa AI PC Bridge App`,
+          output: appData.output,
+        };
+      }
+
+      const shellRes = await fetch(`${bridgeStatus.activeUrl}/shell`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ command }),
+      }).catch(() => null);
+
+      if (shellRes && shellRes.ok) {
+        const shellData = await shellRes.json().catch(() => ({}));
+        return {
+          success: shellData.ok !== false && shellData.success !== false,
+          message: shellData.message || `Command executed via Alsa AI PC Bridge App`,
+          output: shellData.output,
+        };
+      }
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: response.statusText }));
@@ -250,9 +438,10 @@ export const sendCommand = async (command: string): Promise<{ success: boolean; 
     };
   } catch (error: any) {
     console.error('Bridge connection error:', error);
+    cachedStatus = null;
     return {
       success: false,
-      message: error.message || 'Cannot connect to PC Bridge. Make sure the bridge script is running.'
+      message: error.message || BRIDGE_OFFLINE_FALLBACK_MESSAGE
     };
   }
 };
@@ -269,7 +458,12 @@ export interface SystemScanResult {
 
 export const scanSystem = async (): Promise<SystemScanResult> => {
   try {
-    const response = await fetch(`${BRIDGE_URL}/scan`, {
+    const bridgeUrl = await getActiveBridgeUrl();
+    if (!bridgeUrl) {
+      return { success: false, message: BRIDGE_OFFLINE_FALLBACK_MESSAGE };
+    }
+
+    const response = await fetch(`${bridgeUrl}/scan`, {
       method: 'GET',
       headers: getHeaders(),
     });
