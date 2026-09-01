@@ -302,6 +302,8 @@ const Ratings = () => {
       });
   }, [reviews, searchQuery, activeFilter]);
 
+  //hello
+
   const ratingDescriptions: Record<number, { title: string; subtitle: string; color: string }> = {
     5: { title: 'Outstanding', subtitle: 'Fast, intelligent & highly recommended', color: 'text-cyan-400' },
     4: { title: 'Very Good', subtitle: 'Great experience and solid performance', color: 'text-blue-400' },
@@ -322,7 +324,7 @@ const Ratings = () => {
 
       {/* Main Content */}
       <div className="relative z-10 w-full max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 pt-20 sm:pt-24 pb-20 sm:pb-28">
-        
+
         {/* Navigation Bar */}
         <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
           <button
@@ -393,11 +395,10 @@ const Ratings = () => {
                 {[...Array(5)].map((_, i) => (
                   <Star
                     key={i}
-                    className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${
-                      i < Math.round(Number(metrics.avgRating))
+                    className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${i < Math.round(Number(metrics.avgRating))
                         ? 'text-cyan-400 fill-cyan-400'
                         : 'text-slate-700'
-                    }`}
+                      }`}
                   />
                 ))}
               </div>
@@ -455,11 +456,10 @@ const Ratings = () => {
           <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-none touch-pan-x">
             <button
               onClick={() => setActiveFilter('all')}
-              className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 border shrink-0 active:scale-95 ${
-                activeFilter === 'all'
+              className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 border shrink-0 active:scale-95 ${activeFilter === 'all'
                   ? 'bg-cyan-500/20 border-cyan-400/60 text-cyan-300 shadow-md shadow-cyan-500/10'
                   : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
-              }`}
+                }`}
             >
               <Layers className="w-3.5 h-3.5 shrink-0" />
               <span>All ({reviews.length})</span>
@@ -467,11 +467,10 @@ const Ratings = () => {
 
             <button
               onClick={() => setActiveFilter('5star')}
-              className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 border shrink-0 active:scale-95 ${
-                activeFilter === '5star'
+              className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 border shrink-0 active:scale-95 ${activeFilter === '5star'
                   ? 'bg-yellow-500/20 border-yellow-400/60 text-yellow-300 shadow-md shadow-yellow-500/10'
                   : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
-              }`}
+                }`}
             >
               <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400 shrink-0" />
               <span>5 Star</span>
@@ -479,11 +478,10 @@ const Ratings = () => {
 
             <button
               onClick={() => setActiveFilter('media')}
-              className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 border shrink-0 active:scale-95 ${
-                activeFilter === 'media'
+              className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 border shrink-0 active:scale-95 ${activeFilter === 'media'
                   ? 'bg-purple-500/20 border-purple-400/60 text-purple-300 shadow-md shadow-purple-500/10'
                   : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
-              }`}
+                }`}
             >
               <ImageIcon className="w-3.5 h-3.5 text-purple-400 shrink-0" />
               <span>With Media</span>
@@ -491,11 +489,10 @@ const Ratings = () => {
 
             <button
               onClick={() => setActiveFilter('most_liked')}
-              className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 border shrink-0 active:scale-95 ${
-                activeFilter === 'most_liked'
+              className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 border shrink-0 active:scale-95 ${activeFilter === 'most_liked'
                   ? 'bg-pink-500/20 border-pink-400/60 text-pink-300 shadow-md shadow-pink-500/10'
                   : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
-              }`}
+                }`}
             >
               <Flame className="w-3.5 h-3.5 text-pink-400 shrink-0" />
               <span>Most Liked</span>
@@ -503,11 +500,10 @@ const Ratings = () => {
 
             <button
               onClick={() => setActiveFilter('latest')}
-              className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 border shrink-0 active:scale-95 ${
-                activeFilter === 'latest'
+              className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 border shrink-0 active:scale-95 ${activeFilter === 'latest'
                   ? 'bg-blue-500/20 border-blue-400/60 text-blue-300 shadow-md shadow-blue-500/10'
                   : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
-              }`}
+                }`}
             >
               <Clock className="w-3.5 h-3.5 text-blue-400 shrink-0" />
               <span>Newest</span>
@@ -675,11 +671,10 @@ const Ratings = () => {
                       {/* Like Button */}
                       <button
                         onClick={() => handleLike(rev.id)}
-                        className={`flex items-center gap-1.5 text-xs font-medium transition-all active:scale-90 p-1 -ml-1 ${
-                          isLikedByMe
+                        className={`flex items-center gap-1.5 text-xs font-medium transition-all active:scale-90 p-1 -ml-1 ${isLikedByMe
                             ? 'text-pink-400'
                             : 'text-slate-400 hover:text-pink-400'
-                        }`}
+                          }`}
                       >
                         <Heart
                           size={15}
@@ -770,11 +765,10 @@ const Ratings = () => {
                         >
                           <Star
                             size={24}
-                            className={`transition-all duration-200 ${
-                              num <= rating
+                            className={`transition-all duration-200 ${num <= rating
                                 ? 'text-yellow-400 fill-yellow-400'
                                 : 'text-slate-700'
-                            }`}
+                              }`}
                           />
                         </button>
                       ))}
@@ -809,11 +803,10 @@ const Ratings = () => {
                   </label>
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-xl sm:rounded-2xl p-4 text-center cursor-pointer transition-all ${
-                      file
+                    className={`border-2 border-dashed rounded-xl sm:rounded-2xl p-4 text-center cursor-pointer transition-all ${file
                         ? 'border-cyan-500/60 bg-cyan-950/20'
                         : 'border-slate-800 hover:border-cyan-500/40 bg-slate-950/30'
-                    }`}
+                      }`}
                   >
                     <input
                       type="file"
