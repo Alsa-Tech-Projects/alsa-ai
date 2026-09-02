@@ -1,4 +1,3 @@
-// Fix Telegram Fetching Issues
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Mic, Send, Settings, Plus, ImageIcon, Paperclip, Menu, X, Video, Camera, Lock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,8 +26,8 @@ import {
   runCommand,
   checkInstallation,
   sendCommand,
-  adbConnect,
-  adbCommand,
+  checkBridgeStatus,
+  BRIDGE_MESSAGES,
   closeWindow,
   openFolder,
   runProject,
@@ -68,6 +67,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+
 interface FileAttachment {
   name: string;
   type: string;
@@ -76,12 +76,14 @@ interface FileAttachment {
   preview?: string;
   extractedText?: string; // text extracted from PDF/text files or audio transcript
 }
+
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   files?: FileAttachment[];
   keySource?: 'user' | 'server';
 }
+
 const Chat = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -108,12 +110,14 @@ const Chat = () => {
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [show51Update, setShow51Update] = useState(false);
 
-useEffect(() => {
-  const seen = localStorage.getItem('alsa_seen_update_v51');
-  if (!seen) {
-    setShow51Update(true);
-  }
-}, []);
+  // Show 5.1 update notice once per user (localStorage flag)
+  useEffect(() => {
+    const seen = localStorage.getItem('alsa_seen_update_v51');
+    if (!seen) {
+      setShow51Update(true);
+    }
+  }, []);
+
   useEffect(() => {
     if (location.state && typeof location.state === 'object') {
       const targetState = location.state as { autoOpenFromWake?: boolean; wakeTranscript?: string };
@@ -128,15 +132,17 @@ useEffect(() => {
       }
     }
   }, [location.state]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [backupKeyActive, setBackupKeyActive] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSavedPath, setRecordingSavedPath] = useState<string | null>(null);
   const [aiMode, setAiMode] = useState<'fast' | 'thinking'>(() => (localStorage.getItem('alsa_ai_mode') as 'fast' | 'thinking') || 'fast');
+
   const formatWikipedia = (text: string, query: string) => {
     const cleaned = text
       .replace("📖 Wikipedia Result:", "")
-      .replace("Wait For Result, Alsa Ai fetch these details for you....", "")
+      .replace("Please wait a moment, taking action..", "")
       .replace("⚙️", "");
     const lines = cleaned
       .split(/\. |\n/)
@@ -149,6 +155,7 @@ useEffect(() => {
     });
     return `\n## ${query}\n\n${intro}\n\n${bullets.join('\n\n')}\n`;
   };
+
   const subscription = useSubscription();
   const { toast } = useToast();
   const {
@@ -160,16 +167,19 @@ useEffect(() => {
   } = useSpeechRecognition();
   const { speak: ttsSpeak, stop, isSpeaking } = useTextToSpeech();
   const TTS_ENABLED = false;
+
   const speak = useCallback((text: string) => {
     if (!TTS_ENABLED) return;
     const voiceEnabled = localStorage.getItem('alsa_voice_enabled') !== 'false';
     if (voiceEnabled) ttsSpeak(text);
   }, [ttsSpeak]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const listeningTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const lastProcessedRef = useRef<string>('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const loadedConvIdRef = useRef<string | null>(null);
+
   const toggleBridgeConnection = useCallback(async () => {
     if (bridgeConnected) {
       setBridgeConnected(false);
@@ -182,12 +192,13 @@ useEffect(() => {
       } else {
         toast({
           title: 'PC Bridge Not Running',
-          description: 'Start pc-control-bridge.py first',
+          description: BRIDGE_MESSAGES.pcOffline,
           variant: 'destructive'
         });
       }
     }
   }, [bridgeConnected, toast]);
+
   const togglePhoneBridgeConnection = useCallback(async () => {
     if (phoneBridgeConnected) {
       setPhoneBridgeConnected(false);
@@ -199,22 +210,24 @@ useEffect(() => {
         toast({ title: '📱 Phone Bridge Connected', description: 'Alsa can now control your phone' });
       } else {
         toast({
-          title: 'Phone Bridge Is Not Connected To Bridge Server',
-          description: 'In Alsa Ai Bridge App run: Click On Server',
+          title: 'Phone Bridge Not Running',
+          description: BRIDGE_MESSAGES.phoneOffline,
           variant: 'destructive'
         });
       }
     }
   }, [phoneBridgeConnected, toast]);
+
   const toggleVoice = useCallback(() => {
     if (isListening) {
       stopListening();
       toast({ title: '🎙️ Mic Off', description: 'Voice input stopped' });
     } else {
       startListening();
-      toast({ title: '🎙️ Listening...', description: 'Start Speaking.....' });
+      toast({ title: '🎙️ Listening...', description: 'Start Speaking..!!' });
     }
   }, [isListening, startListening, stopListening, toast]);
+
   const handleNewConversation = useCallback(() => {
     setMessages([]);
     setCurrentConversationId(null);
@@ -226,6 +239,7 @@ useEffect(() => {
     speak('Starting a new conversation');
     toast({ title: 'New Chat', description: 'Ready for a new conversation' });
   }, [resetTranscript, speak, toast, navigate]);
+
   const handleRecording = useCallback(async () => {
     if (subscription.isFree) {
       toast({ title: 'Premium Feature', description: 'Screen recording requires Pro or Elite subscription', variant: 'destructive' });
@@ -249,6 +263,7 @@ useEffect(() => {
       }
     }
   }, [isRecording, toast, speak, subscription.isFree, navigate]);
+
   useEffect(() => {
     const handleRecordingSaved = (event: CustomEvent) => {
       const { success, folderPath } = event.detail;
@@ -274,6 +289,7 @@ useEffect(() => {
     window.addEventListener('recording-saved', handleRecordingSaved as EventListener);
     return () => window.removeEventListener('recording-saved', handleRecordingSaved as EventListener);
   }, [toast]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.altKey && e.key.toLowerCase() === 'v') {
@@ -290,6 +306,7 @@ useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleVoice, handleNewConversation]);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
@@ -308,6 +325,7 @@ useEffect(() => {
     });
     return () => subscription.unsubscribe();
   }, [navigate]);
+
   useEffect(() => {
     const loadConversation = async () => {
       const convId = urlConversationId || location.state?.conversationId;
@@ -337,29 +355,31 @@ useEffect(() => {
     };
     loadConversation();
   }, [urlConversationId, location.state, user]);
+
   useEffect(() => {
     if (!hasGreeted && messages.length === 0) {
       const greeting = getTimeBasedGreeting();
       setHasGreeted(true);
     }
   }, [hasGreeted, messages.length]);
+
   useEffect(() => {
     const checkBridge = async () => {
-      const status = await checkBridgeConnection();
-      setBridgeConnected(status.connected);
-      if (status.connected && !systemData) {
+      const h = await checkBridgeStatus(true);
+      setBridgeConnected(h.pc);
+      setPhoneBridgeConnected(h.phone);
+      if (h.pc && !systemData) {
         const scanResult = await scanSystem();
         if (scanResult.success && scanResult.data) {
           setSystemData(scanResult.data);
         }
       }
-      const phoneStatus = await checkPhoneBridgeConnection();
-      setPhoneBridgeConnected(phoneStatus.connected);
     };
     checkBridge();
     const interval = setInterval(checkBridge, 30000);
     return () => clearInterval(interval);
   }, [systemData]);
+
   useEffect(() => {
     if (!isListening) return;
     const currentText = transcript.trim();
@@ -385,12 +405,15 @@ useEffect(() => {
       if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current);
     };
   }, [transcript, isListening, stopListening, resetTranscript]);
+
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, []);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
   useEffect(() => {
     const onEditImage = (e: any) => {
       const src = e?.detail?.src;
@@ -402,6 +425,7 @@ useEffect(() => {
     window.addEventListener('alsa-edit-image', onEditImage as EventListener);
     return () => window.removeEventListener('alsa-edit-image', onEditImage as EventListener);
   }, [toast]);
+
   const saveConversation = async (userMsg: Message, assistantMsg: Message) => {
     if (!user) return;
     try {
@@ -438,6 +462,7 @@ useEffect(() => {
       console.error('Error saving conversation:', error);
     }
   };
+
   const extractFileText = async (f: any): Promise<string | undefined> => {
     const type: string = f.type || '';
     const name: string = (f.name || '').toLowerCase();
@@ -485,6 +510,7 @@ useEffect(() => {
     }
     return undefined;
   };
+
   const handleNativeFiles = async (fileList: FileList | null) => {
     if (!fileList || fileList.length === 0) return;
     const MAX = 20 * 1024 * 1024;
@@ -508,6 +534,7 @@ useEffect(() => {
     }
     if (files.length) await handleFilesSelected(files);
   };
+
   const handleFilesSelected = async (files: any[]) => {
     toast({ title: 'Processing files…', description: 'Extracting content for AI analysis' });
     const attachments: FileAttachment[] = await Promise.all(files.map(async (f) => {
@@ -525,6 +552,7 @@ useEffect(() => {
     setShowFileUpload(false);
     toast({ title: 'Files ready', description: `${attachments.length} file(s) attached for AI analysis` });
   };
+
   const fetchCrossConversationContext = async (): Promise<string> => {
     if (!user) return '';
     try {
@@ -553,6 +581,7 @@ useEffect(() => {
       return blocks.join('\n\n');
     } catch (e) { return ''; }
   };
+
   const handleSubmit = async (text: string = inputText) => {
     if (isTyping || (!text.trim() && uploadedFiles.length === 0)) return;
     if (user && subscription.isFree && !subscription.canSendMessage) {
@@ -631,7 +660,7 @@ useEffect(() => {
       const wantsDownload = /\b(download|save|grab|mp3|mp4|audio|video|playlist|yt-?dlp)\b/i.test(trimmed);
       if (ytUrl && wantsDownload) {
         if (!isProOrElite) {
-          setMessages(prev => [...prev, { role: 'assistant', content: '🔒 YouTube downloader (yt-dlp) Pro & Elite plans mein available hai. Upgrade karein.' }]);
+          setMessages(prev => [...prev, { role: 'assistant', content: '🔒 YouTube downloader (yt-dlp) is available on Pro & Elite plans. Please upgrade.' }]);
           return;
         }
         const wantsAudio = /\b(mp3|audio|song|music)\b/i.test(trimmed);
@@ -647,10 +676,12 @@ useEffect(() => {
           embed_metadata: true,
           playlist: /\bplaylist\b/i.test(trimmed) || /list=/.test(ytUrl),
         };
-        if (phoneBridgeConnected) {
+        const ytHealth = await checkBridgeStatus(true);
+        setBridgeConnected(ytHealth.pc); setPhoneBridgeConnected(ytHealth.phone);
+        if (ytHealth.phone) {
           const ps = await phoneYtdlpStatus();
           if (ps?.installed) {
-            setMessages(prev => [...prev, { role: 'assistant', content: `📱 Phone yt-dlp start...\n\n• URL: ${ytUrl}\n• Mode: ${wantsAudio ? 'audio' : 'video ' + quality + 'p'}` }]);
+            setMessages(prev => [...prev, { role: 'assistant', content: `📱 Phone yt-dlp starting...\n\n• URL: ${ytUrl}\n• Mode: ${wantsAudio ? 'audio' : 'video ' + quality + 'p'}` }]);
             setIsTyping(true);
             const res = await phoneYtdlpDownload(commonOpts);
             setIsTyping(false);
@@ -665,10 +696,10 @@ useEffect(() => {
         }
         const status = await ytdlpStatus();
         if (!status?.installed) {
-          setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ No Pc Bridge, No Alsa Ai Server. Kindly run atleast one from them(`Alsa Ai Server(For Android) Or pc-bridge.py(For Desktop)`).' }]);
+          setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ The video downloader is not available. Please open the Alsa Bridge app on your computer or phone and try again.' }]);
           return;
         }
-        setMessages(prev => [...prev, { role: 'assistant', content: `📥 Downloading via yt-dlp (PC)...\n\n• URL: ${ytUrl}\n• Mode: ${wantsAudio ? 'audio' : 'video ' + quality + 'p'}\n• Folder: ~/Downloads/ALSA-YT\n\nThodi der lagegi...` }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: `📥 Downloading via yt-dlp (PC)...\n\n• URL: ${ytUrl}\n• Mode: ${wantsAudio ? 'audio' : 'video ' + quality + 'p'}\n• Folder: ~/Downloads/ALSA-YT\n\nThis will take a moment...` }]);
         setIsTyping(true);
         const res = await ytdlpDownload(commonOpts);
         setIsTyping(false);
@@ -794,7 +825,7 @@ Output rules (strict markdown):
       const noteValue = noteMatch[1].trim();
       const noteKey = `note_${Date.now()}`;
       addMemory(noteKey, noteValue);
-      const response = `📝 Yaad rakh liya boss! Ye baat ab hamesha mere zehen mein rahegi:\n\n> ${noteValue}`;
+      const response = `📝 Saved to memory! I will remember this:\n\n> ${noteValue}`;
       setMessages(prev => [...prev, { role: 'assistant', content: response }]);
       speak('Note saved permanently');
       if (user) await saveConversation(userMessage, { role: 'assistant', content: response });
@@ -811,9 +842,6 @@ Output rules (strict markdown):
     const reminderPatterns = [
       /remind(?:er)?\s+(?:me\s+)?(?:to\s+)?(.+?)(?:\s+(?:at|on|in|tomorrow|today|next)\s+.+)/i,
       /(?:set|create|add)\s+(?:a\s+)?reminder\s+(?:for\s+)?(.+?)(?:\s+(?:at|on|in|tomorrow|today)\s+.+)/i,
-      /mujhe\s+(.+?)\s+(?:ke\s+liye\s+)?remind\s+kar(?:o|na)?/i,
-      /(.+?)\s+(?:ka|ke|ki)\s+reminder\s+(?:set|laga|bana)/i,
-      /याद\s+दिलाना\s+(.+)/i,
     ];
     const isReminderRequest = reminderPatterns.some(p => p.test(text));
     if (isReminderRequest && user) {
@@ -837,12 +865,20 @@ Output rules (strict markdown):
     }
     // ── PHONE BRIDGE COMMAND PARSER ──
     const phoneCmd = parsePhoneCommand(text);
-    if (phoneCmd && phoneBridgeConnected) {
+    const parsedCommand = parseNaturalLanguage(text);
+    let liveHealth = { pc: bridgeConnected, phone: phoneBridgeConnected, any: bridgeConnected || phoneBridgeConnected };
+    if (phoneCmd || parsedCommand) {
+      const h = await checkBridgeStatus(true);
+      liveHealth = { pc: h.pc, phone: h.phone, any: h.any };
+      if (h.pc !== bridgeConnected) setBridgeConnected(h.pc);
+      if (h.phone !== phoneBridgeConnected) setPhoneBridgeConnected(h.phone);
+    }
+    if (phoneCmd && liveHealth.phone) {
       try {
         const result = await executePhoneCommand(phoneCmd);
         let content = result.success
           ? `📱 **Phone Bridge** → ${phoneCmd.label} ✓`
-          : `❌ Phone Bridge: ${result.message}`;
+          : `❌ ${result.message || BRIDGE_MESSAGES.failed}`;
         if (result.success && result.data) {
           const preview = typeof result.data === 'object' ? JSON.stringify(result.data, null, 2) : String(result.data);
           if (preview && preview !== '{}' && preview.length < 800) {
@@ -854,18 +890,17 @@ Output rules (strict markdown):
         if (user) await saveConversation(userMessage, { role: 'assistant', content });
         return;
       } catch (e: any) {
-        setMessages(prev => [...prev, { role: 'assistant', content: `❌ Phone Bridge error: ${e.message || e}` }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: `❌ ${BRIDGE_MESSAGES.failed}` }]);
         return;
       }
     }
-    if (phoneCmd && !phoneBridgeConnected) {
-      const msg = `📴 Alsa Ai Bridge Server Is Offline. Run Alsa Ai Bridge Server First.`;
+    if (phoneCmd && !liveHealth.phone && !liveHealth.pc) {
+      const msg = `📴 ${BRIDGE_MESSAGES.phoneOffline}`;
       setMessages(prev => [...prev, { role: 'assistant', content: msg }]);
       speak('Phone Bridge is offline');
       return;
     }
-    const parsedCommand = parseNaturalLanguage(text);
-    if (parsedCommand && bridgeConnected) {
+    if (parsedCommand && liveHealth.any) {
       try {
         const result = await executeSystemCommand(text);
         const response = result.success
@@ -876,17 +911,19 @@ Output rules (strict markdown):
         if (user) await saveConversation(userMessage, { role: 'assistant', content: response });
         return;
       } catch (error: any) {
-        setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${error.message || 'Failed'}` }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: `❌ ${error.message || BRIDGE_MESSAGES.failed}` }]);
         return;
       }
     }
-    const openWebsitePatterns = [
-      /\b(open|launch|start)\s+(\w+)\b/i,
-      /\b(\w+)\s+(kholo|kholna|open\s+karo|ko\s+open\s+karo)\b/i,
-    ];
+    if (parsedCommand && !liveHealth.any && ['open', 'close', 'shutdown', 'restart', 'sleep', 'lock'].includes(parsedCommand.action)) {
+      const response = `📴 ${BRIDGE_MESSAGES.bothOffline}`;
+      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+      if (user) await saveConversation(userMessage, { role: 'assistant', content: response });
+      return;
+    }
     const userSites = JSON.parse(localStorage.getItem('alsa_user_sites') || '[]');
     for (const site of userSites) {
-      const sitePattern = new RegExp(`\\b(open|kholo|launch)\\s+${site.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b|\\b${site.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+(kholo|open\\s+karo)\\b`, 'i');
+      const sitePattern = new RegExp(`\\b(open|launch|visit|start)\\s+${site.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
       if (sitePattern.test(lower)) {
         const response = `Opening ${site.name}`;
         setMessages(prev => [...prev, { role: 'assistant', content: response }]);
@@ -900,8 +937,6 @@ Output rules (strict markdown):
       const strictPatterns = [
         new RegExp(`\\b(open|launch|start|visit)\\s+${key}\\b`, 'i'),
         new RegExp(`\\b(open|launch|start|visit)\\s+${site.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i'),
-        new RegExp(`\\b${key}\\s+(kholo|kholna|open\\s+karo|ko\\s+open\\s+karo)\\b`, 'i'),
-        new RegExp(`\\b${site.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+(kholo|kholna|open\\s+karo)\\b`, 'i'),
       ];
       if (strictPatterns.some(pattern => pattern.test(lower))) {
         const appKeywords = ['file explorer', 'explorer', 'notepad', 'word', 'excel', 'powerpoint', 'paint', 'calculator', 'cmd', 'terminal', 'antigravity'];
@@ -1034,35 +1069,47 @@ Output rules (strict markdown):
               accumulatedText += `\n\n${result.success ? `✅ Command output:\n\`\`\`\n${result.output || 'No output'}\n\`\`\`` : `❌ Failed: ${result.message}`}`;
               setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'system_power') {
-              const result = await sendCommand(parsed.action);
+              const h = await checkBridgeStatus(true); setBridgeConnected(h.pc); setPhoneBridgeConnected(h.phone);
+              const result = h.any ? await sendCommand(parsed.action) : { success: false, message: BRIDGE_MESSAGES.bothOffline };
               accumulatedText += `\n\n${result.success ? `✅ ${result.message}` : `❌ ${result.message}`}`;
               setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'run_application') {
-              const result = await runCommand(parsed.command);
+              const h = await checkBridgeStatus(true); setBridgeConnected(h.pc); setPhoneBridgeConnected(h.phone);
+              let result: { success: boolean; message: string };
+              if (h.pc) {
+                result = await runCommand(parsed.command);
+              } else if (h.phone) {
+                const { phoneAppOpen } = await import('@/utils/phoneBridge');
+                const r: any = await phoneAppOpen(parsed.command);
+                result = { success: r?.ok !== false, message: r?.error || r?.message || '' };
+              } else {
+                result = { success: false, message: BRIDGE_MESSAGES.bothOffline };
+              }
               accumulatedText += `\n\n${result.success ? `✅ Opened ${parsed.command}` : `❌ ${result.message}`}`;
               setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'telegram_msg') {
-              // BUG FIX 3: TELEGRAM HANDLER NOW PROPERLY FALLS BACK TO PHONE BRIDGE
               let result: any;
-              if (phoneBridgeConnected) {
+              const h = await checkBridgeStatus(true); setBridgeConnected(h.pc); setPhoneBridgeConnected(h.phone);
+              if (h.phone) {
                 const { phoneTelegramSend } = await import('@/utils/phoneBridge');
                 result = await phoneTelegramSend(parsed.link, parsed.message);
                 result.success = result?.ok !== false;
-              } else if (bridgeConnected) {
+              } else if (h.pc) {
                 const { sendTelegramMsg } = await import('@/utils/pcBridge');
                 result = await sendTelegramMsg(parsed.link, parsed.message);
               } else {
-                result = { success: false, message: 'Na PC Bridge, na Phone Bridge chalu hai.' };
+                result = { success: false, message: BRIDGE_MESSAGES.bothOffline };
               }
               const statusMsg = result.success
                 ? `✅ Telegram message sent to ${parsed.link}`
-                : `❌ Failed to send Telegram: ${result.message || result.error || 'Unknown error'}`;
+                : `❌ Telegram message could not be sent: ${result.message || result.error || BRIDGE_MESSAGES.failed}`;
               accumulatedText += `\n\n${statusMsg}`;
               setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'whatsapp_msg') {
               let result: any;
               let via = 'PC';
-              if (phoneBridgeConnected) {
+              const h = await checkBridgeStatus(true); setBridgeConnected(h.pc); setPhoneBridgeConnected(h.phone);
+              if (h.phone) {
                 const { phoneWhatsappSend, phoneWhatsappSendByName } = await import('@/utils/phoneBridge');
                 via = 'Phone';
                 if (/^\+?\d[\d\s\-]{5,}$/.test(String(parsed.phone))) {
@@ -1071,22 +1118,23 @@ Output rules (strict markdown):
                   result = await phoneWhatsappSendByName(parsed.phone, parsed.message);
                 }
                 result.success = result?.ok !== false;
-              } else if (bridgeConnected) {
+              } else if (h.pc) {
                 result = await sendWhatsAppMsg(parsed.phone, parsed.message);
               } else {
-                result = { success: false, message: 'Na PC Bridge, na Phone Bridge chalu hai.' };
+                result = { success: false, message: BRIDGE_MESSAGES.bothOffline };
               }
               const statusMsg = result.success
                 ? `✅ WhatsApp (${via} Bridge) → ${parsed.phone}`
-                : `❌ WhatsApp failed: ${result.message || result.error}`;
+                : `❌ WhatsApp message could not be sent: ${result.message || result.error || BRIDGE_MESSAGES.failed}`;
               accumulatedText += `\n\n${statusMsg}`;
               setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'email_msg') {
               const { phoneEmailSend, phoneEmailSendByName, deriveSubject } = await import('@/utils/phoneBridge');
               const subject = parsed.subject || deriveSubject(parsed.body || '');
               let result: any;
-              if (!phoneBridgeConnected) {
-                result = { ok: false, error: 'Phone Bridge is offline. Open the Alsa Phone Bridge app (port 5002).' };
+              const h = await checkBridgeStatus(true); setBridgeConnected(h.pc); setPhoneBridgeConnected(h.phone);
+              if (!h.phone) {
+                result = { ok: false, error: BRIDGE_MESSAGES.phoneOffline };
               } else if (parsed.to) {
                 result = await phoneEmailSend({ to: parsed.to, subject, body: parsed.html || parsed.body, html: !!parsed.html });
               } else {
@@ -1095,32 +1143,29 @@ Output rules (strict markdown):
               const ok = result?.ok !== false && !result?.error;
               const statusMsg = ok
                 ? `✅ Email sent → ${parsed.to || result?.contact?.email || parsed.recipient_name} (Subject: ${subject})`
-                : `❌ Email failed: ${result?.error || 'unknown error'}${/not found/i.test(String(result?.error || '')) ? ' — add this contact in Settings → Email Automation.' : ''}`;
+                : `❌ Email could not be sent: ${result?.error || BRIDGE_MESSAGES.failed}${/not found/i.test(String(result?.error || '')) ? ' — add this contact in Settings → Email Automation.' : ''}`;
               accumulatedText += `\n\n${statusMsg}`;
               setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'adb_connect') {
-              const statusMsg = phoneBridgeConnected
-                ? `📱 Phone Bridge already active — ADB connect skip kiya.`
-                : (await adbConnect(parsed.device)).success
-                  ? `✅ ADB connected to ${parsed.device}`
-                  : `❌ ADB not available. Phone Bridge (Alsa Ai Bridge Server) chalu karo — behtar hai.`;
+              const h = await checkBridgeStatus(true); setBridgeConnected(h.pc); setPhoneBridgeConnected(h.phone);
+              const statusMsg = h.phone
+                ? `📱 Your phone is already connected through the Alsa Bridge app.`
+                : `❌ ${BRIDGE_MESSAGES.phoneOffline}`;
               accumulatedText += `\n\n${statusMsg}`;
               setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'adb_command') {
               let result: any;
-              if (phoneBridgeConnected) {
+              const h = await checkBridgeStatus(true); setBridgeConnected(h.pc); setPhoneBridgeConnected(h.phone);
+              if (h.phone) {
                 const { phoneShell } = await import('@/utils/phoneBridge');
                 result = await phoneShell(parsed.command);
                 result.success = result?.ok !== false;
-                result.output = result.output;
-              } else if (bridgeConnected) {
-                result = await adbCommand(parsed.command);
               } else {
-                result = { success: false, message: 'Na PC Bridge, na Phone Bridge chalu hai.' };
+                result = { success: false, message: BRIDGE_MESSAGES.phoneOffline };
               }
               const statusMsg = result.success
-                ? `✅ ${phoneBridgeConnected ? 'Phone' : 'ADB'}:\n\`\`\`\n${result.output || 'Done'}\n\`\`\``
-                : `❌ ${result.message}`;
+                ? `✅ Phone:\n\`\`\`\n${result.output || 'Done'}\n\`\`\``
+                : `❌ ${result.message || result.error || BRIDGE_MESSAGES.failed}`;
               accumulatedText += `\n\n${statusMsg}`;
               setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
             } else if (parsed.type === 'close_window') {
@@ -1208,7 +1253,7 @@ Output rules (strict markdown):
           const next = [...prev];
           const last = next[next.length - 1];
           if (last?.role === 'assistant' && !last.content.trim()) next.pop();
-          return [...next, { role: 'assistant', content: 'Response receive nahi hua. Please message dobara send karein.' }];
+          return [...next, { role: 'assistant', content: 'No response received. Please try sending your message again.' }];
         });
       }
     } catch (error) {
@@ -1224,6 +1269,7 @@ Output rules (strict markdown):
       });
     }
   };
+
   const hasMessages = messages.length > 0;
   if (isMobile) {
     return (
@@ -1387,7 +1433,7 @@ Output rules (strict markdown):
         {showSidebar && (
           <div className="fixed inset-0 z-50 bg-black/80" onClick={() => setShowSidebar(false)}>
             <div className="w-72 h-full" onClick={e => e.stopPropagation()}>
-              <Sidebar bridgeConnected={bridgeConnected || phoneBridgeConnected} onNewChat={handleNewConversation} onOpenMemory={() => setShowMemoryManager(true)} onToggleBridge={phoneBridgeConnected ? togglePhoneBridgeConnection : toggleBridgeConnection} currentConversationId={currentConversationId} />
+              <Sidebar bridgeConnected={bridgeConnected} phoneBridgeConnected={phoneBridgeConnected} onNewChat={handleNewConversation} onOpenMemory={() => setShowMemoryManager(true)} onToggleBridge={toggleBridgeConnection} onTogglePhoneBridge={togglePhoneBridgeConnection} currentConversationId={currentConversationId} />
             </div>
           </div>
         )}
@@ -1419,7 +1465,7 @@ Output rules (strict markdown):
     <div className="flex h-[100dvh] w-full bg-[#0d0d0d] text-white overflow-hidden">
       <ScheduledMessageChecker userId={user?.id || null} />
 
-      <Sidebar bridgeConnected={bridgeConnected || phoneBridgeConnected} onNewChat={handleNewConversation} onOpenMemory={() => setShowMemoryManager(true)} onToggleBridge={phoneBridgeConnected ? togglePhoneBridgeConnection : toggleBridgeConnection} currentConversationId={currentConversationId} />
+      <Sidebar bridgeConnected={bridgeConnected} phoneBridgeConnected={phoneBridgeConnected} onNewChat={handleNewConversation} onOpenMemory={() => setShowMemoryManager(true)} onToggleBridge={toggleBridgeConnection} onTogglePhoneBridge={togglePhoneBridgeConnection} currentConversationId={currentConversationId} />
       <div className="flex-[1_1_0%] min-w-0 relative flex flex-col overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(17,24,39,1)_0%,rgba(0,0,0,1)_100%)]" />
         <div className="relative z-10 flex-1 flex flex-col overflow-hidden">
@@ -1585,8 +1631,8 @@ Output rules (strict markdown):
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 };
+
 export default Chat;

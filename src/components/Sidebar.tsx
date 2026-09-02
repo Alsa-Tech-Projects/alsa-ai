@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Wifi, WifiOff, MessageSquare, BarChart3, Lightbulb, 
   Database, User as UserIcon, ChevronDown, ChevronRight, 
-  Edit, Share2, Trash2, Settings, MoreVertical, Crown, Sparkles, Zap, UserCircle2, Code2
+  Edit, Share2, Trash2, Settings, MoreVertical, Crown, Sparkles, Zap, UserCircle2, Code2, Smartphone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -29,13 +29,15 @@ import { Badge } from '@/components/ui/badge';
 
 interface SidebarProps {
     bridgeConnected: boolean;
+    phoneBridgeConnected?: boolean;
     onNewChat: () => void;
     onOpenMemory: () => void;
     onToggleBridge?: () => void;
+    onTogglePhoneBridge?: () => void;
     currentConversationId?: string | null;
 }
 
-const Sidebar = ({ bridgeConnected, onNewChat, onOpenMemory, onToggleBridge, currentConversationId }: SidebarProps) => {
+const Sidebar = ({ bridgeConnected, phoneBridgeConnected = false, onNewChat, onOpenMemory, onToggleBridge, onTogglePhoneBridge, currentConversationId }: SidebarProps) => {
     const navigate = useNavigate();
     const { toast } = useToast();
     const [user, setUser] = useState<any>(null);
@@ -184,8 +186,9 @@ const Sidebar = ({ bridgeConnected, onNewChat, onOpenMemory, onToggleBridge, cur
     return (
         <div className="w-64 h-[100dvh] max-h-[100dvh] bg-[#1a1a1a]/95 border-r border-white/5 flex flex-col sticky top-0 z-40 backdrop-blur-xl overflow-hidden">
 
-            {/* Bridge Status - Clickable to toggle */}
-            <div className="p-4 border-b border-white/5 shrink-0">
+            {/* Bridge Status */}
+            <div className="p-4 border-b border-white/5 shrink-0 space-y-2">
+                {/* PC Bridge */}
                 <button 
                     onClick={onToggleBridge}
                     className="w-full flex items-center justify-between bg-black/40 p-2.5 rounded-xl border border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
@@ -196,6 +199,19 @@ const Sidebar = ({ bridgeConnected, onNewChat, onOpenMemory, onToggleBridge, cur
                         <span className="text-[11px] font-bold uppercase tracking-widest text-white/70">PC Bridge</span>
                     </div>
                     <div className={`h-1.5 w-1.5 rounded-full ${bridgeConnected ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500'}`} />
+                </button>
+
+                {/* Phone Bridge */}
+                <button
+                    onClick={onTogglePhoneBridge}
+                    className="w-full flex items-center justify-between bg-black/40 p-2.5 rounded-xl border border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
+                    title={phoneBridgeConnected ? 'Phone Bridge connected' : 'Phone Bridge offline'}
+                >
+                    <div className="flex items-center gap-2">
+                        <Smartphone className={`w-3.5 h-3.5 ${phoneBridgeConnected ? 'text-green-400 animate-pulse' : 'text-red-400'}`} />
+                        <span className="text-[11px] font-bold uppercase tracking-widest text-white/70">Phone Bridge</span>
+                    </div>
+                    <div className={`h-1.5 w-1.5 rounded-full ${phoneBridgeConnected ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500'}`} />
                 </button>
             </div>
 

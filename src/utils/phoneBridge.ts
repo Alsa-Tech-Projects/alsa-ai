@@ -1,16 +1,60 @@
 // ═══════════════════════════════════════════════════════════════
-// 📱 PHONE BRIDGE (Elite Only) — Alsa Ai Bridge Server on Android, port 5002
+// 📱 PHONE BRIDGE (Elite Only) — Termux on Android, port 5002
 // ═══════════════════════════════════════════════════════════════
 import { supabase } from '@/integrations/supabase/client';
 
 export interface BridgeStatus {
   connected: boolean;
   message: string;
-  tier?: string;
-  automations_enabled?: boolean;
 }
 
-export const PHONE_BRIDGE_URL = 'http://127.0.0.1:5002';
+export interface Contact {
+  id: string;
+  user_id: string;
+  name: string;
+  phone: string;
+  email?: string | null;
+  username?: string | null;
+  telegram?: string | null;
+  source?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const PHONE_BRIDGE_PORT = 5002;
+export const PHONE_BRIDGE_IP_KEY = 'alsa_phone_bridge_ip';
+
+/**
+ * Phone Bridge address. By default we talk to 127.0.0.1:5002 (when Alsa is opened on the phone itself).
+ * If the user saved their phone's Wi-Fi IP (e.g. 192.168.1.7) in Settings, requests go to
+ * http://192.168.1.7:5002 instead — so a laptop browser can control the phone on the same Wi-Fi.
+ */
+export const getPhoneBridgeIp = (): string => {
+  try {
+    const v = (localStorage.getItem(PHONE_BRIDGE_IP_KEY) || '').trim();
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(v)) return v;
+  } catch { }
+  return '127.0.0.1';
+};
+export const setPhoneBridgeIp = (ip: string) => {
+  const v = (ip || '').trim();
+  try {
+    if (!v) localStorage.removeItem(PHONE_BRIDGE_IP_KEY);
+    else localStorage.setItem(PHONE_BRIDGE_IP_KEY, v);
+  } catch { }
+};
+export const getPhoneBridgeUrl = (): string => `http://${getPhoneBridgeIp()}:${PHONE_BRIDGE_PORT}`;
+/** @deprecated use getPhoneBridgeUrl() — kept for old imports */
+export const PHONE_BRIDGE_URL = getPhoneBridgeUrl();
+
+export const PHONE_MESSAGES = {
+  offline: 'Your phone is not connected right now. Open the Alsa Bridge app on your phone and try again.',
+  timeout: 'Your phone took too long to respond. Please check the Alsa Bridge app and try again.',
+  failed: 'Something went wrong on your phone. Please try again.',
+};
+
+// Increased timeout to 90s to ensure long stories go through directly without hanging
+const PHONE_REQUEST_TIMEOUT_MS = 90000;
 
 // --- HELPER: Phone number sanitizer and strict string validator ---
 const sanitizePhoneNumber = (input: string): string => {
@@ -26,62 +70,22 @@ const isDirectPhoneNumber = (val: string): boolean => {
   return /^\+?[0-9]{10,15}$/.test(clean);
 };
 
-// Get stored header token from user session/profile if available
-async function getAuthHeaderToken(): Promise<string> {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return '';
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('alsa_header_token, header_api_key')
-      .eq('id', user.id)
-      .maybeSingle();
-    return profile?.alsa_header_token || profile?.header_api_key || user.id || '';
-  } catch {
-    return '';
-  }
-}
-
 const phonePost = async (path: string, body: any = {}) => {
   const controller = new AbortController();
-  
-  // FIX: Dynamic timeout in MILLISECONDS.
-  // Standard commands get 30s (30,000ms), messaging & app automations get 120s (120,000ms).
-  const isMessaging = path.includes('/whatsapp') || path.includes('/telegram') || path.includes('/email') || path.includes('/send');
-  const timeoutLimit = isMessaging ? 120000 : 30000; 
-  
-  const timeout = setTimeout(() => controller.abort(), timeoutLimit);
-  
+  const timeout = setTimeout(() => controller.abort(), PHONE_REQUEST_TIMEOUT_MS);
   try {
-    const token = await getAuthHeaderToken();
-    const headers: Record<string, string> = { 
-      'Content-Type': 'application/json' 
-    };
-    if (token) {
-      headers['X-ALSA-Token'] = token;
-      headers['X-ALSA-AI-Header'] = token;
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const r = await fetch(`${PHONE_BRIDGE_URL}${path}`, {
+    const r = await fetch(`${getPhoneBridgeUrl()}${path}`, {
       method: 'POST',
-      headers,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
       signal: controller.signal,
     });
-
     if (!r.ok) {
       const t = await r.text().catch(() => '');
-      try {
-        const parsed = JSON.parse(t);
-        return { ok: false, success: false, error: parsed.message || parsed.error || `HTTP ${r.status}` };
-      } catch {
-        return { ok: false, success: false, error: t || `HTTP ${r.status}` };
-      }
+      return { ok: false, success: false, error: t || `HTTP ${r.status}` };
     }
-
     const res = await r.json();
-    
+
     // Strict success evaluation against Accessibility/Bridge callbacks
     const isSuccess = res.ok === true || res.success === true || res.status === 'sent' || res.status === 'queued';
     return { ...res, ok: isSuccess, success: isSuccess };
@@ -89,7 +93,7 @@ const phonePost = async (path: string, body: any = {}) => {
     return {
       ok: false,
       success: false,
-      error: e?.name === 'AbortError' ? 'Phone Bridge request timed out' : (e?.message || 'Phone Bridge not reachable'),
+      error: e?.name === 'AbortError' ? PHONE_MESSAGES.timeout : PHONE_MESSAGES.offline,
     };
   } finally {
     clearTimeout(timeout);
@@ -99,26 +103,16 @@ const phonePost = async (path: string, body: any = {}) => {
 export const checkPhoneBridgeConnection = async (): Promise<BridgeStatus> => {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    
-    const r = await fetch(`${PHONE_BRIDGE_URL}/status`, {
-      method: 'GET',
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-
+    const t = setTimeout(() => controller.abort(), 1500);
+    const r = await fetch(`${getPhoneBridgeUrl()}/status`, { method: 'GET', signal: controller.signal, cache: 'no-store' });
+    clearTimeout(t);
     if (r.ok) {
       const j = await r.json().catch(() => ({}));
-      return { 
-        connected: true, 
-        message: j?.message || j?.bridge || 'Phone Bridge connected',
-        tier: j?.subscription_tier,
-        automations_enabled: j?.automations_enabled
-      };
+      return { connected: true, message: j?.bridge || 'Phone Bridge connected' };
     }
-    return { connected: false, message: 'Phone Bridge not responding' };
+    return { connected: false, message: PHONE_MESSAGES.offline };
   } catch {
-    return { connected: false, message: 'Phone Bridge Is Not Connected To Bridge Server (Alsa Ai Bridge Server)' };
+    return { connected: false, message: PHONE_MESSAGES.offline };
   }
 };
 
@@ -133,10 +127,10 @@ export async function syncContactsToDb(contactsList: any) {
     const rows = list.map((c: any) => ({
       user_id: user.id,
       name: c.name || c.display_name || 'Unknown',
-      phone: c.phone || c.number ? sanitizePhoneNumber(c.phone || c.number) : null,
+      phone: c.phone ? sanitizePhoneNumber(c.phone) : null,
       email: c.email || null,
     }));
-    
+
     await supabase.from('contacts').upsert(rows, { onConflict: 'user_id,phone' });
   } catch (e) {
     console.error('Error syncing contacts:', e);
@@ -147,14 +141,14 @@ export async function searchContacts(query: string) {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
-    
+
     const { data } = await supabase
       .from('contacts')
       .select('*')
       .eq('user_id', user.id)
       .ilike('name', `%${query}%`)
       .limit(5);
-    return data || [];
+    return (data as Contact[]) || [];
   } catch {
     return [];
   }
@@ -219,28 +213,28 @@ async function getCityFromCoordinates(lat: number, lon: number): Promise<string>
 }
 
 // Basic
-export const phoneNotify   = (title: string, content: string) => phonePost('/notify', { title, content });
-export const phoneToast    = (text: string) => phonePost('/toast', { text });
-export const phoneVibrate  = (duration = 1000) => phonePost('/vibrate', { duration });
+export const phoneNotify = (title: string, content: string) => phonePost('/notify', { title, content });
+export const phoneToast = (text: string) => phonePost('/toast', { text });
+export const phoneVibrate = (duration = 1000) => phonePost('/vibrate', { duration });
 
 // Hardware
-export const phoneTorch      = (on: boolean) => phonePost('/torch', { on });
+export const phoneTorch = (on: boolean) => phonePost('/torch', { on });
 export const phoneBrightness = (level: number) => phonePost('/brightness', { level });
-export const phoneVolume     = (stream: 'music'|'call'|'ring'|'notification', level: number) =>
+export const phoneVolume = (stream: 'music' | 'call' | 'ring' | 'notification', level: number) =>
   phonePost('/volume', { stream, level });
-export const phoneBattery    = () => phonePost('/battery');
-export const phoneLocation   = (provider: 'gps'|'network' = 'gps') => phonePost('/location', { provider });
+export const phoneBattery = () => phonePost('/battery');
+export const phoneLocation = (provider: 'gps' | 'network' = 'gps') => phonePost('/location', { provider });
 
 // Clipboard
 export const phoneClipboardGet = () => phonePost('/clipboard/get');
 export const phoneClipboardSet = (text: string) => phonePost('/clipboard/set', { text });
 
 // SMS / Call
-export const phoneSmsSend  = (number: string, text: string) => phonePost('/sms/send', { number: sanitizePhoneNumber(number), text });
-export const phoneSmsList  = (limit = 10) => phonePost('/sms/list', { limit });
+export const phoneSmsSend = (number: string, text: string) => phonePost('/sms/send', { number: sanitizePhoneNumber(number), text });
+export const phoneSmsList = (limit = 10) => phonePost('/sms/list', { limit });
 export const phoneCallMake = (number: string) => phonePost('/call/make', { number: sanitizePhoneNumber(number) });
 export const phoneCallByName = (name: string) => phonePost('/call/by-name', { name, first: true });
-export const phoneCallEnd  = () => phonePost('/call/end');
+export const phoneCallEnd = () => phonePost('/call/end');
 export const phoneContacts = () => phonePost('/contacts');
 
 // Voice
@@ -248,29 +242,29 @@ export const phoneTts = (text: string) => phonePost('/tts', { text });
 export const phoneStt = () => phonePost('/stt');
 
 // Camera
-export const phoneCameraPhoto = (path?: string, camera: 0|1 = 0) => phonePost('/camera/photo', { path, camera });
-export const phoneCameraInfo  = () => phonePost('/camera/info');
+export const phoneCameraPhoto = (path?: string, camera: 0 | 1 = 0) => phonePost('/camera/photo', { path, camera });
+export const phoneCameraInfo = () => phonePost('/camera/info');
 
 // Apps / Intents
-export const phoneAppOpen = (pkgOrName: string) => phonePost('/app/open', { package: pkgOrName, name: pkgOrName });
+export const phoneAppOpen = (pkg: string) => phonePost('/app/open', { package: pkg });
 export const phoneAppList = () => phonePost('/app/list');
 export const phoneUrlOpen = (url: string) => phonePost('/url/open', { url });
-export const phoneShare   = (text: string, title = 'Share') => phonePost('/share', { text, title });
+export const phoneShare = (text: string, title = 'Share') => phonePost('/share', { text, title });
 
 // Wi-Fi
 export const phoneWifiToggle = (on: boolean) => phonePost('/wifi/toggle', { on });
-export const phoneWifiInfo   = () => phonePost('/wifi/info');
+export const phoneWifiInfo = () => phonePost('/wifi/info');
 
 // Media
-export const phoneMediaControl = (action: 'play'|'pause'|'next'|'previous'|'stop') =>
+export const phoneMediaControl = (action: 'play' | 'pause' | 'next' | 'previous' | 'stop') =>
   phonePost('/media/control', { action });
 
 // Sensors
 export const phoneSensors = (name?: string) => phonePost('/sensors', name ? { name } : {});
 
 // Storage
-export const phoneStorageList  = (path = '/sdcard') => phonePost('/storage/list', { path });
-export const phoneStorageRead  = (path: string) => phonePost('/storage/read', { path });
+export const phoneStorageList = (path = '/sdcard') => phonePost('/storage/list', { path });
+export const phoneStorageRead = (path: string) => phonePost('/storage/read', { path });
 export const phoneStorageWrite = (path: string, content: string) => phonePost('/storage/write', { path, content });
 
 // Shell
@@ -279,6 +273,8 @@ export const phoneShell = (command: string) => phonePost('/shell', { command });
 // WhatsApp Automation
 const phonePostWithFallback = async (paths: string[], body: any) => {
   let last: any = null;
+  // NOTE: clipboard payload removed because `termux-clipboard-set` hangs on device for 60s causing Broken Pipe
+
   for (const p of paths) {
     const res = await phonePost(p, body);
     if (res && (res.ok === true || res.success === true)) return res;
@@ -293,14 +289,16 @@ export const phoneWhatsappSend = (number: string, text: string) =>
   phonePostWithFallback(['/whatsapp/send', '/send'], { platform: 'whatsapp', number: sanitizePhoneNumber(number), text });
 
 export const phoneWhatsappSendByName = async (name: string, text: string) => {
+  // Direct Number Check bypasses Fuzzy Search
   if (isDirectPhoneNumber(name)) {
     return phoneWhatsappSend(name, text);
   }
+
   const hits = await searchContacts(name);
   if (hits.length) {
     const exactHit = hits.find(h => h.name.toLowerCase() === name.toLowerCase() && h.phone);
     const target = exactHit || hits.find(h => h.phone) || hits[0];
-    
+
     if (target?.phone) {
       return phoneWhatsappSend(target.phone, text);
     }
@@ -339,7 +337,7 @@ export const phoneEmailSend = (opts: {
 export const phoneEmailSendByName = async (name: string, body: string, subject?: string, html = false) => {
   const hit = await lookupEmailContact(name);
   if (!hit) {
-    return phonePost('/email/send-by-name', { name, body, subject, html });
+    return { ok: false, success: false, error: `No saved email found for "${name}". Add it in Settings → Email Contacts.` };
   }
   return phoneEmailSend({ to: hit.email, subject: subject || deriveSubject(body), body, html });
 };
@@ -354,10 +352,10 @@ export const deriveSubject = (body: string) => {
 
 // Contacts
 export const phoneContactsRefresh = () => phonePost('/contacts/refresh');
-export const phoneContactsSearch  = (query: string) => phonePost('/contacts/search', { query });
+export const phoneContactsSearch = (query: string) => phonePost('/contacts/search', { query });
 
 // yt-dlp
-export const phoneYtdlpStatus   = () => phonePost('/ytdlp/status');
+export const phoneYtdlpStatus = () => phonePost('/ytdlp/status');
 export const phoneYtdlpDownload = (opts: {
   url: string;
   mode?: 'video' | 'audio';
@@ -370,12 +368,44 @@ export const phoneYtdlpDownload = (opts: {
   output_dir?: string;
 }) => phonePost('/ytdlp/download', opts);
 
-// ── App Opening Helpers ─────
-async function smartOpenApp(appName: string) {
-  return phoneAppOpen(appName.trim());
+// Smart App Aliases
+const APP_ALIASES: Record<string, string> = {
+  fb: "facebook",
+  facebookapp: "facebook",
+  yt: "youtube",
+  youtubeapp: "youtube",
+  insta: "instagram",
+  ig: "instagram",
+  wa: "whatsapp",
+  whatsappapp: "whatsapp",
+  chromebrowser: "chrome",
+  playstore: "play store",
+  play: "play store",
+  mapsapp: "maps",
+  gps: "maps",
+  galleryapp: "gallery",
+  photos: "gallery",
+  cam: "camera",
+  settingsapp: "settings",
+  calc: "calculator",
+  contactsapp: "contacts",
+  filesapp: "files",
+  filemanager: "files",
+  musicplayer: "music",
+  videoplayer: "video",
+  gmailapp: "gmail",
+  googlemail: "gmail",
+  driveapp: "drive",
+  googlephotos: "photos",
+  playmusic: "youtube music"
+};
+
+function normalizeAppName(name: string): string {
+  const key = name.toLowerCase().trim().replace(/\s+/g, "");
+  return APP_ALIASES[key] || name.toLowerCase().trim();
 }
 
-// ── Phone natural-language parser + executor (SUPERCHARGED HINGLISH NLP) ────────────────────────────────
+// ── Phone natural-language parser + executor ────────────────────────────────
 export interface PhoneCommand {
   action: string;
   params?: Record<string, any>;
@@ -384,9 +414,10 @@ export interface PhoneCommand {
 
 export const parsePhoneCommand = (input: string): PhoneCommand | null => {
   const t = input.trim();
-  const lowerT = t.toLowerCase(); 
+  // BUG FIX: lowerT created so that basic hardware commands like "Torch On", "Set Brightness" match regardless of case.
+  const lowerT = t.toLowerCase();
 
-  // 📧 EMAIL AUTOMATION
+  // 📧 EMAIL AUTOMATION PARSING 
   const emailDirectM = t.match(/^(?:email|mail)\s+(?:to\s+)?([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\s+(?:subject\s+["']?([^"'\n]+)["']?\s+)?(?:body|text|msg|message)\s+([\s\S]+)$/i);
   if (emailDirectM) {
     return { action: 'email-send', params: { to: emailDirectM[1], subject: emailDirectM[2] || undefined, body: emailDirectM[3].trim() }, label: `Email to ${emailDirectM[1]}` };
@@ -400,7 +431,7 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
     }
   }
 
-  // 💬 WHATSAPP AUTOMATION
+  // 💬 WHATSAPP AUTOMATION PARSING 
   const waNumM = t.match(/^(?:whatsapp|wa)\s+(?:to\s+)?(\+?\d[\d\s\-]{6,15})\s+(?:msg|message|text|saying)\s+([\s\S]+)$/i);
   if (waNumM) {
     return { action: 'whatsapp-num', params: { number: sanitizePhoneNumber(waNumM[1]), text: waNumM[2].trim() }, label: `WhatsApp to ${waNumM[1]}` };
@@ -418,130 +449,158 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
     }
   }
 
-  // 📱 ADVANCED HINGLISH AUTOMATION PARSERS
-
-  // -- Torch / Flashlight --
-  if (/\b(torch|flashlight|flash|light|battery light)\b/i.test(lowerT)) {
-    if (/\b(on|chalu|jala|jalao|start|open)\b/i.test(lowerT)) return { action: 'torch', params: { on: true }, label: 'turn torch ON' };
-    if (/\b(off|band|bandh|close|stop|bujha)\b/i.test(lowerT)) return { action: 'torch', params: { on: false }, label: 'turn torch OFF' };
+  // Torch (Now uses lowerT to match Capital Letters flawlessly)
+  if (/\b(torch|flashlight|flash|light)\b.*\b(on|chalu|jala|jalao|start|open)\b/.test(lowerT)
+    || /\b(on|chalu|jalao|start)\b.*\b(torch|flashlight|flash)\b/.test(lowerT)) {
+    return { action: 'torch', params: { on: true }, label: 'turn torch ON' };
+  }
+  if (/\b(torch|flashlight|flash|light)\b.*\b(off|band|bandh|close|stop)\b/.test(lowerT)
+    || /\b(off|band|bandh|stop)\b.*\b(torch|flashlight|flash)\b/.test(lowerT)) {
+    return { action: 'torch', params: { on: false }, label: 'turn torch OFF' };
   }
 
-  // -- Vibrate --
-  if (/\b(vibrate|vibration|kampan|thartharao|vibrator)\b/i.test(lowerT)) {
-    return { action: 'vibrate', params: { duration: 1000 }, label: `vibrate phone` };
+  // Vibrate
+  if (/\b(vibrate|vibration|kampan|thartharao|thartharaho)\b/.test(lowerT)) {
+    const m = lowerT.match(/(\d{2,5})\s*(ms|milli|second|sec)?/);
+    const dur = m ? Math.min(5000, parseInt(m[1])) : 1000;
+    return { action: 'vibrate', params: { duration: dur }, label: `vibrate phone (${dur}ms)` };
   }
 
-  // -- Battery --
-  if (/\b(battery|batri|battry|charge|charging)\b/i.test(lowerT) && /\b(kitni|status|level|percent|kya hai|batao)\b/i.test(lowerT)) {
+  // Battery
+  if (/\bbattery\b|\bbatri\b|\bbattry\b|battery\s*(status|level|percent)|kitni.*battery|battery.*kitni/.test(lowerT)) {
     return { action: 'battery', label: 'get battery status' };
   }
 
-  // -- Brightness --
-  if (/\b(brightness|roshni|screen light|display light)\b/i.test(lowerT)) {
-    if (/\b(full|max|100|tej|jyada|zyada|badha|increase|bada)\b/i.test(lowerT)) return { action: 'brightness', params: { level: 255 }, label: 'increase brightness' };
-    if (/\b(half|50|aadha|adhi)\b/i.test(lowerT)) return { action: 'brightness', params: { level: 127 }, label: 'set brightness half' };
-    if (/\b(kam|low|dim|thoda|dheere|ghatao|slow|decrease)\b/i.test(lowerT)) return { action: 'brightness', params: { level: 50 }, label: 'decrease brightness' };
-    const valMatch = lowerT.match(/(\d{1,3})/);
-    if (valMatch) {
-      let val = parseInt(valMatch[1]);
-      if (val <= 100) val = Math.round(val * 2.55);
-      return { action: 'brightness', params: { level: Math.min(255, val) }, label: `set brightness ${valMatch[1]}%` };
-    }
+  // Brightness
+  const brightM = lowerT.match(/brightness\s*(?:ko|to|=)?\s*(\d{1,3})/) || lowerT.match(/(\d{1,3})\s*%?\s*brightness/);
+  if (brightM) {
+    const lvl = Math.max(0, Math.min(255, parseInt(brightM[1]) > 100 ? parseInt(brightM[1]) : Math.round(parseInt(brightM[1]) * 2.55)));
+    return { action: 'brightness', params: { level: lvl }, label: `set brightness ${brightM[1]}` };
   }
 
-  // -- Volume --
-  if (/\b(volume|awaz|awaaz|sound|speaker)\b/i.test(lowerT)) {
-    if (/\b(full|max|100|tej|jyada|zyada|badha|increase|bada)\b/i.test(lowerT)) return { action: 'volume', params: { stream: 'music', level: 100 }, label: 'increase volume' };
-    if (/\b(half|50|aadha|adhi)\b/i.test(lowerT)) return { action: 'volume', params: { stream: 'music', level: 50 }, label: 'set volume half' };
-    if (/\b(kam|low|dim|thoda|dheere|ghatao|slow|decrease)\b/i.test(lowerT)) return { action: 'volume', params: { stream: 'music', level: 20 }, label: 'decrease volume' };
-    if (/\b(mute|band|zero|0)\b/i.test(lowerT)) return { action: 'volume', params: { stream: 'music', level: 0 }, label: 'mute volume' };
-    const valMatch = lowerT.match(/(\d{1,3})/);
-    if (valMatch) return { action: 'volume', params: { stream: 'music', level: Math.min(100, parseInt(valMatch[1])) }, label: `set volume ${valMatch[1]}` };
-  }
+  // Volume
+  const volM = lowerT.match(/volume\s*(?:ko|to|=)?\s*(\d{1,3})/);
+  if (volM) return { action: 'volume', params: { stream: 'music', level: parseInt(volM[1]) }, label: `set volume ${volM[1]}` };
 
-  // -- Wi-Fi --
-  if (/\bwifi\b/i.test(lowerT) || /\bwi-fi\b/i.test(lowerT)) {
-    if (/\b(on|chalu|start|open)\b/i.test(lowerT)) return { action: 'wifi', params: { on: true }, label: 'wifi ON' };
-    if (/\b(off|band|stop|close)\b/i.test(lowerT)) return { action: 'wifi', params: { on: false }, label: 'wifi OFF' };
-    if (/\b(info|details|status|check)\b/i.test(lowerT)) return { action: 'wifi-info', label: 'wifi info' };
-  }
-
-  // -- Location --
-  if (/\b(location|gps|kaha hu|kahan hoon|where am i|meri location|kidhar hu)\b/i.test(lowerT)) {
+  // Location
+  if (/\b(location|gps|kaha hu|kahan hoon|where am i|meri location)\b/.test(lowerT)) {
     return { action: 'location', label: 'get GPS location' };
   }
 
-  // -- Call (Flexible Hinglish Calling) --
-  const callMatch = lowerT.match(/^(?:call|phone|dial|ring)\s+(?:to\s+|karo\s+|lagao\s+|milao\s+)?([a-z0-9\s]+)$/i) ||
-                    lowerT.match(/^([a-z0-9\s]+?)\s*(?:ko|par|ke|se)\s*(?:call|phone|dial)\s*(?:karo|kar|do|lagao|milao|karna)/i) ||
-                    lowerT.match(/^call\s+([a-z0-9\s]+)$/i);
+  // Wi-Fi
+  if (/\bwifi\b.*\b(on|chalu|start)\b/.test(lowerT)) return { action: 'wifi', params: { on: true }, label: 'wifi ON' };
+  if (/\bwifi\b.*\b(off|band|stop)\b/.test(lowerT)) return { action: 'wifi', params: { on: false }, label: 'wifi OFF' };
+  if (/\bwifi\b.*(info|details|status)/.test(lowerT)) return { action: 'wifi-info', label: 'wifi info' };
 
-  if (callMatch) {
-    const target = callMatch[1].trim();
-    if (!/^(me|him|her|them|someone|anyone|nobody|end|back|now|please|karo|kar|do)$/i.test(target) && target.length > 1) {
-        if (/^[\d\s\-\+]+$/.test(target) && target.replace(/\D/g, '').length >= 7) {
-            return { action: 'call', params: { number: sanitizePhoneNumber(target) }, label: `call ${target}` };
-        }
-        return { action: 'call-name', params: { name: target }, label: `call ${target}` };
-    }
-  }
-  
-  if (/\b(end call|call end|call kaat|hang up|cut call|phone kaat|phone band karo)\b/i.test(lowerT)) {
-    return { action: 'call-end', label: 'end call' };
-  }
+  // Clipboard
+  if (/clipboard.*(read|get|dikhao|show)/.test(lowerT)) return { action: 'clip-get', label: 'read clipboard' };
+  const clipSet = t.match(/clipboard.*(?:set|copy|par likh|mein daal)[^"']*["'](.+?)["']/i);
+  if (clipSet) return { action: 'clip-set', params: { text: clipSet[1] }, label: 'set clipboard' };
 
-  // -- App Open (Smart Natural Selection) --
-  const appMatch = lowerT.match(/(?:open|launch|start|run|chalu\s*karo|khol|kholo|app\s*kholo)\s+([a-z0-9\s]+)/i) ||
-                   lowerT.match(/([a-z0-9\s]+?)\s+(?:open|launch|start|run|chalu)\s*(?:karo|kar|do|khol|kholo)/i);
-  if (appMatch) {
-    const appName = appMatch[1].trim();
-    if (!/^(app|application|the|a|an|it|this|that|karo|kar|do|mera|apna)$/i.test(appName) && appName.length > 2) {
-        return { action: 'app-open', params: { name: appName }, label: `open ${appName}` };
-    }
-  }
-
-  // -- Media Control --
-  if (/\b(pause|ruk|band karo|stop)\s*(music|song|media|gana|gaana)\b/i.test(lowerT)) return { action: 'media', params: { action: 'pause' }, label: 'pause media' };
-  if (/\b(play|chalu karo|start)\s*(music|song|media|gana|gaana)\b/i.test(lowerT)) return { action: 'media', params: { action: 'play' }, label: 'play media' };
-  if (/\b(next|agla)\s*(music|song|media|gana|gaana)\b/i.test(lowerT)) return { action: 'media', params: { action: 'next' }, label: 'next media' };
-  if (/\b(previous|pichla)\s*(music|song|media|gana|gaana)\b/i.test(lowerT)) return { action: 'media', params: { action: 'previous' }, label: 'previous media' };
-
-  // -- Camera --
-  if (/\b(front cam|selfie|front camera)\b/i.test(lowerT) || (/\b(photo|pic|picture)\b/i.test(lowerT) && /\b(front|selfie)\b/i.test(lowerT))) {
-    return { action: 'photo', params: { camera: 1 }, label: 'front camera photo' };
-  }
-  if (/\b(back cam|rear cam|back camera)\b/i.test(lowerT) || (/\b(photo|pic|picture)\b/i.test(lowerT) && /\b(back|rear|khinch|click)\b/i.test(lowerT))) {
-    return { action: 'photo', params: { camera: 0 }, label: 'back camera photo' };
-  }
-
-  // Telegram SMS legacy fallbacks
-  const tgUserM = t.match(/^(?:telegram|tg)\s+(?:to\s+)?@([a-zA-Z0-9_]+)\s+(?:msg|message|text)\s+([\s\S]+)$/i);
-  if (tgUserM) return { action: 'telegram-user', params: { username: tgUserM[1].trim(), text: tgUserM[2].trim() }, label: `Telegram to @${tgUserM[1]}` };
-  
-  const tgNameM = t.match(/^(?:telegram|tg)\s+(?:to\s+)?([a-zA-Z][a-zA-Z\s]{1,30}?)\s+(?:msg|message|text)\s+([\s\S]+)$/i);
-  if (tgNameM && !/\d/.test(tgNameM[1])) return { action: 'telegram-name', params: { name: tgNameM[1].trim(), text: tgNameM[2].trim() }, label: `Telegram to ${tgNameM[1].trim()}` };
-
-  const smsM = t.match(/^(?:sms|text)\s+(?:to\s+)?(\+?\d[\d\s\-]{6,15})\s+(?:msg|message)\s+([\s\S]+)$/i) || t.match(/^(\+?\d[\d\s\-]{6,15})\s*(?:ko|par)?\s*sms\s*(?:bhejo|send|kar)\s+([\s\S]+)$/i);
+  // SMS 
+  const smsM = t.match(/^(?:sms|text)\s+(?:to\s+)?(\+?\d[\d\s\-]{6,15})\s+(?:msg|message)\s+([\s\S]+)$/i)
+    || t.match(/^(\+?\d[\d\s\-]{6,15})\s*(?:ko|par)?\s*sms\s*(?:bhejo|send|kar)\s+([\s\S]+)$/i);
   if (smsM) return { action: 'sms', params: { number: sanitizePhoneNumber(smsM[1]), text: smsM[2] || smsM[3] }, label: `SMS to ${smsM[1]}` };
+
+  // Call by number
+  const callM = t.match(/^(?:call|phone|dial)\s+(?:to\s+)?(\+?\d[\d\s\-]{6,15})$/i)
+    || t.match(/^(\+?\d[\d\s\-]{6,15})\s*(?:ko|par)?\s*(?:call|phone|dial)\s*(?:karo|kar|do)$/i);
+  if (callM) return { action: 'call', params: { number: sanitizePhoneNumber(callM[1]) }, label: `call ${callM[1]}` };
+
+  // Call by name
+  const callNameM = t.match(/^(?:call|phone|dial|ring|video\s*call)\s+(?:to\s+|karo\s+)?([a-zA-Z][a-zA-Z\s\.'-]{1,30}?)(?:\s*$|[.,!?])/i)
+    || t.match(/^([a-zA-Z][a-zA-Z\s\.'-]{1,30}?)\s*(?:ko|par|ke|se)\s*(?:call|phone|dial)\s*(?:karo|kar|do|lagao|milao)?$/i);
+  if (callNameM && !/\d/.test(callNameM[1])) {
+    const name = callNameM[1].trim().replace(/\s+/g, ' ');
+    if (!/^(me|him|her|them|someone|anyone|nobody|end|back|now|please)$/i.test(name) && name.length >= 2) {
+      return { action: 'call-name', params: { name }, label: `call ${name}` };
+    }
+  }
+
+  if (/^(?:end call|call end|call kaat|hang up|cut call)$/i.test(t)) return { action: 'call-end', label: 'end call' };
+
+  // Camera
+  if (/\b(front cam|selfie|front camera).*photo|photo.*front|selfie\s*(khinch|le|lo|lelo)/i.test(lowerT))
+    return { action: 'photo', params: { camera: 1 }, label: 'front camera photo' };
+  if (/\b(back cam|rear cam|back camera).*photo|photo.*back|photo\s*(khinch|le|lo|lelo|click)/i.test(lowerT))
+    return { action: 'photo', params: { camera: 0 }, label: 'back camera photo' };
+
+  // Toast / Notify
+  const toastM = t.match(/toast[^"']*["'](.+?)["']/i);
+  if (toastM) return { action: 'toast', params: { text: toastM[1] }, label: 'toast' };
+  const notifM = t.match(/(?:notify|notification)[^"']*["'](.+?)["']/i);
+  if (notifM) return { action: 'notify', params: { title: 'Alsa AI', content: notifM[1] }, label: 'notification' };
+
+  // TTS
+  const ttsM = t.match(/(?:speak|bolo|tts)[^"']*["'](.+?)["']/i);
+  if (ttsM) return { action: 'tts', params: { text: ttsM[1] }, label: 'speak' };
+
+  // Telegram 
+  const tgUserM = t.match(/^(?:telegram|tg)\s+(?:to\s+)?@([a-zA-Z0-9_]+)\s+(?:msg|message|text)\s+([\s\S]+)$/i);
+  if (tgUserM) {
+    return { action: 'telegram-user', params: { username: tgUserM[1].trim(), text: tgUserM[2].trim() }, label: `Telegram to @${tgUserM[1]}` };
+  }
+  const tgNameM = t.match(/^(?:telegram|tg)\s+(?:to\s+)?([a-zA-Z][a-zA-Z\s]{1,30}?)\s+(?:msg|message|text)\s+([\s\S]+)$/i);
+  if (tgNameM && !/\d/.test(tgNameM[1])) {
+    return { action: 'telegram-name', params: { name: tgNameM[1].trim(), text: tgNameM[2].trim() }, label: `Telegram to ${tgNameM[1].trim()}` };
+  }
 
   // YT-DLP
   const ytM = t.match(/(https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com)\/\S+)/i);
-  if (ytM && /\b(download|save|mp3|mp4|audio|video|yt-?dlp|playlist)\b/i.test(lowerT)) {
-    const audio = /\b(mp3|audio|song|music)\b/i.test(lowerT);
-    const q = lowerT.match(/\b(144|240|360|480|720|1080|1440|2160|4k)\b/i);
+  if (ytM && /\b(download|save|mp3|mp4|audio|video|yt-?dlp|playlist)\b/i.test(t)) {
+    const audio = /\b(mp3|audio|song|music)\b/i.test(t);
+    const q = t.match(/\b(144|240|360|480|720|1080|1440|2160|4k)\b/i);
     return {
       action: 'ytdlp',
-      params: { url: ytM[1], mode: audio ? 'audio' : 'video', quality: q ? (q[1].toLowerCase() === '4k' ? '2160' : q[1]) : 'best', playlist: /\bplaylist\b/i.test(lowerT) || /list=/.test(ytM[1]) },
+      params: {
+        url: ytM[1],
+        mode: audio ? 'audio' : 'video',
+        quality: q ? (q[1].toLowerCase() === '4k' ? '2160' : q[1]) : 'best',
+        playlist: /\bplaylist\b/i.test(t) || /list=/.test(ytM[1]),
+      },
       label: `yt-dlp ${audio ? 'audio' : 'video'} on phone`,
     };
   }
 
-  // Contacts Search
+  // Contacts
   const cSearch = t.match(/(?:contact|contacts)\s+(?:search|find|dhundo|dhoondo|khojo)\s+(.+)/i);
   if (cSearch) return { action: 'contact-search', params: { query: cSearch[1].trim() }, label: `search contact "${cSearch[1].trim()}"` };
 
+  // Media
+  if (/\b(pause|ruk|band karo)\s*(music|song|media|gana)/i.test(lowerT)) return { action: 'media', params: { action: 'pause' }, label: 'pause media' };
+  if (/\b(play)\s*(music|song|media|gana)/i.test(lowerT)) return { action: 'media', params: { action: 'play' }, label: 'play media' };
+
+  // Smart App Open Selector
+  const openAppPattern =
+    t.match(/(?:open|launch|start|run|chalu\s*karo|khol|kholo|open\s+app)\s+(.+)/i) ||
+    t.match(/(.+?)\s+(?:open\s*karo|chalu\s*karo|start\s*karo|khol|kholo)/i);
+
+  if (openAppPattern) {
+    let appName = normalizeAppName(openAppPattern[1].trim().replace(/[.!?]$/, ""));
+    return { action: "app-open", params: { name: appName }, label: `open ${appName}` };
+  }
+
   return null;
 };
+
+async function smartOpenApp(appName: string) {
+  let res = await phoneAppOpen(appName);
+  if (res?.ok || res?.success) return res;
+
+  const list = await phoneAppList();
+  const apps = list?.data || list?.apps || [];
+  if (!Array.isArray(apps)) return res;
+
+  const target = appName.toLowerCase();
+  const match = apps.find((app: any) => {
+    const label = (app.label || app.name || "").toLowerCase();
+    const pkg = (app.package || "").toLowerCase();
+    return label.includes(target) || pkg.includes(target);
+  });
+
+  if (!match) return { ok: false, success: false, message: `App "${appName}" not found` };
+  return phoneAppOpen(match.package);
+}
 
 function formatPhoneResult(cmd: PhoneCommand, res: any): string {
   const d = res?.data ?? res ?? {};
@@ -565,16 +624,8 @@ function formatPhoneResult(cmd: PhoneCommand, res: any): string {
     case 'whatsapp-num':
     case 'whatsapp-name':
       return `💬 WhatsApp message bhej diya ${p.name || p.number} ko.`;
-    case 'telegram-user':
-    case 'telegram-name':
-      return `✈️ Telegram message bhej diya ${p.username || p.name} ko.`;
-    case 'sms':
-      return `💬 SMS bhej diya ${p.number} ko.`;
-    case 'call':
-    case 'call-name':
-      return `📞 Call mila diya ${p.name || p.number} ko.`;
     case 'app-open':
-      return `📱 ${p.name || p.package || 'App'} open kar di.`;
+      return `📱 ${p.name} open kar di.`;
     default:
       return typeof d === 'string' ? d : (res?.message || `${cmd.label} ✓`);
   }
@@ -586,15 +637,15 @@ export const executePhoneCommand = async (cmd: PhoneCommand): Promise<{ success:
     switch (cmd.action) {
       case 'email-send': res = await phoneEmailSend({ to: cmd.params!.to, subject: cmd.params!.subject, body: cmd.params!.body }); break;
       case 'email-name': res = await phoneEmailSendByName(cmd.params!.name, cmd.params!.body, cmd.params!.subject); break;
-      case 'whatsapp-num':  res = await phoneWhatsappSend(cmd.params!.number, cmd.params!.text); break;
+      case 'whatsapp-num': res = await phoneWhatsappSend(cmd.params!.number, cmd.params!.text); break;
       case 'whatsapp-name': res = await phoneWhatsappSendByName(cmd.params!.name, cmd.params!.text); break;
       case 'telegram-user': res = await phoneTelegramSend(cmd.params!.username, cmd.params!.text); break;
       case 'telegram-name': res = await phoneTelegramSendByName(cmd.params!.name, cmd.params!.text); break;
-      case 'torch':      res = await phoneTorch(cmd.params!.on); break;
-      case 'vibrate':    res = await phoneVibrate(cmd.params!.duration); break;
-      case 'battery':    res = await phoneBattery(); break;
+      case 'torch': res = await phoneTorch(cmd.params!.on); break;
+      case 'vibrate': res = await phoneVibrate(cmd.params!.duration); break;
+      case 'battery': res = await phoneBattery(); break;
       case 'brightness': res = await phoneBrightness(cmd.params!.level); break;
-      case 'volume':     res = await phoneVolume(cmd.params!.stream, cmd.params!.level); break;
+      case 'volume': res = await phoneVolume(cmd.params!.stream, cmd.params!.level); break;
       case 'location': {
         res = await phoneLocation();
         const lat = res?.data?.latitude ?? res?.latitude;
@@ -608,19 +659,16 @@ export const executePhoneCommand = async (cmd: PhoneCommand): Promise<{ success:
         }
         break;
       }
-      case 'wifi':       res = await phoneWifiToggle(cmd.params!.on); break;
-      case 'wifi-info':  res = await phoneWifiInfo(); break;
-      case 'clip-get':   res = await phoneClipboardGet(); break;
-      case 'clip-set':   res = await phoneClipboardSet(cmd.params!.text); break;
-      case 'sms':        res = await phoneSmsSend(cmd.params!.number, cmd.params!.text); break;
-      case 'call':       res = await phoneCallMake(cmd.params!.number); break;
-      case 'call-name':  res = await phoneCallByName(cmd.params!.name); break;
-      case 'call-end':   res = await phoneCallEnd(); break;
-      case 'photo':      res = await phoneCameraPhoto(undefined, cmd.params!.camera); break;
-      case 'toast':      res = await phoneToast(cmd.params!.text); break;
-      case 'notify':     res = await phoneNotify(cmd.params!.title, cmd.params!.content); break;
-      case 'tts':        res = await phoneTts(cmd.params!.text); break;
-      case 'ytdlp':      res = await phoneYtdlpDownload(cmd.params as any); break;
+      case 'wifi': res = await phoneWifiToggle(cmd.params!.on); break;
+      case 'sms': res = await phoneSmsSend(cmd.params!.number, cmd.params!.text); break;
+      case 'call': res = await phoneCallMake(cmd.params!.number); break;
+      case 'call-name': res = await phoneCallByName(cmd.params!.name); break;
+      case 'call-end': res = await phoneCallEnd(); break;
+      case 'photo': res = await phoneCameraPhoto(undefined, cmd.params!.camera); break;
+      case 'toast': res = await phoneToast(cmd.params!.text); break;
+      case 'notify': res = await phoneNotify(cmd.params!.title, cmd.params!.content); break;
+      case 'tts': res = await phoneTts(cmd.params!.text); break;
+      case 'ytdlp': res = await phoneYtdlpDownload(cmd.params as any); break;
       case 'contacts':
         res = await phoneContacts();
         await syncContactsToDb(res?.data ?? res);
@@ -635,11 +683,11 @@ export const executePhoneCommand = async (cmd: PhoneCommand): Promise<{ success:
         }
         break;
       }
-      case 'media':      res = await phoneMediaControl(cmd.params!.action); break;
-      case 'app-open':   res = await smartOpenApp(cmd.params!.name); break;
+      case 'media': res = await phoneMediaControl(cmd.params!.action); break;
+      case 'app-open': res = await smartOpenApp(cmd.params!.name); break;
       default: return { success: false, message: `Unknown phone action: ${cmd.action}` };
     }
-    
+
     // Strict success validation
     const ok = res?.success !== false && res?.ok !== false && res?.status !== 'error';
     return {

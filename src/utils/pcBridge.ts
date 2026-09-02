@@ -1,183 +1,158 @@
 // pcBridge.ts - Full PC Control Bridge with Natural Language Support
 import { syncContactsToDb, searchContacts, lookupTelegramContact, lookupEmailContact } from '@/utils/contactsStore';
+import { getPhoneBridgeUrl } from '@/utils/phoneBridge';
 
-export const DESKTOP_BRIDGE_PORT = 5001;
-export const PC_APP_BRIDGE_PORT = 5002;
+export const PC_BRIDGE_PORT = 5001;
+export const PC_BRIDGE_IP_KEY = 'alsa_pc_bridge_ip';
 
-export const DESKTOP_BRIDGE_URL = 'http://127.0.0.1:5001';
-export const PC_APP_BRIDGE_URL = 'http://127.0.0.1:5002';
+export const getPcBridgeIp = (): string => {
+  try {
+    const v = (localStorage.getItem(PC_BRIDGE_IP_KEY) || '').trim();
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(v)) return v;
+  } catch { }
+  return '127.0.0.1';
+};
 
-export const BRIDGE_OFFLINE_FALLBACK_MESSAGE =
-  'Alsa Ai bridge server is offline: Please start either Desktop Bridge (Port 5001) or Alsa AI PC Bridge App (Port 5002).';
+export const setPcBridgeIp = (ip: string) => {
+  const v = (ip || '').trim();
+  try {
+    if (!v) localStorage.removeItem(PC_BRIDGE_IP_KEY);
+    else localStorage.setItem(PC_BRIDGE_IP_KEY, v);
+  } catch { }
+};
+
+export const getPcBridgeUrl = (): string => `http://${getPcBridgeIp()}:${PC_BRIDGE_PORT}`;
+
+// Kept as a function call so it stays dynamic at runtime
+const BRIDGE_URL = getPcBridgeUrl();
+
+// ── Friendly, non-technical messages shown to the user ──
+export const BRIDGE_MESSAGES = {
+  bothOffline: 'Alsa cannot reach your device. Please open the Alsa Bridge app on your computer or phone, then try again.',
+  pcOffline: 'Your computer is not connected right now. Please start Alsa PC Bridge on your computer and try again.',
+  phoneOffline: 'Your phone is not connected right now. Open the Alsa Bridge app on your phone and try again.',
+  timeout: 'Your device took too long to respond. Please check the Alsa Bridge app and try again.',
+  notConnected: 'Device not connected.',
+  failed: 'Something went wrong while talking to your device. Please try again.',
+};
+export const BRIDGE_OFFLINE_MESSAGE = BRIDGE_MESSAGES.bothOffline;
 
 const getHeaders = () => ({
   'Content-Type': 'application/json',
 });
 
-export interface BridgeHealthCheckResult {
-  port5001Active: boolean;
-  port5002Active: boolean;
-  activePort: 5001 | 5002 | null;
-  activeUrl: string | null;
-  bridgeName: 'Desktop Bridge' | 'Alsa AI PC Bridge App' | 'None';
-  connected: boolean;
-  message: string;
-}
-
 export interface BridgeStatus {
   connected: boolean;
   message?: string;
-  activePort?: 5001 | 5002 | null;
-  activeUrl?: string | null;
 }
 
-// Short-term cache for bridge health checks (2 seconds TTL)
-let cachedStatus: { result: BridgeHealthCheckResult; timestamp: number } | null = null;
-const CACHE_TTL_MS = 2000;
-
-/**
- * Ping a specific port with a strict timeout to prevent UI lag.
- * Probes candidate URLs (127.0.0.1 and localhost) for /status and /health endpoints.
- */
-async function pingPort(port: number, timeoutMs = 1500): Promise<{ active: boolean; url: string; data?: any }> {
-  const candidateUrls = [`http://127.0.0.1:${port}`, `http://localhost:${port}`];
-
-  for (const url of candidateUrls) {
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-      let res: Response | null = null;
-      try {
-        res = await fetch(`${url}/status`, {
-          method: 'GET',
-          headers: { 'Accept': 'application/json' },
-          signal: controller.signal,
-        });
-      } catch (err: any) {
-        if (err?.name === 'AbortError') {
-          clearTimeout(timer);
-          continue;
-        }
-        // If /status fails, try /health
-        try {
-          const controller2 = new AbortController();
-          const timer2 = setTimeout(() => controller2.abort(), timeoutMs);
-          res = await fetch(`${url}/health`, {
-            method: 'GET',
-            headers: { 'Accept': 'application/json' },
-            signal: controller2.signal,
-          });
-          clearTimeout(timer2);
-        } catch {
-          res = null;
-        }
-      } finally {
-        clearTimeout(timer);
-      }
-
-      if (res && (res.ok || res.status === 200 || res.status === 204)) {
-        const data = await res.json().catch(() => ({}));
-        return { active: true, url, data };
-      }
-    } catch {
-      // Gracefully handle CORS / connection errors
-    }
-  }
-
-  return { active: false, url: `http://127.0.0.1:${port}` };
+export interface BridgeHealth {
+  pc: boolean;      // Desktop bridge on port 5001
+  phone: boolean;   // Phone bridge app on port 5002
+  any: boolean;
+  checkedAt: number;
 }
 
-/**
- * Pre-Execution Health Check:
- * Asynchronously identifies active local bridge servers (Port 5001 vs Port 5002)
- * using concurrent fetch with a 1.5s timeout.
- */
-export const checkBridgeStatus = async (forceRefresh = false): Promise<BridgeHealthCheckResult> => {
-  const now = Date.now();
-  if (!forceRefresh && cachedStatus && (now - cachedStatus.timestamp < CACHE_TTL_MS)) {
-    return cachedStatus.result;
-  }
+const HEALTH_TIMEOUT_MS = 1500;
+const HEALTH_CACHE_MS = 5000;
+let healthCache: BridgeHealth | null = null;
+let healthInFlight: Promise<BridgeHealth> | null = null;
 
+const ping = async (url: string): Promise<boolean> => {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
   try {
-    const [p5001, p5002] = await Promise.all([
-      pingPort(DESKTOP_BRIDGE_PORT, 1500),
-      pingPort(PC_APP_BRIDGE_PORT, 1500),
-    ]);
-
-    let result: BridgeHealthCheckResult;
-
-    if (p5001.active) {
-      result = {
-        port5001Active: true,
-        port5002Active: p5002.active,
-        activePort: 5001,
-        activeUrl: p5001.url,
-        bridgeName: 'Desktop Bridge',
-        connected: true,
-        message: 'Desktop Bridge (Port 5001) connected',
-      };
-    } else if (p5002.active) {
-      result = {
-        port5001Active: false,
-        port5002Active: true,
-        activePort: 5002,
-        activeUrl: p5002.url,
-        bridgeName: 'Alsa AI PC Bridge App',
-        connected: true,
-        message: 'Alsa AI PC Bridge App (Port 5002) connected',
-      };
-    } else {
-      result = {
-        port5001Active: false,
-        port5002Active: false,
-        activePort: null,
-        activeUrl: null,
-        bridgeName: 'None',
-        connected: false,
-        message: BRIDGE_OFFLINE_FALLBACK_MESSAGE,
-      };
-    }
-
-    cachedStatus = { result, timestamp: now };
-    return result;
+    const r = await fetch(`${url}/status`, { method: 'GET', signal: controller.signal, cache: 'no-store' });
+    return r.ok;
   } catch {
-    const fallback: BridgeHealthCheckResult = {
-      port5001Active: false,
-      port5002Active: false,
-      activePort: null,
-      activeUrl: null,
-      bridgeName: 'None',
-      connected: false,
-      message: BRIDGE_OFFLINE_FALLBACK_MESSAGE,
-    };
-    cachedStatus = { result: fallback, timestamp: now };
-    return fallback;
+    return false;
+  } finally {
+    clearTimeout(t);
   }
 };
 
 /**
- * Returns the active bridge URL or null if both ports are offline.
+ * Pre-execution health check: pings PC bridge (5001) and Phone bridge (5002) concurrently.
+ * Results are cached for 5s so repeated commands don't spam the network.
  */
-export const getActiveBridgeUrl = async (forceRefresh = false): Promise<string | null> => {
-  const status = await checkBridgeStatus(forceRefresh);
-  return status.activeUrl;
+export const checkBridgeStatus = async (force = false): Promise<BridgeHealth> => {
+  const now = Date.now();
+  if (!force && healthCache && now - healthCache.checkedAt < HEALTH_CACHE_MS) return healthCache;
+  if (healthInFlight) return healthInFlight;
+  healthInFlight = (async () => {
+    const [pc, phone] = await Promise.all([ping(BRIDGE_URL), ping(getPhoneBridgeUrl())]);
+    healthCache = { pc, phone, any: pc || phone, checkedAt: Date.now() };
+    healthInFlight = null;
+    return healthCache;
+  })();
+  return healthInFlight;
 };
 
-export const checkBridgeConnection = async (forceRefresh = false): Promise<BridgeStatus> => {
-  const status = await checkBridgeStatus(forceRefresh);
-  return {
-    connected: status.connected,
-    message: status.message,
-    activePort: status.activePort,
-    activeUrl: status.activeUrl,
-  };
+export const invalidateBridgeHealth = () => { healthCache = null; };
+
+/** Returns the base URL of the best available bridge (PC first, then Phone). */
+export const getActiveBridgeUrl = async (): Promise<string | null> => {
+  const h = await checkBridgeStatus();
+  if (h.pc) return BRIDGE_URL;
+  if (h.phone) return getPhoneBridgeUrl();
+  return null;
+};
+
+const friendlyError = (e: any): string => {
+  const m = String(e?.message || e || '');
+  if (e?.name === 'AbortError' || /timed? ?out/i.test(m)) return BRIDGE_MESSAGES.timeout;
+  if (/Failed to fetch|NetworkError|Load failed|ECONNREFUSED/i.test(m)) return BRIDGE_MESSAGES.bothOffline;
+  return m || BRIDGE_MESSAGES.failed;
+};
+
+/**
+ * fetch() replacement for all bridge helpers: swaps the hardcoded 5001 host for whichever
+ * bridge is actually alive. Throws a friendly error if none is reachable.
+ */
+const bridgeFetch = async (url: string, init?: RequestInit): Promise<Response> => {
+  const base = await getActiveBridgeUrl();
+  if (!base) throw new Error(BRIDGE_MESSAGES.bothOffline);
+  try {
+    return await fetch(url.replace(BRIDGE_URL, base), init);
+  } catch (e: any) {
+    invalidateBridgeHealth();
+    throw new Error(friendlyError(e));
+  }
+};
+
+/** Run a request against whichever bridge is online. */
+export const executeOnAnyBridge = async <T = any>(path: string, body: any = {}, method: 'POST' | 'GET' = 'POST'): Promise<{ success: boolean; message: string; data?: T; via?: 'pc' | 'phone' }> => {
+  const h = await checkBridgeStatus();
+  const base = h.pc ? BRIDGE_URL : h.phone ? getPhoneBridgeUrl() : null;
+  if (!base) return { success: false, message: BRIDGE_MESSAGES.bothOffline };
+  try {
+    const r = await fetch(`${base}${path}`, {
+      method,
+      headers: getHeaders(),
+      body: method === 'POST' ? JSON.stringify(body) : undefined,
+    });
+    const data: any = await r.json().catch(() => ({}));
+    const ok = r.ok && data?.success !== false && data?.ok !== false;
+    return { success: ok, message: data?.message || data?.error || (ok ? 'Done' : BRIDGE_MESSAGES.failed), data, via: h.pc ? 'pc' : 'phone' };
+  } catch (e: any) {
+    invalidateBridgeHealth();
+    return { success: false, message: friendlyError(e) };
+  }
+};
+
+export const checkBridgeConnection = async (): Promise<BridgeStatus> => {
+  const ok = await ping(BRIDGE_URL);
+  if (ok) {
+    healthCache = healthCache ? { ...healthCache, pc: true, any: true } : healthCache;
+    return { connected: true, message: 'PC Bridge connected' };
+  }
+  return { connected: false, message: BRIDGE_MESSAGES.pcOffline };
 };
 
 // 110+ Website URLs for opening via PC Bridge
 export const WEBSITES: Record<string, { name: string; url: string; category: string }> = {
   // Social Media
- // 'youtube': { name: 'YouTube', url: 'https://www.youtube.com', category: 'Social Media' },
+  // 'youtube': { name: 'YouTube', url: 'https://www.youtube.com', category: 'Social Media' },
   'facebook': { name: 'Facebook', url: 'https://www.facebook.com', category: 'Social Media' },
   'instagram': { name: 'Instagram', url: 'https://www.instagram.com', category: 'Social Media' },
   'twitter': { name: 'Twitter/X', url: 'https://twitter.com', category: 'Social Media' },
@@ -197,7 +172,7 @@ export const WEBSITES: Record<string, { name: string; url: string; category: str
 
   // Entertainment
   'netflix': { name: 'Netflix', url: 'https://www.netflix.com', category: 'Entertainment' },
- // 'spotify': { name: 'Spotify', url: 'https://open.spotify.com', category: 'Entertainment' },
+  // 'spotify': { name: 'Spotify', url: 'https://open.spotify.com', category: 'Entertainment' },
   'primevideo': { name: 'Prime Video', url: 'https://www.primevideo.com', category: 'Entertainment' },
   'amazonprime': { name: 'Amazon Prime', url: 'https://www.primevideo.com', category: 'Entertainment' },
   'hotstar': { name: 'Disney+ Hotstar', url: 'https://www.hotstar.com', category: 'Entertainment' },
@@ -219,7 +194,7 @@ export const WEBSITES: Record<string, { name: string; url: string; category: str
   'crunchyroll': { name: 'Crunchyroll', url: 'https://www.crunchyroll.com', category: 'Entertainment' },
 
   // Productivity
-//  'google': { name: 'Google', url: 'https://www.google.com', category: 'Productivity' },
+  //  'google': { name: 'Google', url: 'https://www.google.com', category: 'Productivity' },
   'gmail': { name: 'Gmail', url: 'https://mail.google.com', category: 'Productivity' },
   'drive': { name: 'Google Drive', url: 'https://drive.google.com', category: 'Productivity' },
   'docs': { name: 'Google Docs', url: 'https://docs.google.com', category: 'Productivity' },
@@ -372,58 +347,15 @@ export const WEBSITES: Record<string, { name: string; url: string; category: str
   'crazygames': { name: 'CrazyGames', url: 'https://www.crazygames.com', category: 'Gaming' },
 };
 
-// Universal command execution - dynamically routes to active bridge (Port 5001 or 5002)
+// Universal command execution - no whitelist restrictions
 export const sendCommand = async (command: string): Promise<{ success: boolean; message: string; output?: string }> => {
   try {
-    const bridgeStatus = await checkBridgeStatus();
-    if (!bridgeStatus.connected || !bridgeStatus.activeUrl) {
-      return {
-        success: false,
-        message: BRIDGE_OFFLINE_FALLBACK_MESSAGE,
-      };
-    }
-
-    console.log(`Sending command to bridge (${bridgeStatus.bridgeName} on ${bridgeStatus.activeUrl}):`, command);
-
-    const response = await fetch(`${bridgeStatus.activeUrl}/execute`, {
+    console.log('Sending command to bridge:', command);
+    const response = await bridgeFetch(`${BRIDGE_URL}/execute`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ command }),
     });
-
-    // If 404/405 on Port 5002 (e.g. Phone Bridge API), fallback to /app/open or /shell
-    if ((response.status === 404 || response.status === 405) && bridgeStatus.activePort === 5002) {
-      const cleaned = command.replace(/^start\s+/i, '').trim();
-      const appRes = await fetch(`${bridgeStatus.activeUrl}/app/open`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ package: cleaned, name: cleaned }),
-      }).catch(() => null);
-
-      if (appRes && appRes.ok) {
-        const appData = await appRes.json().catch(() => ({}));
-        return {
-          success: appData.ok !== false && appData.success !== false,
-          message: appData.message || `Opened ${cleaned} via Alsa AI PC Bridge App`,
-          output: appData.output,
-        };
-      }
-
-      const shellRes = await fetch(`${bridgeStatus.activeUrl}/shell`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ command }),
-      }).catch(() => null);
-
-      if (shellRes && shellRes.ok) {
-        const shellData = await shellRes.json().catch(() => ({}));
-        return {
-          success: shellData.ok !== false && shellData.success !== false,
-          message: shellData.message || `Command executed via Alsa AI PC Bridge App`,
-          output: shellData.output,
-        };
-      }
-    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: response.statusText }));
@@ -438,10 +370,9 @@ export const sendCommand = async (command: string): Promise<{ success: boolean; 
     };
   } catch (error: any) {
     console.error('Bridge connection error:', error);
-    cachedStatus = null;
     return {
       success: false,
-      message: error.message || BRIDGE_OFFLINE_FALLBACK_MESSAGE
+      message: error.message || BRIDGE_MESSAGES.bothOffline
     };
   }
 };
@@ -458,12 +389,7 @@ export interface SystemScanResult {
 
 export const scanSystem = async (): Promise<SystemScanResult> => {
   try {
-    const bridgeUrl = await getActiveBridgeUrl();
-    if (!bridgeUrl) {
-      return { success: false, message: BRIDGE_OFFLINE_FALLBACK_MESSAGE };
-    }
-
-    const response = await fetch(`${bridgeUrl}/scan`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/scan`, {
       method: 'GET',
       headers: getHeaders(),
     });
@@ -679,7 +605,7 @@ export const executeSystemCommand = async (action: string): Promise<{ success: b
       case 'close_app':
       case 'close_window':
         return await closeWindow(parsed.target);
-        
+
       case 'start_recording':
         return await startScreenRecording(parsed.params.duration);
 
@@ -703,7 +629,7 @@ export const executeSystemCommand = async (action: string): Promise<{ success: b
 
 export const executePythonFile = async (filePath: string): Promise<{ success: boolean; message: string; output?: string }> => {
   try {
-    const response = await fetch(`${BRIDGE_URL}/execute_python`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/execute_python`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ file_path: filePath }),
@@ -724,14 +650,14 @@ export const executePythonFile = async (filePath: string): Promise<{ success: bo
   } catch (error: any) {
     return {
       success: false,
-      message: error.message || 'Cannot connect to PC Bridge'
+      message: error.message || BRIDGE_MESSAGES.bothOffline
     };
   }
 };
 
 export const executeCmdCommand = async (command: string): Promise<{ success: boolean; message: string; output?: string }> => {
   try {
-    const response = await fetch(`${BRIDGE_URL}/execute_cmd`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/execute_cmd`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ command }),
@@ -752,14 +678,14 @@ export const executeCmdCommand = async (command: string): Promise<{ success: boo
   } catch (error: any) {
     return {
       success: false,
-      message: error.message || 'Cannot connect to PC Bridge'
+      message: error.message || BRIDGE_MESSAGES.bothOffline
     };
   }
 };
 
 export const createProject = async (projectPath: string, files: Record<string, string>): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await fetch(`${BRIDGE_URL}/create_project`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/create_project`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ project_path: projectPath, files }),
@@ -775,7 +701,7 @@ export const createProject = async (projectPath: string, files: Record<string, s
   } catch (error: any) {
     return {
       success: false,
-      message: error.message || 'Cannot connect to PC Bridge'
+      message: error.message || BRIDGE_MESSAGES.bothOffline
     };
   }
 };
@@ -783,7 +709,7 @@ export const createProject = async (projectPath: string, files: Record<string, s
 // Create a folder at any path
 export const createFolder = async (folderPath: string): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await fetch(`${BRIDGE_URL}/create_folder`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/create_folder`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ folder_path: folderPath }),
@@ -799,7 +725,7 @@ export const createFolder = async (folderPath: string): Promise<{ success: boole
   } catch (error: any) {
     return {
       success: false,
-      message: error.message || 'Cannot connect to PC Bridge'
+      message: error.message || BRIDGE_MESSAGES.bothOffline
     };
   }
 };
@@ -808,7 +734,7 @@ export const createFolder = async (folderPath: string): Promise<{ success: boole
 export const sendWhatsAppMsg = async (phone: string, message: string): Promise<{ success: boolean; message?: string; error?: string }> => {
   try {
     console.log('Sending WhatsApp message to:', phone);
-    const response = await fetch(`${BRIDGE_URL}/whatsapp-msg`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/whatsapp-msg`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ phone, message })
@@ -822,7 +748,7 @@ export const sendWhatsAppMsg = async (phone: string, message: string): Promise<{
     return await response.json();
   } catch (error: any) {
     console.error('WhatsApp message error:', error);
-    return { success: false, error: error.message || 'Cannot connect to PC Bridge for WhatsApp' };
+    return { success: false, error: error.message || BRIDGE_MESSAGES.bothOffline };
   }
 };
 
@@ -830,7 +756,7 @@ export const sendWhatsAppMsg = async (phone: string, message: string): Promise<{
 export const sendTelegramMsg = async (link: string, message: string): Promise<{ success: boolean; message?: string; error?: string }> => {
   try {
     console.log('Sending Telegram message to:', link);
-    const response = await fetch(`${BRIDGE_URL}/telegram-msg`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/telegram-msg`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ link, message })
@@ -844,14 +770,14 @@ export const sendTelegramMsg = async (link: string, message: string): Promise<{ 
     return await response.json();
   } catch (error: any) {
     console.error('Telegram message error:', error);
-    return { success: false, error: error.message || 'Cannot connect to PC Bridge for Telegram' };
+    return { success: false, error: error.message || BRIDGE_MESSAGES.bothOffline };
   }
 };
 
 // Create a text file with content at any path
 export const createTextFile = async (filePath: string, content: string): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await fetch(`${BRIDGE_URL}/create_text_file`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/create_text_file`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ file_path: filePath, content }),
@@ -867,7 +793,7 @@ export const createTextFile = async (filePath: string, content: string): Promise
   } catch (error: any) {
     return {
       success: false,
-      message: error.message || 'Cannot connect to PC Bridge'
+      message: error.message || BRIDGE_MESSAGES.bothOffline
     };
   }
 };
@@ -897,7 +823,7 @@ export const openCustomApp = async (appName: string): Promise<{ success: boolean
       return { success: false, message: `Custom app "${appName}" not found in settings` };
     }
 
-    const response = await fetch(`${BRIDGE_URL}/execute`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/execute`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ command: `start "" "${app.path}"` }),
@@ -912,14 +838,14 @@ export const openCustomApp = async (appName: string): Promise<{ success: boolean
   } catch (error: any) {
     return {
       success: false,
-      message: error.message || 'Cannot connect to PC Bridge'
+      message: error.message || BRIDGE_MESSAGES.bothOffline
     };
   }
 };
 
 export const checkInstallation = async (software: string): Promise<{ success: boolean; installed: boolean; message: string; version?: string }> => {
   try {
-    const response = await fetch(`${BRIDGE_URL}/check_installation`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/check_installation`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ software }),
@@ -943,7 +869,7 @@ export const checkInstallation = async (software: string): Promise<{ success: bo
 
 export const adbConnect = async (ipAddress?: string): Promise<{ success: boolean; message: string; output?: string }> => {
   try {
-    const response = await fetch(`${BRIDGE_URL}/adb_connect`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/adb_connect`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ ip_address: ipAddress || '' }),
@@ -965,7 +891,7 @@ export const adbConnect = async (ipAddress?: string): Promise<{ success: boolean
 
 export const adbCommand = async (command: string): Promise<{ success: boolean; message: string; output?: string }> => {
   try {
-    const response = await fetch(`${BRIDGE_URL}/adb_command`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/adb_command`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ command }),
@@ -1005,7 +931,7 @@ export const saveRecordingToDisk = async (
 
     const filename = `recording-${Date.now()}.webm`;
 
-    const response = await fetch(`${BRIDGE_URL}/save_recording`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/save_recording`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({
@@ -1038,7 +964,7 @@ export const saveRecordingToDisk = async (
 // Open folder in file explorer
 export const openFolder = async (folderPath: string): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await fetch(`${BRIDGE_URL}/open_folder`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/open_folder`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ folder_path: folderPath })
@@ -1158,7 +1084,7 @@ export const stopScreenRecording = async (): Promise<{ success: boolean; message
 
 export const closeWindow = async (windowName: string): Promise<{ success: boolean; message: string; output?: string }> => {
   try {
-    const response = await fetch(`${BRIDGE_URL}/close_window`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/close_window`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ window_name: windowName })
@@ -1179,7 +1105,7 @@ export const closeWindow = async (windowName: string): Promise<{ success: boolea
 
 export const runCommand = async (command: string): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await fetch(`${BRIDGE_URL}/run_command`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/run_command`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ command })
@@ -1200,7 +1126,7 @@ export const runCommand = async (command: string): Promise<{ success: boolean; m
   } catch (error: any) {
     return {
       success: false,
-      message: error.message || 'Cannot connect to PC Bridge for run command'
+      message: error.message || BRIDGE_MESSAGES.bothOffline
     };
   }
 };
@@ -1218,7 +1144,7 @@ export const createPowerPoint = async (
   theme?: string
 ): Promise<{ success: boolean; message: string; file_path?: string }> => {
   try {
-    const response = await fetch(`${BRIDGE_URL}/create_powerpoint`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/create_powerpoint`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({
@@ -1242,7 +1168,7 @@ export const createPowerPoint = async (
   } catch (error: any) {
     return {
       success: false,
-      message: error.message || 'Cannot connect to PC Bridge for PowerPoint creation'
+      message: error.message || BRIDGE_MESSAGES.bothOffline
     };
   }
 };
@@ -1261,7 +1187,7 @@ export const createExcel = async (
   formatting?: ExcelFormatting
 ): Promise<{ success: boolean; message: string; file_path?: string }> => {
   try {
-    const response = await fetch(`${BRIDGE_URL}/create_excel`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/create_excel`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({
@@ -1286,7 +1212,7 @@ export const createExcel = async (
   } catch (error: any) {
     return {
       success: false,
-      message: error.message || 'Cannot connect to PC Bridge for Excel creation'
+      message: error.message || BRIDGE_MESSAGES.bothOffline
     };
   }
 };
@@ -1309,7 +1235,7 @@ export const createDatabase = async (
   tables: TableDef[]
 ): Promise<{ success: boolean; message: string; file_path?: string; tables?: string[] }> => {
   try {
-    const response = await fetch(`${BRIDGE_URL}/create_database`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/create_database`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({
@@ -1333,7 +1259,7 @@ export const createDatabase = async (
   } catch (error: any) {
     return {
       success: false,
-      message: error.message || 'Cannot connect to PC Bridge for database creation'
+      message: error.message || BRIDGE_MESSAGES.bothOffline
     };
   }
 };
@@ -1348,7 +1274,7 @@ export interface SongInfo {
 
 export const getSongList = async (): Promise<{ success: boolean; songs: SongInfo[]; message?: string }> => {
   try {
-    const response = await fetch(`${BRIDGE_URL}/get_songs`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/get_songs`, {
       method: 'GET',
       headers: getHeaders(),
     });
@@ -1367,14 +1293,14 @@ export const getSongList = async (): Promise<{ success: boolean; songs: SongInfo
     return {
       success: false,
       songs: [],
-      message: error.message || 'Cannot connect to PC Bridge for song list'
+      message: error.message || BRIDGE_MESSAGES.bothOffline
     };
   }
 };
 
 export const playSong = async (songPath: string): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await fetch(`${BRIDGE_URL}/play_song`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/play_song`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ song_path: songPath })
@@ -1392,14 +1318,14 @@ export const playSong = async (songPath: string): Promise<{ success: boolean; me
   } catch (error: any) {
     return {
       success: false,
-      message: error.message || 'Cannot connect to PC Bridge for playing song'
+      message: error.message || BRIDGE_MESSAGES.bothOffline
     };
   }
 };
 
 export const stopSong = async (): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await fetch(`${BRIDGE_URL}/stop_song`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/stop_song`, {
       method: 'POST',
       headers: getHeaders(),
     });
@@ -1412,7 +1338,7 @@ export const stopSong = async (): Promise<{ success: boolean; message: string }>
   } catch (error: any) {
     return {
       success: false,
-      message: error.message || 'Cannot connect to PC Bridge'
+      message: error.message || BRIDGE_MESSAGES.bothOffline
     };
   }
 };
@@ -1423,7 +1349,7 @@ export const uploadFileToBridge = async (file: File): Promise<{ success: boolean
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(`${BRIDGE_URL}/upload_file`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/upload_file`, {
       method: 'POST',
       body: formData
     });
@@ -1437,7 +1363,7 @@ export const uploadFileToBridge = async (file: File): Promise<{ success: boolean
   } catch (error: any) {
     return {
       success: false,
-      message: error.message || 'Cannot connect to PC Bridge for file upload'
+      message: error.message || BRIDGE_MESSAGES.bothOffline
     };
   }
 };
@@ -1474,7 +1400,7 @@ export const runProject = async (
     const projectCommands = commands[projectType] || commands.html;
 
     // Execute via PC Bridge - open cmd and run commands
-    const response = await fetch(`${BRIDGE_URL}/run_project`, {
+    const response = await bridgeFetch(`${BRIDGE_URL}/run_project`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({
@@ -1501,7 +1427,7 @@ export const runProject = async (
     } catch {
       return {
         success: false,
-        message: error.message || 'Cannot connect to PC Bridge for running project'
+        message: error.message || BRIDGE_MESSAGES.bothOffline
       };
     }
   }
@@ -1545,7 +1471,7 @@ export interface YtDlpDownloadOptions {
 
 export const ytdlpStatus = async () => {
   try {
-    const r = await fetch(`${BRIDGE_URL}/ytdlp/status`);
+    const r = await bridgeFetch(`${BRIDGE_URL}/ytdlp/status`);
     return await r.json();
   } catch (e: any) {
     return { installed: false, error: e.message };
@@ -1553,7 +1479,7 @@ export const ytdlpStatus = async () => {
 };
 
 export const ytdlpInfo = async (url: string) => {
-  const r = await fetch(`${BRIDGE_URL}/ytdlp/info`, {
+  const r = await bridgeFetch(`${BRIDGE_URL}/ytdlp/info`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ url }),
@@ -1562,7 +1488,7 @@ export const ytdlpInfo = async (url: string) => {
 };
 
 export const ytdlpDownload = async (opts: YtDlpDownloadOptions) => {
-  const r = await fetch(`${BRIDGE_URL}/ytdlp/download`, {
+  const r = await bridgeFetch(`${BRIDGE_URL}/ytdlp/download`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(opts),
@@ -1571,7 +1497,7 @@ export const ytdlpDownload = async (opts: YtDlpDownloadOptions) => {
 };
 
 export const ytdlpFormats = async (url: string) => {
-  const r = await fetch(`${BRIDGE_URL}/ytdlp/formats`, {
+  const r = await bridgeFetch(`${BRIDGE_URL}/ytdlp/formats`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ url }),
@@ -1580,7 +1506,7 @@ export const ytdlpFormats = async (url: string) => {
 };
 
 export const ytdlpOpenFolder = async () => {
-  const r = await fetch(`${BRIDGE_URL}/ytdlp/open_folder`);
+  const r = await bridgeFetch(`${BRIDGE_URL}/ytdlp/open_folder`);
   return await r.json();
 };
 

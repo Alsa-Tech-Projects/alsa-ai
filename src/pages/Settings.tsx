@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Moon, Sun, FolderOpen, Key, Plus, Trash2, MessageSquare, Mail, Monitor, Type, ShieldCheck, Mic, Globe, Terminal, Sparkles, AppWindow, FileCode, Keyboard, Upload } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, FolderOpen, Key, Plus, Trash2, MessageSquare, Mail, Monitor, Type, ShieldCheck, Mic, Globe, Terminal, Sparkles, AppWindow, FileCode, Keyboard, Upload, Wifi } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -16,6 +16,8 @@ import { useTheme, AccentColor, FontSize, ThemeMode } from '@/hooks/useTheme';
 import { isFaceAuthEnabled, setFaceAuthEnabled, isEnrolled, clearEnrollment } from '@/utils/faceAuth';
 import FaceAuth from '@/components/FaceAuth';
 import { CustomCommand, CustomActionType, loadCustomCommands, addCustomCommand, removeCustomCommand } from '@/utils/customCommands';
+import { getPcBridgeIp, setPcBridgeIp } from '@/utils/pcBridge';
+import { getPhoneBridgeIp, setPhoneBridgeIp } from '@/utils/phoneBridge';
 
 interface OutputPaths {
   recording: string;
@@ -147,6 +149,10 @@ const Settings = () => {
     reader.readAsText(file);
   };
   
+  // Bridge IP state
+  const [pcBridgeIp, setPcBridgeIpState] = useState<string>(() => getPcBridgeIp());
+  const [phoneBridgeIp, setPhoneBridgeIpState] = useState<string>(() => getPhoneBridgeIp());
+
   // Custom apps state
   const [customApps, setCustomApps] = useState<CustomApp[]>([]);
   const [newAppName, setNewAppName] = useState('');
@@ -273,6 +279,10 @@ const Settings = () => {
       localStorage.setItem('alsa_custom_instructions', customInstructions.slice(0, 2000));
       localStorage.setItem('alsa_user_api_key', userApiKey.trim());
       localStorage.setItem('alsa_user_model', userModel);
+
+      // Save bridge IPs
+      setPcBridgeIp(pcBridgeIp);
+      setPhoneBridgeIp(phoneBridgeIp);
 
       applyTheme(preferences.theme);
 
@@ -1006,6 +1016,91 @@ const Settings = () => {
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Bridge Connection Settings */}
+            <Card className="bg-card border-border w-full max-w-full overflow-hidden min-w-0">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wifi className="w-5 h-5 text-primary flex-shrink-0" /> Bridge Connection
+                </CardTitle>
+                <CardDescription className="break-words">
+                  Set custom IP addresses to control your PC or phone from another device on the same Wi-Fi network.
+                  Leave blank (or use 127.0.0.1) to connect locally.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {/* PC Bridge */}
+                <div className="space-y-1">
+                  <Label htmlFor="pc-bridge-ip" className="flex items-center gap-2">
+                    <Monitor className="w-4 h-4 flex-shrink-0" /> PC Bridge IP
+                    <span className="text-xs text-muted-foreground font-normal">— port 5001</span>
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="pc-bridge-ip"
+                      value={pcBridgeIp}
+                      onChange={(e) => setPcBridgeIpState(e.target.value.trim())}
+                      placeholder="127.0.0.1"
+                      className="font-mono w-full"
+                      inputMode="url"
+                      autoComplete="off"
+                    />
+                    {pcBridgeIp && pcBridgeIp !== '127.0.0.1' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="flex-shrink-0"
+                        onClick={() => setPcBridgeIpState('127.0.0.1')}
+                        title="Reset to localhost"
+                      >
+                        <Trash2 className="w-4 h-4 text-muted-foreground" />
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Current: <span className="font-mono">{pcBridgeIp || '127.0.0.1'}:5001</span>
+                  </p>
+                </div>
+
+                {/* Phone Bridge */}
+                <div className="space-y-1">
+                  <Label htmlFor="phone-bridge-ip" className="flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 flex-shrink-0" /> Phone Bridge IP
+                    <span className="text-xs text-muted-foreground font-normal">— port 5002</span>
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="phone-bridge-ip"
+                      value={phoneBridgeIp}
+                      onChange={(e) => setPhoneBridgeIpState(e.target.value.trim())}
+                      placeholder="127.0.0.1"
+                      className="font-mono w-full"
+                      inputMode="url"
+                      autoComplete="off"
+                    />
+                    {phoneBridgeIp && phoneBridgeIp !== '127.0.0.1' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="flex-shrink-0"
+                        onClick={() => setPhoneBridgeIpState('127.0.0.1')}
+                        title="Reset to localhost"
+                      >
+                        <Trash2 className="w-4 h-4 text-muted-foreground" />
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Current: <span className="font-mono">{phoneBridgeIp || '127.0.0.1'}:5002</span>
+                  </p>
+                </div>
+
+                <p className="text-xs text-muted-foreground bg-secondary/30 rounded-md p-3">
+                  💡 <strong>Tip:</strong> To control your PC from your phone, enter your computer's local Wi-Fi IP here
+                  (e.g. <span className="font-mono">192.168.1.10</span>). Find it via <span className="font-mono">ipconfig</span> on Windows.
+                </p>
               </CardContent>
             </Card>
 

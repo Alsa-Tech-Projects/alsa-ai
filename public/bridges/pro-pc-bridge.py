@@ -585,7 +585,7 @@ def create_powerpoint():
     try:
         from pptx import Presentation
         from pptx.util import Inches, Pt
-        from pptx.dml.color import RgbColor
+        from pptx.dml.color import RGBColor
         from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
         
         data = request.get_json()
@@ -629,7 +629,7 @@ def create_powerpoint():
         tf.paragraphs[0].text = title
         tf.paragraphs[0].font.size = Pt(54)
         tf.paragraphs[0].font.bold = True
-        tf.paragraphs[0].font.color.rgb = RgbColor(*colors['title'])
+        tf.paragraphs[0].font.color.rgb = RGBColor(*colors['title'])
         tf.paragraphs[0].alignment = PP_ALIGN.CENTER
         
         # Add content slides
@@ -642,7 +642,7 @@ def create_powerpoint():
             tf.paragraphs[0].text = slide_data.get('title', '')
             tf.paragraphs[0].font.size = Pt(36)
             tf.paragraphs[0].font.bold = True
-            tf.paragraphs[0].font.color.rgb = RgbColor(*colors['title'])
+            tf.paragraphs[0].font.color.rgb = RGBColor(*colors['title'])
             
             # Slide content
             content = slide_data.get('content', '')
@@ -655,12 +655,12 @@ def create_powerpoint():
                 if i == 0:
                     tf.paragraphs[0].text = line
                     tf.paragraphs[0].font.size = Pt(24)
-                    tf.paragraphs[0].font.color.rgb = RgbColor(*colors['text'])
+                    tf.paragraphs[0].font.color.rgb = RGBColor(*colors['text'])
                 else:
                     p = tf.add_paragraph()
                     p.text = line
                     p.font.size = Pt(24)
-                    p.font.color.rgb = RgbColor(*colors['text'])
+                    p.font.color.rgb = RGBColor(*colors['text'])
                     p.space_before = Pt(12)
         
         # Ensure directory exists
@@ -676,8 +676,8 @@ def create_powerpoint():
             'slides_count': len(slides_data) + 1
         })
         
-    except ImportError:
-        return jsonify({'error': 'python-pptx not installed. Run: pip install python-pptx'}), 500
+    except ImportError as ie:
+        return jsonify({'error': f'PowerPoint tool is missing on this computer ({ie}). Please run: pip install python-pptx'}), 500
     except Exception as e:
         print(f"Error creating PowerPoint: {str(e)}")
         return jsonify({'error': str(e)}), 500
