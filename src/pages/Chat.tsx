@@ -1,3 +1,5 @@
+// Chat Page Content
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Mic, Send, Settings, Plus, ImageIcon, Paperclip, Menu, X, Video, Camera, Lock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
