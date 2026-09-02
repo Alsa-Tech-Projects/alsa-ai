@@ -2,6 +2,7 @@ import os
 import sys
 import subprocess
 import json
+import string
 import urllib.request
 import shutil
 import re
@@ -22,17 +23,35 @@ CORS(app, origins=[
     '*'  # Allow all origins for development
 ])
 
-# Allowed base directories for file operations
-ALLOWED_BASE_DIRS = [
-    os.path.expanduser('~\\Documents'),
-    os.path.expanduser('~\\Desktop'),
-    os.path.expanduser('~\\Pictures'),
-    os.path.expanduser('~\\Music'),
-    'E:\\Projects',
-    'C:\\Projects',
-    'G:\\',
-]
+def get_all_allowed_dirs():
+    allowed_dirs = []
+    
+    # 1. User Home Directories (Desktop, Documents, Downloads, etc.)
+    home = os.path.expanduser('~')
+    allowed_dirs.append(home)
+    
+    # Common user folders
+    user_folders = ['Desktop', 'Documents', 'Pictures', 'Music', 'Videos', 'Downloads']
+    for folder in user_folders:
+        folder_path = os.path.join(home, folder)
+        if os.path.exists(folder_path):
+            allowed_dirs.append(folder_path)
 
+    # 2. Windows Drive Letters (A:\ to Z:\)
+    if os.name == 'nt':
+        for letter in string.ascii_uppercase:
+            drive = f"{letter}:\\"
+            if os.path.exists(drive):
+                allowed_dirs.append(drive)
+    
+    # 3. Linux / Android / Termux Storage Paths
+    else:
+        allowed_dirs.extend(['/', '/storage/emulated/0', '/sdcard'])
+
+    # Duplicates remove karna
+    return list(set(allowed_dirs))
+
+ALLOWED_BASE_DIRS = get_all_allowed_dirs()
 # Dangerous shell metacharacters to sanitize
 DANGEROUS_CHARS = re.compile(r'[;&|`$\n\r]')
 
@@ -1221,6 +1240,7 @@ def ytdlp_download():
     else:
         fmt = f'bv*[height<={quality}]+ba/b[height<={quality}]'
 
+    # Extracting audio using ffmpeg 
     pps = []
     if mode == 'audio':
         pps.append({'key': 'FFmpegExtractAudio',
@@ -1302,4 +1322,4 @@ if __name__ == '__main__':
     print("ALSA AI Elite PC Control Bridge Started")
     print("Bridge is running on http://localhost:5001")
     print("Features: Projects, PPT, Excel, Database, ADB, Music, YouTube Downloader (yt-dlp), Automation")
-    app.run(host='127.0.0.1', port=5001, debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)
