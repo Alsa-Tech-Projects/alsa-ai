@@ -2,14 +2,14 @@
 """
 Alsa AI — Phone Bridge (Elite Only)
 ====================================
-Run this inside Alsa Ai Bridge Server on your Android phone:
+Run this inside Termux on your Android phone:
 
     pkg update && pkg upgrade -y
-    pkg install python Alsa Ai Bridge Server-api -y
+    pkg install python termux-api -y
     pip install flask flask-cors
     python phone-bridge.py
 
-Then in Alsa Ai Bridge Server:app grant Alsa Ai Bridge Server:API permissions (Settings > Apps > Alsa Ai Bridge Server:API).
+Then in Termux:app grant Termux:API permissions (Settings > Apps > Termux:API).
 Alsa AI's Elite tier can now control THIS phone via voice/chat.
 
 Endpoints (all JSON POST unless noted):
@@ -71,7 +71,13 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
+# allow_private_network=True is required for Chrome's "Private Network Access"
+# check: a page loaded from a public origin (e.g. https://www.alsa-ai.in) must
+# get Access-Control-Allow-Private-Network: true before it's allowed to reach
+# an address on a private network (your phone's LAN IP, e.g. 192.168.x.x).
+# Without it, Chrome blocks the request and reports it as a CORS failure even
+# though standard CORS headers are already present.
+CORS(app, allow_private_network=True)
 
 PORT = 5002
 HOME = os.path.expanduser("~")
@@ -117,78 +123,78 @@ def status():
 @app.route("/notify", methods=["POST"])
 def notify():
     d = request.get_json(force=True) or {}
-    ok, out, _ = run(["Alsa Ai Bridge Server-notification", "--title", d.get("title", "Alsa AI"), "--content", d.get("content", "")])
+    ok, out, _ = run(["termux-notification", "--title", d.get("title", "Alsa AI"), "--content", d.get("content", "")])
     return jsonify({"ok": ok, "output": out})
 
 @app.route("/toast", methods=["POST"])
 def toast():
     d = request.get_json(force=True) or {}
-    ok, out, _ = run(["Alsa Ai Bridge Server-toast", d.get("text", "Hello")])
+    ok, out, _ = run(["termux-toast", d.get("text", "Hello")])
     return jsonify({"ok": ok, "output": out})
 
 @app.route("/vibrate", methods=["POST"])
 def vibrate():
     d = request.get_json(force=True) or {}
-    ok, out, _ = run(["Alsa Ai Bridge Server-vibrate", "-d", str(d.get("duration", 1000))])
+    ok, out, _ = run(["termux-vibrate", "-d", str(d.get("duration", 1000))])
     return jsonify({"ok": ok, "output": out})
 
 @app.route("/torch", methods=["POST"])
 def torch():
     d = request.get_json(force=True) or {}
-    ok, out, _ = run(["Alsa Ai Bridge Server-torch", "on" if d.get("on") else "off"])
+    ok, out, _ = run(["termux-torch", "on" if d.get("on") else "off"])
     return jsonify({"ok": ok, "output": out})
 
 @app.route("/brightness", methods=["POST"])
 def brightness():
     d = request.get_json(force=True) or {}
-    ok, out, _ = run(["Alsa Ai Bridge Server-brightness", str(d.get("level", 128))])
+    ok, out, _ = run(["termux-brightness", str(d.get("level", 128))])
     return jsonify({"ok": ok, "output": out})
 
 @app.route("/volume", methods=["POST"])
 def volume():
     d = request.get_json(force=True) or {}
-    ok, out, _ = run(["Alsa Ai Bridge Server-volume", d.get("stream", "music"), str(d.get("level", 5))])
+    ok, out, _ = run(["termux-volume", d.get("stream", "music"), str(d.get("level", 5))])
     return jsonify({"ok": ok, "output": out})
 
 @app.route("/battery", methods=["POST"])
 def battery():
-    ok, out, j = run(["Alsa Ai Bridge Server-battery-status"])
+    ok, out, j = run(["termux-battery-status"])
     return jsonify({"ok": ok, "data": j or out})
 
 @app.route("/location", methods=["POST"])
 def location():
-    ok, out, j = run(["Alsa Ai Bridge Server-location", "-p", "gps", "-r", "once"], timeout=60)
+    ok, out, j = run(["termux-location", "-p", "gps", "-r", "once"], timeout=60)
     return jsonify({"ok": ok, "data": j or out})
 
 @app.route("/clipboard/get", methods=["POST"])
 def clip_get():
-    ok, out, _ = run(["Alsa Ai Bridge Server-clipboard-get"])
+    ok, out, _ = run(["termux-clipboard-get"])
     return jsonify({"ok": ok, "text": out})
 
 @app.route("/clipboard/set", methods=["POST"])
 def clip_set():
     d = request.get_json(force=True) or {}
-    ok, out, _ = run(["Alsa Ai Bridge Server-clipboard-set"], input_data=d.get("text", ""))
+    ok, out, _ = run(["termux-clipboard-set"], input_data=d.get("text", ""))
     return jsonify({"ok": ok, "output": out})
 
 @app.route("/sms/send", methods=["POST"])
 def sms_send():
     d = request.get_json(force=True) or {}
     if not d.get("number"): return jsonify({"ok": False, "error": "number required"}), 400
-    ok, out, _ = run(["Alsa Ai Bridge Server-sms-send", "-n", d["number"]], input_data=d.get("text", ""))
+    ok, out, _ = run(["termux-sms-send", "-n", d["number"]], input_data=d.get("text", ""))
     return jsonify({"ok": ok, "output": out})
 
 @app.route("/sms/list", methods=["POST"])
 def sms_list():
     d = request.get_json(force=True) or {}
-    ok, out, j = run(["Alsa Ai Bridge Server-sms-list", "-l", str(d.get("limit", 10))])
+    ok, out, j = run(["termux-sms-list", "-l", str(d.get("limit", 10))])
     return jsonify({"ok": ok, "messages": j or out})
 
 @app.route("/call/make", methods=["POST"])
 def call_make():
     d = request.get_json(force=True) or {}
     if not d.get("number"): return jsonify({"ok": False, "error": "number required"}), 400
-    ok, out, _ = run(["Alsa Ai Bridge Server-telephony-call", d["number"]])
+    ok, out, _ = run(["termux-telephony-call", d["number"]])
     return jsonify({"ok": ok, "output": out})
 
 @app.route("/call/by-name", methods=["POST"])
@@ -199,30 +205,30 @@ def call_by_name():
     matches = [c for c in _load_contacts() if name in c["name"].lower()]
     if not matches: return jsonify({"ok": False, "error": "Contact not found"}), 404
     chosen = matches[0]
-    ok, out, _ = run(["Alsa Ai Bridge Server-telephony-call", chosen["number"]])
+    ok, out, _ = run(["termux-telephony-call", chosen["number"]])
     return jsonify({"ok": ok, "output": out, "contact": chosen})
 
 @app.route("/contacts", methods=["POST"])
 def contacts():
-    ok, out, j = run(["Alsa Ai Bridge Server-contact-list"])
+    ok, out, j = run(["termux-contact-list"])
     return jsonify({"ok": ok, "contacts": j or out})
 
 @app.route("/tts", methods=["POST"])
 def tts():
     d = request.get_json(force=True) or {}
-    ok, out, _ = run(["Alsa Ai Bridge Server-tts-speak"], input_data=d.get("text", ""))
+    ok, out, _ = run(["termux-tts-speak"], input_data=d.get("text", ""))
     return jsonify({"ok": ok})
 
 @app.route("/stt", methods=["POST"])
 def stt():
-    ok, out, _ = run(["Alsa Ai Bridge Server-speech-to-text"], timeout=60)
+    ok, out, _ = run(["termux-speech-to-text"], timeout=60)
     return jsonify({"ok": ok, "text": out})
 
 @app.route("/camera/photo", methods=["POST"])
 def camera_photo():
     d = request.get_json(force=True) or {}
     path = d.get("path") or "/sdcard/alsa_photo.jpg"
-    ok, out, _ = run(["Alsa Ai Bridge Server-camera-photo", "-c", str(d.get("camera", 0)), path])
+    ok, out, _ = run(["termux-camera-photo", "-c", str(d.get("camera", 0)), path])
     return jsonify({"ok": ok, "path": path})
 
 @app.route("/app/open", methods=["POST"])
@@ -237,7 +243,7 @@ def app_open():
 @app.route("/url/open", methods=["POST"])
 def url_open():
     d = request.get_json(force=True) or {}
-    ok, out, _ = run(["Alsa Ai Bridge Server-open-url", d.get("url", "")])
+    ok, out, _ = run(["termux-open-url", d.get("url", "")])
     return jsonify({"ok": ok})
 
 @app.route("/shell", methods=["POST"])
@@ -252,7 +258,7 @@ def _normalize_num(n):
     return re.sub(r"[^\d+]", "", str(n or ""))
 
 def _rebuild_contacts_file():
-    ok, out, j = run(["Alsa Ai Bridge Server-contact-list"], timeout=45)
+    ok, out, j = run(["termux-contact-list"], timeout=45)
     contacts = []
     if ok and isinstance(j, list):
         for c in j:
