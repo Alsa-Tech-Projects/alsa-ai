@@ -111,6 +111,13 @@ const Chat = () => {
   const [uploadedFiles, setUploadedFiles] = useState<FileAttachment[]>([]);
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [show51Update, setShow51Update] = useState(false);
+  const [pendingDeviceSelect, setPendingDeviceSelect] = useState<{
+    originalText: string;
+    phoneCmd: ReturnType<typeof parsePhoneCommand>;
+    parsedCommand: ReturnType<typeof parseNaturalLanguage>;
+    userMessage: Message;
+  } | null>(null);
+  const [isDeviceExecuting, setIsDeviceExecuting] = useState(false);
 
   // Show 5.1 update notice once per user (localStorage flag)
   useEffect(() => {
@@ -584,6 +591,43 @@ const Chat = () => {
     } catch (e) { return ''; }
   };
 
+  const executeOnSelectedDevice = useCallback(async (device: 'pc' | 'phone') => {
+    // Guard against double-clicks / duplicate execution while a selection is already running.
+    if (!pendingDeviceSelect || isDeviceExecuting) return;
+    const { phoneCmd, parsedCommand, userMessage, originalText } = pendingDeviceSelect;
+    setPendingDeviceSelect(null);
+    setIsDeviceExecuting(true);
+    try {
+      if (device === 'phone' && phoneCmd) {
+        const result = await executePhoneCommand(phoneCmd);
+        let content = result.success
+          ? `📱 **Phone Bridge** → ${phoneCmd.label} ✓`
+          : `❌ ${result.message || BRIDGE_MESSAGES.failed}`;
+        if (result.success && result.data) {
+          const preview = typeof result.data === 'object' ? JSON.stringify(result.data, null, 2) : String(result.data);
+          if (preview && preview !== '{}' && preview.length < 800) {
+            content += `\n\`\`\`json\n${preview}\n\`\`\``;
+          }
+        }
+        setMessages(prev => [...prev, { role: 'assistant', content }]);
+        speak(result.success ? phoneCmd.label : 'Phone command failed');
+        if (user) await saveConversation(userMessage, { role: 'assistant', content });
+      } else if (device === 'pc' && parsedCommand) {
+        const result = await executeSystemCommand(originalText);
+        const content = result.success
+          ? `✅ ${result.message}${result.output ? `\n\`\`\`\n${result.output}\n\`\`\`` : ''}`
+          : `❌ ${result.message}`;
+        setMessages(prev => [...prev, { role: 'assistant', content }]);
+        speak(result.success ? result.message : 'Command failed');
+        if (user) await saveConversation(userMessage, { role: 'assistant', content });
+      }
+    } catch (e: any) {
+      setMessages(prev => [...prev, { role: 'assistant', content: `❌ ${e.message || BRIDGE_MESSAGES.failed}` }]);
+    } finally {
+      setIsDeviceExecuting(false);
+    }
+  }, [pendingDeviceSelect, isDeviceExecuting, user, speak]);
+
   const handleSubmit = async (text: string = inputText) => {
     if (isTyping || (!text.trim() && uploadedFiles.length === 0)) return;
     if (user && subscription.isFree && !subscription.canSendMessage) {
@@ -865,7 +909,7 @@ Output rules (strict markdown):
         }
       }
     }
-    // ── PHONE BRIDGE COMMAND PARSER ──
+    // ── BRIDGE COMMAND ROUTING ──
     const phoneCmd = parsePhoneCommand(text);
     const parsedCommand = parseNaturalLanguage(text);
     let liveHealth = { pc: bridgeConnected, phone: phoneBridgeConnected, any: bridgeConnected || phoneBridgeConnected };
@@ -875,53 +919,91 @@ Output rules (strict markdown):
       if (h.pc !== bridgeConnected) setBridgeConnected(h.pc);
       if (h.phone !== phoneBridgeConnected) setPhoneBridgeConnected(h.phone);
     }
-    if (phoneCmd && liveHealth.phone) {
+    // Device-hint detection: "on my phone" forces phone; "on my pc/computer" forces PC
+    const hasPhoneHint = /\b(on my phone|on phone|on android|on mobile|from my phone|on the phone)\b/i.test(text);
+    const hasPcHint = /\b(on my pc|on my computer|on (my )?windows|on (the )?pc|from my pc|from my computer)\b/i.test(text);
+    const effectivePhoneCmd = hasPcHint ? null : phoneCmd;
+    const effectiveParsedCommand = hasPhoneHint ? null : parsedCommand;
+
+    // ── Helper: run phone command ──
+    const runOnPhone = async (cmd: NonNullable<ReturnType<typeof parsePhoneCommand>>) => {
       try {
-        const result = await executePhoneCommand(phoneCmd);
+        const result = await executePhoneCommand(cmd);
         let content = result.success
-          ? `📱 **Phone Bridge** → ${phoneCmd.label} ✓`
+          ? `📱 **Phone Bridge** → ${cmd.label} ✓`
           : `❌ ${result.message || BRIDGE_MESSAGES.failed}`;
         if (result.success && result.data) {
           const preview = typeof result.data === 'object' ? JSON.stringify(result.data, null, 2) : String(result.data);
-          if (preview && preview !== '{}' && preview.length < 800) {
-            content += `\n\`\`\`json\n${preview}\n\`\`\``;
-          }
+          if (preview && preview !== '{}' && preview.length < 800) content += `\n\`\`\`json\n${preview}\n\`\`\``;
         }
         setMessages(prev => [...prev, { role: 'assistant', content }]);
-        speak(result.success ? phoneCmd.label : 'Phone command failed');
+        speak(result.success ? cmd.label : 'Phone command failed');
         if (user) await saveConversation(userMessage, { role: 'assistant', content });
-        return;
       } catch (e: any) {
         setMessages(prev => [...prev, { role: 'assistant', content: `❌ ${BRIDGE_MESSAGES.failed}` }]);
-        return;
       }
-    }
-    if (phoneCmd && !liveHealth.phone && !liveHealth.pc) {
-      const msg = `📴 ${BRIDGE_MESSAGES.phoneOffline}`;
-      setMessages(prev => [...prev, { role: 'assistant', content: msg }]);
-      speak('Phone Bridge is offline');
-      return;
-    }
-    if (parsedCommand && liveHealth.any) {
+    };
+
+    // ── Helper: run PC command ──
+    const runOnPc = async () => {
       try {
         const result = await executeSystemCommand(text);
-        const response = result.success
+        const content = result.success
           ? `✅ ${result.message}${result.output ? `\n\`\`\`\n${result.output}\n\`\`\`` : ''}`
           : `❌ ${result.message}`;
-        setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+        setMessages(prev => [...prev, { role: 'assistant', content }]);
         speak(result.success ? result.message : 'Command failed');
-        if (user) await saveConversation(userMessage, { role: 'assistant', content: response });
-        return;
+        if (user) await saveConversation(userMessage, { role: 'assistant', content });
       } catch (error: any) {
         setMessages(prev => [...prev, { role: 'assistant', content: `❌ ${error.message || BRIDGE_MESSAGES.failed}` }]);
+      }
+    };
+
+    if (effectivePhoneCmd && effectiveParsedCommand) {
+      // Both parsers matched → route based on bridge availability
+      if (liveHealth.pc && liveHealth.phone) {
+        // Both bridges live: ambiguous → show device selection popup
+        setPendingDeviceSelect({ originalText: text, phoneCmd: effectivePhoneCmd, parsedCommand: effectiveParsedCommand, userMessage });
+        return;
+      } else if (liveHealth.pc) {
+        await runOnPc(); return;
+      } else if (liveHealth.phone) {
+        await runOnPhone(effectivePhoneCmd); return;
+      } else {
+        const msg = `📴 ${BRIDGE_MESSAGES.bothOffline}`;
+        setMessages(prev => [...prev, { role: 'assistant', content: msg }]);
+        if (user) await saveConversation(userMessage, { role: 'assistant', content: msg });
         return;
       }
     }
-    if (parsedCommand && !liveHealth.any && ['open', 'close', 'shutdown', 'restart', 'sleep', 'lock'].includes(parsedCommand.action)) {
-      const response = `📴 ${BRIDGE_MESSAGES.bothOffline}`;
-      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
-      if (user) await saveConversation(userMessage, { role: 'assistant', content: response });
-      return;
+
+    if (effectivePhoneCmd && !effectiveParsedCommand) {
+      // Phone-only command (e.g. torch, vibrate, battery, whatsapp message)
+      if (liveHealth.phone) {
+        await runOnPhone(effectivePhoneCmd); return;
+      } else {
+        const msg = `📴 ${BRIDGE_MESSAGES.phoneOffline}`;
+        setMessages(prev => [...prev, { role: 'assistant', content: msg }]);
+        speak('Phone Bridge is offline');
+        return;
+      }
+    }
+
+    if (!effectivePhoneCmd && effectiveParsedCommand) {
+      // PC-only command (e.g. open cmd, open notepad, shutdown)
+      if (liveHealth.pc) {
+        await runOnPc(); return;
+      } else if (liveHealth.phone) {
+        const msg = `💻 ${BRIDGE_MESSAGES.pcOffline}`;
+        setMessages(prev => [...prev, { role: 'assistant', content: msg }]);
+        if (user) await saveConversation(userMessage, { role: 'assistant', content: msg });
+        return;
+      } else {
+        const msg = `📴 ${BRIDGE_MESSAGES.bothOffline}`;
+        setMessages(prev => [...prev, { role: 'assistant', content: msg }]);
+        if (user) await saveConversation(userMessage, { role: 'assistant', content: msg });
+        return;
+      }
     }
     const userSites = JSON.parse(localStorage.getItem('alsa_user_sites') || '[]');
     for (const site of userSites) {
@@ -1080,12 +1162,8 @@ Output rules (strict markdown):
               let result: { success: boolean; message: string };
               if (h.pc) {
                 result = await runCommand(parsed.command);
-              } else if (h.phone) {
-                const { phoneAppOpen } = await import('@/utils/phoneBridge');
-                const r: any = await phoneAppOpen(parsed.command);
-                result = { success: r?.ok !== false, message: r?.error || r?.message || '' };
               } else {
-                result = { success: false, message: BRIDGE_MESSAGES.bothOffline };
+                result = { success: false, message: BRIDGE_MESSAGES.pcOffline };
               }
               accumulatedText += `\n\n${result.success ? `✅ Opened ${parsed.command}` : `❌ ${result.message}`}`;
               setMessages(prev => { const n = [...prev]; const l = n[n.length - 1]; if (l?.role === 'assistant') l.content = accumulatedText; return n; });
@@ -1271,6 +1349,53 @@ Output rules (strict markdown):
       });
     }
   };
+
+  // Device Selection Dialog — shown when a command is ambiguous (could run on either
+  // device) and both bridges are live. Rendered from a shared element so it appears
+  // identically on both the mobile and desktop layouts below.
+  const deviceSelectDialog = (
+    <Dialog open={!!pendingDeviceSelect} onOpenChange={(open) => { if (!open && !isDeviceExecuting) setPendingDeviceSelect(null); }}>
+      <DialogContent className="bg-[#0d0d0d] border-white/10 text-white max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="text-base font-semibold text-center">Where do you want to open this?</DialogTitle>
+        </DialogHeader>
+        {pendingDeviceSelect && (
+          <p className="text-center text-sm text-white/50 -mt-2 mb-2 truncate">
+            "{pendingDeviceSelect.originalText}"
+          </p>
+        )}
+        <div className="flex gap-3 mt-2">
+          <button
+            onClick={() => executeOnSelectedDevice('pc')}
+            disabled={isDeviceExecuting}
+            className="flex-1 flex flex-col items-center gap-2 py-5 rounded-xl bg-white/5 border border-white/10 hover:bg-blue-500/20 hover:border-blue-500/50 transition-all disabled:opacity-40 disabled:pointer-events-none"
+          >
+            <span className="text-3xl">💻</span>
+            <span className="text-sm font-medium text-white">Open on PC</span>
+            <span className="text-[10px] text-white/40">Windows Bridge</span>
+          </button>
+          <button
+            onClick={() => executeOnSelectedDevice('phone')}
+            disabled={isDeviceExecuting}
+            className="flex-1 flex flex-col items-center gap-2 py-5 rounded-xl bg-white/5 border border-white/10 hover:bg-green-500/20 hover:border-green-500/50 transition-all disabled:opacity-40 disabled:pointer-events-none"
+          >
+            <span className="text-3xl">📱</span>
+            <span className="text-sm font-medium text-white">Open on Phone</span>
+            <span className="text-[10px] text-white/40">Android Bridge</span>
+          </button>
+        </div>
+        <DialogFooter className="mt-1">
+          <button
+            onClick={() => setPendingDeviceSelect(null)}
+            disabled={isDeviceExecuting}
+            className="w-full text-xs text-white/30 hover:text-white/60 py-2 transition disabled:opacity-40 disabled:pointer-events-none"
+          >
+            Cancel
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 
   const hasMessages = messages.length > 0;
   if (isMobile) {
@@ -1460,6 +1585,7 @@ Output rules (strict markdown):
         </Dialog>
         <MusicPlayer song={currentSong} onClose={() => setCurrentSong(null)} />
         <GameLauncher game={currentGame as any} onClose={() => setCurrentGame(null)} />
+        {deviceSelectDialog}
       </div>
     );
   }
@@ -1588,6 +1714,9 @@ Output rules (strict markdown):
       <MusicPlayer song={currentSong} onClose={() => setCurrentSong(null)} />
       <GameLauncher game={currentGame as any} onClose={() => setCurrentGame(null)} />
       <ReminderNotification userId={user?.id || null} />
+
+      {deviceSelectDialog}
+
       <Dialog open={show51Update} onOpenChange={(o) => { setShow51Update(o); if (!o) { try { localStorage.setItem('alsa_seen_update_v51', '1'); } catch { } } }}>
         <DialogContent className="bg-gradient-to-br from-[#0a0a0a] to-[#0d1425] border-blue-500/30 text-white max-w-md">
           <DialogHeader>
