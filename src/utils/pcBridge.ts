@@ -90,14 +90,6 @@ export const checkBridgeStatus = async (force = false): Promise<BridgeHealth> =>
 
 export const invalidateBridgeHealth = () => { healthCache = null; };
 
-/** Returns the base URL of the best available bridge (PC first, then Phone). */
-export const getActiveBridgeUrl = async (): Promise<string | null> => {
-  const h = await checkBridgeStatus();
-  if (h.pc) return BRIDGE_URL;
-  if (h.phone) return getPhoneBridgeUrl();
-  return null;
-};
-
 const friendlyError = (e: any): string => {
   const m = String(e?.message || e || '');
   if (e?.name === 'AbortError' || /timed? ?out/i.test(m)) return BRIDGE_MESSAGES.timeout;
@@ -106,37 +98,22 @@ const friendlyError = (e: any): string => {
 };
 
 /**
- * fetch() replacement for all bridge helpers: swaps the hardcoded 5001 host for whichever
- * bridge is actually alive. Throws a friendly error if none is reachable.
+ * fetch() replacement for all PC bridge helpers.
+ * Always uses the PC bridge (port 5001) — never falls back to the phone bridge.
+ * Throws a friendly error if the PC bridge is unreachable.
  */
 const bridgeFetch = async (url: string, init?: RequestInit): Promise<Response> => {
-  const base = await getActiveBridgeUrl();
-  if (!base) throw new Error(BRIDGE_MESSAGES.bothOffline);
+  const pcUrl = getPcBridgeUrl();
+  const alive = await ping(pcUrl);
+  if (!alive) {
+    invalidateBridgeHealth();
+    throw new Error(BRIDGE_MESSAGES.pcOffline);
+  }
   try {
-    return await fetch(url.replace(BRIDGE_URL, base), init);
+    return await fetch(url.replace(BRIDGE_URL, pcUrl), init);
   } catch (e: any) {
     invalidateBridgeHealth();
     throw new Error(friendlyError(e));
-  }
-};
-
-/** Run a request against whichever bridge is online. */
-export const executeOnAnyBridge = async <T = any>(path: string, body: any = {}, method: 'POST' | 'GET' = 'POST'): Promise<{ success: boolean; message: string; data?: T; via?: 'pc' | 'phone' }> => {
-  const h = await checkBridgeStatus();
-  const base = h.pc ? BRIDGE_URL : h.phone ? getPhoneBridgeUrl() : null;
-  if (!base) return { success: false, message: BRIDGE_MESSAGES.bothOffline };
-  try {
-    const r = await fetch(`${base}${path}`, {
-      method,
-      headers: getHeaders(),
-      body: method === 'POST' ? JSON.stringify(body) : undefined,
-    });
-    const data: any = await r.json().catch(() => ({}));
-    const ok = r.ok && data?.success !== false && data?.ok !== false;
-    return { success: ok, message: data?.message || data?.error || (ok ? 'Done' : BRIDGE_MESSAGES.failed), data, via: h.pc ? 'pc' : 'phone' };
-  } catch (e: any) {
-    invalidateBridgeHealth();
-    return { success: false, message: friendlyError(e) };
   }
 };
 
@@ -152,7 +129,10 @@ export const checkBridgeConnection = async (): Promise<BridgeStatus> => {
 // 110+ Website URLs for opening via PC Bridge
 export const WEBSITES: Record<string, { name: string; url: string; category: string }> = {
   // Social Media
-  // 'youtube': { name: 'YouTube', url: 'https://www.youtube.com', category: 'Social Media' },
+  // NOTE: kept active (not commented out) — "open youtube" must be recognized as a
+  // valid PC-side target so it's correctly treated as ambiguous (PC or phone) when
+  // both bridges are online, instead of silently falling through to phone-only routing.
+  'youtube': { name: 'YouTube', url: 'https://www.youtube.com', category: 'Social Media' },
   'facebook': { name: 'Facebook', url: 'https://www.facebook.com', category: 'Social Media' },
   'instagram': { name: 'Instagram', url: 'https://www.instagram.com', category: 'Social Media' },
   'twitter': { name: 'Twitter/X', url: 'https://twitter.com', category: 'Social Media' },

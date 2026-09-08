@@ -405,6 +405,32 @@ function normalizeAppName(name: string): string {
   return APP_ALIASES[key] || name.toLowerCase().trim();
 }
 
+// Apps that are Windows/PC-only and must never be routed to the phone bridge
+export const PC_ONLY_APP_NAMES = new Set([
+  // Windows system tools
+  'cmd', 'command prompt', 'powershell', 'powershell ise',
+  'notepad', 'wordpad', 'calculator', 'calc', 'paint', 'mspaint',
+  'file explorer', 'explorer', 'task manager', 'taskmgr',
+  'control panel', 'control', 'settings', 'ms-settings',
+  'registry editor', 'regedit', 'device manager', 'disk management',
+  'event viewer', 'services', 'windows terminal', 'terminal', 'wt',
+  // Development tools (desktop-only)
+  // NOTE: "vs code" / "vscode" are intentionally NOT in this list — VS Code is a
+  // cross-platform-ambiguous app name (user may mean a phone code-editor app too),
+  // so it should trigger the device-selection popup rather than auto-route to PC.
+  'visual studio', 'devenv',
+  'android studio', 'pycharm', 'intellij', 'eclipse',
+  'sublime text', 'sublime', 'atom', 'notepad++', 'git bash', 'antigravity',
+  // Creative/media desktop apps
+  'obs', 'obs studio', 'photoshop', 'premiere', 'after effects', 'blender',
+  'audacity', 'handbrake',
+  // Microsoft Office
+  'word', 'excel', 'powerpoint', 'access', 'outlook',
+  'microsoft word', 'microsoft excel', 'microsoft powerpoint', 'winword', 'powerpnt',
+  // Media players (desktop)
+  'vlc', 'media player', 'windows media player', 'wmplayer',
+]);
+
 // ── Phone natural-language parser + executor ────────────────────────────────
 export interface PhoneCommand {
   action: string;
@@ -570,18 +596,52 @@ export const parsePhoneCommand = (input: string): PhoneCommand | null => {
   if (/\b(pause|ruk|band karo)\s*(music|song|media|gana)/i.test(lowerT)) return { action: 'media', params: { action: 'pause' }, label: 'pause media' };
   if (/\b(play)\s*(music|song|media|gana)/i.test(lowerT)) return { action: 'media', params: { action: 'play' }, label: 'play media' };
 
-  // Smart App Open Selector
+  // Smart App Open Selector — skips apps that are PC-only and must never go to the phone bridge
   const openAppPattern =
     t.match(/(?:open|launch|start|run|chalu\s*karo|khol|kholo|open\s+app)\s+(.+)/i) ||
     t.match(/(.+?)\s+(?:open\s*karo|chalu\s*karo|start\s*karo|khol|kholo)/i);
 
   if (openAppPattern) {
     let appName = normalizeAppName(openAppPattern[1].trim().replace(/[.!?]$/, ""));
+    if (PC_ONLY_APP_NAMES.has(appName.toLowerCase())) return null;
     return { action: "app-open", params: { name: appName }, label: `open ${appName}` };
   }
 
   return null;
 };
+
+// Confidently resolves a free-text app name to an installed Android app.
+// IMPORTANT: never falls back to a loose "contains" match — a short/generic name
+// (e.g. "x") must not silently resolve to an unrelated installed app (e.g. Twitter/X).
+// If nothing matches with confidence, this returns a clean "not found" error instead.
+function resolveInstalledApp(target: string, apps: any[]): any | null {
+  const esc = target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const wordBoundary = new RegExp(`\\b${esc}\\b`, 'i');
+
+  // 1) Exact label or package match — highest confidence.
+  let match = apps.find((app: any) => {
+    const label = (app.label || app.name || '').toLowerCase();
+    const pkg = (app.package || '').toLowerCase();
+    return label === target || pkg === target;
+  });
+  if (match) return match;
+
+  // Loose matching below is only safe for names specific enough to avoid
+  // accidentally grabbing an unrelated app.
+  if (target.length < 3) return null;
+
+  // 2) Label/package starts with the target (e.g. "insta" → "instagram").
+  match = apps.find((app: any) => {
+    const label = (app.label || app.name || '').toLowerCase();
+    const pkg = (app.package || '').toLowerCase();
+    return label.startsWith(target) || pkg.startsWith(target);
+  });
+  if (match) return match;
+
+  // 3) Target appears as a whole word inside the label (e.g. "code" → "VS Code").
+  match = apps.find((app: any) => wordBoundary.test((app.label || app.name || '').toLowerCase()));
+  return match || null;
+}
 
 async function smartOpenApp(appName: string) {
   let res = await phoneAppOpen(appName);
@@ -589,16 +649,14 @@ async function smartOpenApp(appName: string) {
 
   const list = await phoneAppList();
   const apps = list?.data || list?.apps || [];
-  if (!Array.isArray(apps)) return res;
+  if (!Array.isArray(apps) || apps.length === 0) {
+    return { ok: false, success: false, message: `App "${appName}" not found on this phone` };
+  }
 
-  const target = appName.toLowerCase();
-  const match = apps.find((app: any) => {
-    const label = (app.label || app.name || "").toLowerCase();
-    const pkg = (app.package || "").toLowerCase();
-    return label.includes(target) || pkg.includes(target);
-  });
+  const target = appName.toLowerCase().trim();
+  const match = resolveInstalledApp(target, apps);
 
-  if (!match) return { ok: false, success: false, message: `App "${appName}" not found` };
+  if (!match) return { ok: false, success: false, message: `App "${appName}" not found on this phone. Please check the app name.` };
   return phoneAppOpen(match.package);
 }
 
