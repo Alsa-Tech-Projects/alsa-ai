@@ -3,10 +3,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
+import TitleBar from "./components/TitleBar";
 
-// Eagerly load Landing for instant first paint (avoid loader flash on landing)
+// Eagerly load Landing for instant first paint
 import Landing from "./pages/Landing";
 const Chat = lazy(() => import("./pages/Chat"));
 const FaceAuthGate = lazy(() => import("./components/FaceAuthGate"));
@@ -36,15 +37,14 @@ const ApiKeyOnboarding = lazy(() => import("./components/ApiKeyOnboarding"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
       retry: 1,
       refetchOnWindowFocus: false,
     },
   },
 });
 
-// Loading fallback component
 const PageLoader = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
     <div className="flex flex-col items-center gap-4">
@@ -54,12 +54,20 @@ const PageLoader = () => (
   </div>
 );
 
+// Check if running inside Electron environment or loaded via file system
+const isElectron = typeof window !== "undefined" &&
+  (window.location.protocol === "file:" || !!(window as any).electron || navigator.userAgent.toLowerCase().includes("electron"));
+
+// Automatically select HashRouter for Electron Desktop and BrowserRouter for Web
+const Router = isElectron ? HashRouter : BrowserRouter;
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <Router>
+        <TitleBar />
         <Suspense fallback={<PageLoader />}>
           <ApiKeyOnboarding />
           <Routes>
@@ -87,9 +95,7 @@ const App = () => (
             <Route path="/update-history" element={<UpdateHistory />} />
 
             <Route path="/share/:shareToken" element={<SharedConversation />} />
-            {/* Obfuscated admin path — protected by auth + role check inside */}
             <Route path="/zx-control-9k2" element={<ProtectedRoute redirectTo="/auth"><Admin /></ProtectedRoute>} />
-            {/* Decoy: hide default /admin and /dashboard paths */}
             <Route path="/admin" element={<Navigate to="/404" replace />} />
             <Route path="/admin/*" element={<Navigate to="/404" replace />} />
             <Route path="/dashboard" element={<Navigate to="/404" replace />} />
@@ -97,7 +103,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
-      </BrowserRouter>
+      </Router>
     </TooltipProvider>
   </QueryClientProvider>
 );
