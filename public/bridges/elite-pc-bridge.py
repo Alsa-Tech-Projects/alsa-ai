@@ -13,15 +13,21 @@ import winapps
 import  pyodbc
 
 app = Flask(__name__)
+# allow_private_network=True is required for Chrome's "Private Network Access"
+# check: a page loaded from a public origin (e.g. https://www.alsa-ai.in) must
+# get Access-Control-Allow-Private-Network: true before it's allowed to reach
+# a private-network address (e.g. this PC's LAN IP instead of 127.0.0.1).
+# Without it, Chrome blocks the request and reports it as a CORS failure even
+# though standard CORS headers are already present.
 CORS(app, origins=[
-    'https://www.alsa-ai.in', 
+    'https://www.alsa-ai.in',
     'https://alsa-ai.in',
     'http://localhost:5173',
     'http://localhost:8080',
     'http://127.0.0.1:5173',
     'http://127.0.0.1:8080',
     '*'  # Allow all origins for development
-])
+], allow_private_network=True)
 
 def get_all_allowed_dirs():
     allowed_dirs = []
