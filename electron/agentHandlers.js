@@ -35,55 +35,30 @@ function registerAgentHandlers() {
         }
     });
 
-    // 2. MS Paint Live Mouse Drawing Automation
-    ipcMain.handle('agent:drawInPaint', async (_, shape = 'box') => {
-        try {
-            const { mouse, straightTo, Point, Button } = require('@nut-tree-fork/nut-js');
-
-            exec('start mspaint');
-            await new Promise(r => setTimeout(r, 2000));
-
-            const startX = 500, startY = 400;
-            await mouse.setPosition(new Point(startX, startY));
-            await mouse.pressButton(Button.LEFT);
-
-            if (shape === 'box') {
-                await mouse.move(straightTo(new Point(startX + 200, startY)));
-                await mouse.move(straightTo(new Point(startX + 200, startY + 200)));
-                await mouse.move(straightTo(new Point(startX, startY + 200)));
-                await mouse.move(straightTo(new Point(startX, startY)));
-            }
-
-            await mouse.releaseButton(Button.LEFT);
-            return { success: true, message: 'Painting completed on MS Paint!' };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
+    // 2. MS Paint drawing automation removed — it required @nut-tree-fork/nut-js
+    // (a native module), which was dropped from the pure-Node PC bridge migration.
+    ipcMain.handle('agent:drawInPaint', async () => {
+        return { success: false, error: 'Live drawing automation is no longer available in this build.' };
     });
 
-    // 3. Live PowerPoint Presentation Automation
+    // 3. Live PowerPoint Presentation Automation (pure Node via pptxgenjs — no PowerShell COM)
     ipcMain.handle('agent:createPPT', async (_, data) => {
-        const title = data?.title || "ALSA AI Autonomous Generated Presentation";
-        const slideText = data?.content || "This presentation was generated live by ALSA AI Agent.";
+        const { createPowerPoint } = require('./plugins/ppt_creator.cjs');
+        const title = data?.title || 'ALSA AI Autonomous Generated Presentation';
+        const content = data?.content || 'This presentation was generated live by ALSA AI Agent.';
+        const filePath = data?.file_path || path.join(os.homedir(), 'Desktop', `alsa-presentation-${Date.now()}.pptx`);
 
-        const psScript = `
-      $pptx = New-Object -ComObject PowerPoint.Application;
-      $pptx.Visible = [MsoTriState]::msoTrue;
-      $pres = $pptx.Presentations.Add();
-      $slide = $pres.Slides.Add(1, 1);
-      $slide.Shapes.Title.TextFrame.TextRange.Text = "${title}";
-      $slide.Shapes.Placeholders.Item(2).TextFrame.TextRange.Text = "${slideText}";
-    `;
-
-        return new Promise((resolve) => {
-            exec(`powershell -Command "${psScript.replace(/\n/g, '')}"`, (err) => {
-                if (err) {
-                    resolve({ success: false, error: err.message });
-                } else {
-                    resolve({ success: true, message: 'PowerPoint slide generated live!' });
-                }
-            });
+        const result = await createPowerPoint({
+            file_path: filePath,
+            title,
+            slides: [{ title, content, layout: 'content' }],
         });
+
+        if (result.success) {
+            exec(`start "" "${filePath}"`);
+            return { success: true, message: 'PowerPoint generated!', file_path: filePath };
+        }
+        return { success: false, error: result.message };
     });
 
     // 4. App & URL Opening Automation

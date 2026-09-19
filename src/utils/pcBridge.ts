@@ -368,6 +368,15 @@ export interface SystemScanResult {
 }
 
 export const scanSystem = async (): Promise<SystemScanResult> => {
+  const win = window as any;
+  if (win?.electronAPI?.scanSystem) {
+    try {
+      return await win.electronAPI.scanSystem();
+    } catch (error: any) {
+      return { success: false, message: friendlyError(error) };
+    }
+  }
+
   try {
     const response = await bridgeFetch(`${BRIDGE_URL}/scan`, {
       method: 'GET',
@@ -712,6 +721,15 @@ export const createFolder = async (folderPath: string): Promise<{ success: boole
 
 // WhatsApp message automation
 export const sendWhatsAppMsg = async (phone: string, message: string): Promise<{ success: boolean; message?: string; error?: string }> => {
+  const win = window as any;
+  if (win?.electronAPI?.runPlugin) {
+    try {
+      return await win.electronAPI.runPlugin('messaging_automation', 'sendWhatsApp', { phone, message });
+    } catch (error: any) {
+      return { success: false, error: friendlyError(error) };
+    }
+  }
+
   try {
     console.log('Sending WhatsApp message to:', phone);
     const response = await bridgeFetch(`${BRIDGE_URL}/whatsapp-msg`, {
@@ -734,6 +752,15 @@ export const sendWhatsAppMsg = async (phone: string, message: string): Promise<{
 
 // Telegram message automation
 export const sendTelegramMsg = async (link: string, message: string): Promise<{ success: boolean; message?: string; error?: string }> => {
+  const win = window as any;
+  if (win?.electronAPI?.runPlugin) {
+    try {
+      return await win.electronAPI.runPlugin('messaging_automation', 'sendTelegram', { link, message });
+    } catch (error: any) {
+      return { success: false, error: friendlyError(error) };
+    }
+  }
+
   try {
     console.log('Sending Telegram message to:', link);
     const response = await bridgeFetch(`${BRIDGE_URL}/telegram-msg`, {
@@ -1123,6 +1150,20 @@ export const createPowerPoint = async (
   slides: SlideData[],
   theme?: string
 ): Promise<{ success: boolean; message: string; file_path?: string }> => {
+  const win = window as any;
+  if (win?.electronAPI?.runPlugin) {
+    try {
+      return await win.electronAPI.runPlugin('ppt_creator', 'createPowerPoint', {
+        file_path: filePath,
+        title,
+        slides,
+        theme: theme || 'professional',
+      });
+    } catch (error: any) {
+      return { success: false, message: friendlyError(error) };
+    }
+  }
+
   try {
     const response = await bridgeFetch(`${BRIDGE_URL}/create_powerpoint`, {
       method: 'POST',
@@ -1166,6 +1207,21 @@ export const createExcel = async (
   data: string[][],
   formatting?: ExcelFormatting
 ): Promise<{ success: boolean; message: string; file_path?: string }> => {
+  const win = window as any;
+  if (win?.electronAPI?.runPlugin) {
+    try {
+      return await win.electronAPI.runPlugin('excel_creator', 'createExcel', {
+        file_path: filePath,
+        sheet_name: sheetName,
+        headers,
+        data,
+        formatting: formatting || { header_color: '#4472C4', alternating_rows: true, auto_width: true },
+      });
+    } catch (error: any) {
+      return { success: false, message: friendlyError(error) };
+    }
+  }
+
   try {
     const response = await bridgeFetch(`${BRIDGE_URL}/create_excel`, {
       method: 'POST',
@@ -1214,6 +1270,19 @@ export const createDatabase = async (
   dbType: 'sqlite' | 'access',
   tables: TableDef[]
 ): Promise<{ success: boolean; message: string; file_path?: string; tables?: string[] }> => {
+  const win = window as any;
+  if (win?.electronAPI?.runPlugin) {
+    try {
+      return await win.electronAPI.runPlugin('db_creator', 'createDatabase', {
+        file_path: filePath,
+        db_type: dbType,
+        tables,
+      });
+    } catch (error: any) {
+      return { success: false, message: friendlyError(error) };
+    }
+  }
+
   try {
     const response = await bridgeFetch(`${BRIDGE_URL}/create_database`, {
       method: 'POST',
@@ -1253,6 +1322,15 @@ export interface SongInfo {
 }
 
 export const getSongList = async (): Promise<{ success: boolean; songs: SongInfo[]; message?: string }> => {
+  const win = window as any;
+  if (win?.electronAPI?.runPlugin) {
+    try {
+      return await win.electronAPI.runPlugin('music_player', 'getSongList', {});
+    } catch (error: any) {
+      return { success: false, songs: [], message: friendlyError(error) };
+    }
+  }
+
   try {
     const response = await bridgeFetch(`${BRIDGE_URL}/get_songs`, {
       method: 'GET',
@@ -1279,6 +1357,15 @@ export const getSongList = async (): Promise<{ success: boolean; songs: SongInfo
 };
 
 export const playSong = async (songPath: string): Promise<{ success: boolean; message: string }> => {
+  const win = window as any;
+  if (win?.electronAPI?.runPlugin) {
+    try {
+      return await win.electronAPI.runPlugin('music_player', 'playSong', { song_path: songPath });
+    } catch (error: any) {
+      return { success: false, message: friendlyError(error) };
+    }
+  }
+
   try {
     const response = await bridgeFetch(`${BRIDGE_URL}/play_song`, {
       method: 'POST',
@@ -1304,6 +1391,15 @@ export const playSong = async (songPath: string): Promise<{ success: boolean; me
 };
 
 export const stopSong = async (): Promise<{ success: boolean; message: string }> => {
+  const win = window as any;
+  if (win?.electronAPI?.runPlugin) {
+    try {
+      return await win.electronAPI.runPlugin('music_player', 'stopSong', {});
+    } catch (error: any) {
+      return { success: false, message: friendlyError(error) };
+    }
+  }
+
   try {
     const response = await bridgeFetch(`${BRIDGE_URL}/stop_song`, {
       method: 'POST',
