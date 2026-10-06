@@ -1,10 +1,10 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { exec } from "node:child_process";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const { registerAgentHandlers } = require('./agentHandlers');
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -44,44 +44,9 @@ function createWindow(): void {
   });
 }
 
-// Pure-Node plugin dispatch: renderer calls window.electronAPI.runPlugin(plugin, action, payload)
-// which invokes 'run-plugin' here; each plugin is a .cjs module living alongside this file
-// (copied from electron/plugins/ into dist-electron/plugins/ by electron/copy-assets.cjs).
-function registerBridgeHandlers(): void {
-  const pluginsDir = path.join(__dirname, "plugins");
-
-  ipcMain.handle("run-plugin", async (_event, args: { plugin: string; action: string; payload?: unknown }) => {
-    const { plugin, action, payload } = args || ({} as any);
-    if (!plugin || !action) {
-      return { success: false, message: "plugin and action are required" };
-    }
-    if (!/^[a-zA-Z0-9_]+$/.test(plugin) || !/^[a-zA-Z0-9_]+$/.test(action)) {
-      return { success: false, message: "Invalid plugin or action name" };
-    }
-    try {
-      const mod = require(path.join(pluginsDir, `${plugin}.cjs`));
-      if (typeof mod[action] !== "function") {
-        return { success: false, message: `Plugin "${plugin}" has no action "${action}"` };
-      }
-      return await mod[action](payload);
-    } catch (error: any) {
-      return { success: false, message: error?.message || "Plugin execution failed" };
-    }
-  });
-
-  ipcMain.handle("bridge:scan", async () => {
-    try {
-      const mod = require(path.join(pluginsDir, "multi_task_handler.cjs"));
-      return await mod.getInstalledApps();
-    } catch (error: any) {
-      return { success: false, message: error?.message || "Scan failed" };
-    }
-  });
-}
-
-// Register IPC listeners for window actions
+// Register IPC listeners for window actions & plugins
 function registerIpcHandlers(): void {
-  // Single, clean handler for window actions
+  // Window control actions
   ipcMain.on("window-control", (_event, action: "minimize" | "maximize" | "close") => {
     if (!mainWindow) return;
 
@@ -101,6 +66,30 @@ function registerIpcHandlers(): void {
         break;
     }
   });
+
+  // Handle CommonJS plugins execution directly in Node Main process
+  ipcMain.handle("run-plugin", async (_event, { pluginName, payload }) => {
+    return new Promise((resolve) => {
+      const pluginsDir = isDev
+        ? path.join(__dirname, "../src/utils/plugins")
+        : path.join(process.resourcesPath, "src/utils/plugins");
+
+      const pluginPath = path.join(pluginsDir, `${pluginName}.cjs`);
+      const jsonString = JSON.stringify(payload || {}).replace(/"/g, '\\"');
+
+      exec(`node "${pluginPath}" "${jsonString}"`, (error, stdout, stderr) => {
+        if (error) {
+          resolve({ success: false, error: stderr || error.message });
+        } else {
+          try {
+            resolve(JSON.parse(stdout));
+          } catch {
+            resolve({ success: true, output: stdout.trim() });
+          }
+        }
+      });
+    });
+  });
 }
 
 // Single application instance lock
@@ -119,8 +108,6 @@ if (!gotTheLock) {
   app.whenReady().then(() => {
     registerIpcHandlers();
     createWindow();
-    registerAgentHandlers();
-    registerBridgeHandlers();
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) {
